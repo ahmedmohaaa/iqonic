@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'http://169.58.112.213/api/',
+  // تم التعديل هنا: استخدام مسار نسبي بدلاً من الرابط المباشر
+  baseURL: '/api/', 
   headers: {
     'Content-Type': 'application/json',
   },
