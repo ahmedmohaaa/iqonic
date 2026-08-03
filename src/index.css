@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+:root{
+  --ink:#0a0e13; --ink-2:#0f151c; --surface:#121a23; --line:#1e2a36;
+  --paper:#e8edf2; --muted:#8a99a8;
+  --amber:#f5b544; --emerald:#34d399; --sky:#5cc8ff; --rose:#fb7185; --violet:#a78bfa;
+}
+*{ -webkit-font-smoothing:antialiased; }
+html,body,#root{ height:100%; }
+body{
+  margin:0; background:var(--ink); color:var(--paper);
+  font-family:'IBM Plex Sans Arabic','Space Grotesk',system-ui,sans-serif;
+  font-feature-settings:"ss01","cv11";
+}
+
+/* الطبقة ١: شبكة المخطط الهندسي */
+.bp-grid{
+  background-image:
+    linear-gradient(to right, rgba(92,200,255,.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(92,200,255,.05) 1px, transparent 1px);
+  background-size:46px 46px;
+}
+/* الطبقة ٢: توهج زاوي خافت */
+.bp-glow{
+  background:
+    radial-gradient(60% 50% at 85% -10%, rgba(245,181,68,.10), transparent 60%),
+    radial-gradient(50% 50% at 0% 110%, rgba(52,211,153,.08), transparent 60%);
+}
+/* الطبقة ٣: ضوضاء ورقية */
+.bp-noise{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+.font-display{ font-family:'Space Grotesk','IBM Plex Sans Arabic',sans-serif; letter-spacing:-.02em; }
+.font-mono-eng{ font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
+.tnum{ font-variant-numeric:tabular-nums; }
+
+/* بطاقة حية */
+.card-live{
+  background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0)) , var(--surface);
+  border:1px solid var(--line);
+  transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s;
+}
+.card-live:hover{
+  transform:translateY(-3px);
+  border-color:rgba(92,200,255,.35);
+  box-shadow:0 18px 40px -22px rgba(92,200,255,.45);
+}
+
+/* نقطة حالة نابضة */
+.pulse-dot{ position:relative; }
+.pulse-dot::after{
+  content:""; position:absolute; inset:-4px; border-radius:9999px;
+  background:currentColor; opacity:.5; animation:ping 1.8s cubic-bezier(0,0,.2,1) infinite;
+}
+@keyframes ping{ 75%,100%{ transform:scale(2.2); opacity:0; } }
+
+/* شريط تقدم بلمعان متحرك */
+.bar-shimmer{ position:relative; overflow:hidden; }
+.bar-shimmer::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  transform:translateX(-100%); animation:shimmer 2.4s ease-in-out infinite;
+}
+@keyframes shimmer{ 60%,100%{ transform:translateX(220%); } }
+
+/* كشف عند التمرير */
+.reveal{ opacity:0; transform:translateY(14px); transition:opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+.reveal.in{ opacity:1; transform:none; }
+
+/* خط فاصل بطابع مسطرة */
+.rule-tick{
+  height:1px; background:repeating-linear-gradient(90deg,var(--line) 0 8px, transparent 8px 14px);
+}
