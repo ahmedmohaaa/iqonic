@@ -191,7 +191,6 @@ const StaffManagement = () => {
                   <th className="p-4">Department</th>
                   <th className="p-4">Contact</th>
                   <th className="p-4">Joined</th>
-                  <th className="p-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -238,24 +237,7 @@ const StaffManagement = () => {
                     <td className="p-4 text-gray-600">
                       {member.date_joined ? new Date(member.date_joined).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="p-4">
-                      {isManager && (
-                        <div className="flex space-x-2">
-                          <button 
-                            onClick={() => handleEdit(member)}
-                            className="text-blue-600 text-blue-800"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(member.id, `${member.first_name} ${member.last_name}`)}
-                            className="text-red-600 text-red-800"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
+
                   </tr>
                 ))}
               </tbody>

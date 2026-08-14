@@ -6,7 +6,7 @@ import {
   CheckCircle, Clock, AlertTriangle, Loader,
   BarChart3, PieChart, Activity
 } from 'lucide-react';
-
+import { getAllTasks } from '../../api/services/tasks';  // ← جديد
 const ReportsAnalytics = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
@@ -21,12 +21,24 @@ const ReportsAnalytics = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, financialRes, kpiRes] = await Promise.all([
+      const [statsRes, financialRes, kpiRes, tasksRes] = await Promise.all([
         getStatistics(),
         getFinancialDashboard(),
         getStaffKPIInsights(),
+        getAllTasks({ page_size: 1000 }), // ← جلب كل التاسكات للعد اليدوي
       ]);
-      setStats(statsRes.data);
+
+      const statsData = statsRes.data;
+      const allTasks = tasksRes.data.results || tasksRes.data || [];
+
+      /* ── fallback: احسب approved_tasks من التاسكات لو الـ API مش بيرجّعها ── */
+      const approvedCount = allTasks.filter(t => t.status === 'APPROVED').length;
+      if (!statsData.tasks_efficiency) statsData.tasks_efficiency = {};
+      if (statsData.tasks_efficiency.approved_tasks == null) {
+        statsData.tasks_efficiency.approved_tasks = approvedCount;
+      }
+
+      setStats(statsData);
       setFinancial(financialRes.data);
       setStaffKPI(kpiRes.data);
     } catch (err) {
@@ -125,17 +137,14 @@ const ReportsAnalytics = () => {
           <Activity className="mr-2 text-purple-600" size={20} />
           Tasks Efficiency
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <MetricCard title="Total Tasks" value={tasks_efficiency?.total_tasks || 0} color="gray" />
-          <MetricCard title="Completed" value={tasks_efficiency?.completed_tasks || 0} color="green" />
-          <MetricCard title="In Progress" value={tasks_efficiency?.in_progress_tasks || 0} color="blue" />
-          <MetricCard title="On Hold" value={tasks_efficiency?.delayed_tasks || 0} color="red" />
-          <MetricCard 
-            title="Completion Rate" 
-            value={`${tasks_efficiency?.completion_rate_percentage || 0}%`} 
-            color="purple" 
-          />
-        </div>
+<div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+  <MetricCard title="Total Tasks"   value={tasks_efficiency?.total_tasks || 0} color="gray" />
+  <MetricCard title="Completed"     value={tasks_efficiency?.completed_tasks || 0} color="green" />
+  <MetricCard title="Approved"      value={tasks_efficiency?.approved_tasks || 0} color="emerald" />
+  <MetricCard title="In Progress"   value={tasks_efficiency?.in_progress_tasks || 0} color="blue" />
+  <MetricCard title="On Hold"       value={tasks_efficiency?.delayed_tasks || 0} color="red" />
+  <MetricCard title="Completion Rate" value={`${tasks_efficiency?.completion_rate_percentage || 0}%`} color="purple" />
+</div>
         {/* Progress Bar */}
         <div className="mt-6">
           <div className="flex justify-between text-sm mb-2">

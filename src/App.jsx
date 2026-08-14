@@ -45,6 +45,8 @@ import ExportConsole from './pages/Admin/ExportConsole';
 import InvoiceConsole from './pages/Financials/InvoiceConsole';
 import ChatCenter from './pages/Chat/ChatCenter';
 import ReviewDirectory from './pages/InternalReview/ReviewDirectory';
+import EditTask from './pages/tasks/EditTask';  // غيّر المسار حسب مجلدك
+
 function App() {
   return (
     <AuthProvider>
@@ -63,9 +65,7 @@ function App() {
             <Route 
   path="/replacements" 
   element={
-    <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM']}>
       <ReplacementManagement />
-    </ProtectedRoute>
   } 
 />
 <Route 
@@ -79,7 +79,7 @@ function App() {
 <Route 
   path="/client-directory" 
   element={
-    <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT']}>
+    <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT', 'SECRETARY' ]}>
       <ClientDirectory />
     </ProtectedRoute>
   } 
@@ -170,7 +170,7 @@ function App() {
   <Route 
     path="/supervision/external-logs" 
     element={
-      <ProtectedRoute allowedRoles={['SUP_MGR', 'PM', 'ENGINEER', 'SENIOR_ENG', 'DRAFTSMAN', 'SECRETARY']}>
+      <ProtectedRoute allowedRoles={['SUP_MGR', 'GM' ,'AGM','DESIGN_MGR']}>
         <ExternalLogs />
       </ProtectedRoute>
           } 
@@ -195,6 +195,10 @@ function App() {
 
 
 <Route path='/review-directory' element={<ReviewDirectory/>}/>
+
+<Route path="/tasks/:id/edit" element={<EditTask />} />
+
+
 
 
           </Route>

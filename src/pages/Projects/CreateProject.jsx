@@ -12,27 +12,39 @@ import {
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
-   منطق القسم: من يرى ماذا؟
-   - السكرتيرة تُقفل على قسمها (لا ترى قائمة scope أصلاً)
-   - المديرون/GM/AGM يختارون بحرية (DESIGN / SUPERVISION / BOTH)
+   منطق القسم:
+   - المدراء يرون كل الأقسام (DESIGN, SUPERVISION, BOTH)
+   - سكرتيرة التصميم ترى (DESIGN, BOTH)
+   - سكرتيرة الإشراف ترى (SUPERVISION, BOTH)
    ═══════════════════════════════════════════════════════════ */
-const SECRETARY_SCOPE = { Design: 'DESIGN', Supervision: 'SUPERVISION' };
-const FREE_ROLES = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM'];
-
-const DEPT_TONE = {
-  DESIGN: { key: 'design', label: 'قسم التصميم', Icon: Building2, accent: 'sky' },
-  SUPERVISION: { key: 'sup', label: 'قسم الإشراف', Icon: HardHat, accent: 'amber' },
-};
+const FREE_ROLES = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'MANAGER'];
 
 export default function CreateProject() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const isSecretary = user?.role === 'SECRETARY';
-  const lockedScope = isSecretary ? SECRETARY_SCOPE[user.department] : null;
-  const canPickBoth = !isSecretary && FREE_ROLES.includes(user?.role);
+  // تنظيف بيانات المستخدم لتجنب أخطاء حالة الأحرف (Case Sensitivity)
+  const roleString = String(user?.role || user?.groups?.[0] || '').toUpperCase();
+  const deptString = String(user?.department || '').toUpperCase();
 
-  const [scope, setScope] = useState(lockedScope || 'DESIGN');
+  const isSecretary = roleString.includes('SECRETARY') || roleString.includes('سكرتير');
+  const isDesignDept = deptString.includes('DESIGN') || deptString.includes('تصميم');
+  const isSupDept = deptString.includes('SUP') || deptString.includes('إشراف');
+
+  // تحديد الخيارات المتاحة بناءً على المستخدم
+  const availableScopes = useMemo(() => {
+    if (isSecretary) {
+      if (isDesignDept) return ['DESIGN', 'BOTH'];
+      if (isSupDept) return ['SUPERVISION', 'BOTH'];
+    }
+    // للمدراء أو في حال عدم وجود قسم محدد
+    return ['DESIGN', 'SUPERVISION', 'BOTH'];
+  }, [isSecretary, isDesignDept, isSupDept]);
+
+  // تحديد القسم الافتراضي عند فتح الصفحة
+  const initialScope = isSecretary && isSupDept ? 'SUPERVISION' : 'DESIGN';
+  
+  const [scope, setScope] = useState(initialScope);
   const [clients, setClients] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [loading, setLoad] = useState(true);
@@ -46,6 +58,10 @@ export default function CreateProject() {
     name: '', project_no: '', client: '', location: '',
     start_date: '', duration_days: '', priority: 'MEDIUM',
     building_type: 'Residential', floors: '', plot_area: '', bua: '',
+    apartments: '', shops: '', parking: '', description: '', application_no: '', pin_no: '',
+    // ══ الحقول الناقصة ══
+    owner: '', supervision_consultant: '', permit_no: '', permit_date: '', permit_deadline: '', permit_status: 'NOT_ISSUED',
+    // ═════════════════════
     // تصميم
     offer_status: 'NOT_SUBMITTED', contract_status: 'NOT_SUBMITTED',
     internal_design_review_required: false,
@@ -90,11 +106,27 @@ export default function CreateProject() {
       const payload = {
         name: f.name, project_no: f.project_no, scope,
         client: Number(f.client), location: f.location,
+        description: f.description,
         start_date: f.start_date || null,
         duration_days: f.duration_days ? Number(f.duration_days) : 0,
         priority: f.priority,
         building_type: f.building_type,
-        floors: f.floors || null, plot_area: f.plot_area || null, bua: f.bua || null,
+        floors: f.floors ? Number(f.floors) : null, 
+        plot_area: f.plot_area || null, 
+        bua: f.bua || null,
+        apartments: f.apartments ? Number(f.apartments) : 0,
+        shops: f.shops ? Number(f.shops) : 0,
+        parking: f.parking || null,
+        application_no: f.application_no || null,
+        pin_no: f.pin_no || null,
+        // ══ الحقول الناقصة ══
+        owner: f.owner || null,
+        supervision_consultant: f.supervision_consultant || null,
+        permit_no: f.permit_no || null,
+        permit_date: f.permit_date || null,
+        permit_deadline: f.permit_deadline || null,
+        permit_status: f.permit_status,
+        // ═════════════════════
       ...(showDesign && {
         offer_status: f.offer_status,
         contract_status: f.contract_status,
@@ -127,43 +159,29 @@ export default function CreateProject() {
           <h1 className="cp-title">مشروع جديد</h1>
           <p className="cp-sub">
             {isSecretary
-              ? `أنتِ تسجّلين بصفتكِ سكرتيرة ${user.department === 'Design' ? 'التصميم' : 'الإشراف'} — الحقول مقفولة على قسمكِ.`
+              ? `أنتِ تسجّلين بصفتكِ سكرتيرة ${isDesignDept ? 'التصميم' : 'الإشراف'} — يمكنك اختيار قسمك أو مشروع مشترك (Both).`
               : 'اختر نطاق المشروع لتظهر الحقول الخاصة به.'}
           </p>
         </div>
-        {isSecretary && (
-          <div className={`cp-lock t-${lockedScope === 'DESIGN' ? 'sky' : 'amber'}`}>
-            <Lock size={15} /> مقفل على: {user.department === 'Design' ? 'التصميم' : 'الإشراف'}
-          </div>
-        )}
       </header>
 
       {/* مؤشّر القسم النشط */}
       <div className="cp-scope cp-rv">
-        {canPickBoth ? (
-          <div className="cp-scope-pick">
-            {['DESIGN', 'SUPERVISION', 'BOTH'].map((s) => (
-              <button
-                key={s} type="button"
-                className={`cp-scope-btn ${scope === s ? 'on' : ''} t-${s === 'DESIGN' ? 'sky' : s === 'SUPERVISION' ? 'amber' : 'both'}`}
-                onClick={() => setScope(s)}
-              >
-                {s === 'DESIGN' ? 'تصميم' : s === 'SUPERVISION' ? 'إشراف' : 'الاثنان'}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className={`cp-scope-fixed t-${lockedScope === 'DESIGN' ? 'sky' : 'amber'}`}>
-            {lockedScope === 'DESIGN' ? <Building2 size={16} /> : <HardHat size={16} />}
-            نطاق ثابت: {lockedScope === 'DESIGN' ? 'تصميم' : 'إشراف'}
-          </div>
-        )}
+        <div className="cp-scope-pick">
+          {availableScopes.map((s) => (
+            <button
+              key={s} type="button"
+              className={`cp-scope-btn ${scope === s ? 'on' : ''} t-${s === 'DESIGN' ? 'sky' : s === 'SUPERVISION' ? 'amber' : 'both'}`}
+              onClick={() => setScope(s)}
+            >
+              {s === 'DESIGN' ? 'تصميم' : s === 'SUPERVISION' ? 'إشراف' : 'مشترك (Both)'}
+            </button>
+          ))}
+        </div>
 
         <div className={`cp-dept-cards ${activeTone}`}>
-        <DeptCard tone="sky" Icon={Building2} label="التصميم" active={showDesign}
-          hint="Offer · Contract" />
-        <DeptCard tone="amber" Icon={HardHat} label="الإشراف" active={showSup}
-          hint="المقاول · Design Company · Commencement · Internal Review" />
+          <DeptCard tone="sky" Icon={Building2} label="التصميم" active={showDesign} hint="Offer · Contract" />
+          <DeptCard tone="amber" Icon={HardHat} label="الإشراف" active={showSup} hint="المقاول · Design Company · Commencement · Internal Review" />
         </div>
       </div>
 
@@ -176,6 +194,9 @@ export default function CreateProject() {
         <section className="cp-block cp-rv">
           <h2 className="cp-block-h"><span className="cp-num">01</span> البيانات الأساسية</h2>
           <div className="cp-grid">
+            <Field label="الوصف (Description)">
+              <textarea value={f.description} onChange={set('description')} rows={2} placeholder="Proposed (B+G+3+PH) Residential Building" />
+            </Field>
             <Field label="اسم المشروع *"><input required value={f.name} onChange={set('name')} /></Field>
             <Field label="رقم المشروع *"><input required value={f.project_no} onChange={set('project_no')} /></Field>
             <Field label="العميل *">
@@ -196,7 +217,26 @@ export default function CreateProject() {
             <Field label="نوع المبنى"><input value={f.building_type} onChange={set('building_type')} /></Field>
             <Field label="الأدوار"><input type="number" value={f.floors} onChange={set('floors')} /></Field>
             <Field label="مساحة الأرض"><input value={f.plot_area} onChange={set('plot_area')} /></Field>
-            <Field label="BUA"><input value={f.bua} onChange={set('bua')} /></Field>
+            <Field label="BUA (M²)"><input value={f.bua} onChange={set('bua')} /></Field>
+            <Field label="الوحدات السكنية (Apartments)"><input type="number" value={f.apartments} onChange={set('apartments')} /></Field>
+            <Field label="المحلات (Shops)"><input type="number" value={f.shops} onChange={set('shops')} /></Field>
+            <Field label="المواقف (Parking)"><input value={f.parking} onChange={set('parking')} /></Field>
+            <Field label="رقم الطلب (Application No.)"><input value={f.application_no} onChange={set('application_no')} placeholder="N/2026/XXXXXXX" /></Field>
+            <Field label="رقم PIN"><input value={f.pin_no} onChange={set('pin_no')} /></Field>
+            {/* ══ الحقول الناقصة ══ */}
+            <Field label="المالك (Owner)"><input value={f.owner} onChange={set('owner')} /></Field>
+            <Field label="استشاري الإشراف (Supervision Consultant)"><input value={f.supervision_consultant} onChange={set('supervision_consultant')} /></Field>
+            <Field label="رقم التصريح (Permit No.)"><input value={f.permit_no} onChange={set('permit_no')} /></Field>
+            <Field label="تاريخ التصريح (Permit Date)"><input type="date" value={f.permit_date} onChange={set('permit_date')} /></Field>
+            <Field label="موعد نهائي للتصريح (Permit Deadline)"><input type="date" value={f.permit_deadline} onChange={set('permit_deadline')} /></Field>
+            <Field label="حالة التصريح (Permit Status)">
+              <select value={f.permit_status} onChange={set('permit_status')}>
+                <option value="NOT_ISSUED">Not Issued</option>
+                <option value="PENDING_AUTHORITY">Pending Authority</option>
+                <option value="ISSUED">Approved/Issued</option>
+              </select>
+            </Field>
+            {/* ═════════════════════ */}
           </div>
         </section>
 
@@ -212,13 +252,13 @@ export default function CreateProject() {
                   <option value="APPROVED">معتمد</option>
                 </select>
               </Field>
-      <Field label="حالة العقد">
-        <select value={f.contract_status} onChange={set('contract_status')}>
-          <option value="NOT_SUBMITTED">لم يُرفع</option>
-          <option value="SUBMITTED">مرفوع</option>
-          <option value="APPROVED">معتمد</option>
-        </select>
-      </Field>
+              <Field label="حالة العقد">
+                <select value={f.contract_status} onChange={set('contract_status')}>
+                  <option value="NOT_SUBMITTED">لم يُرفع</option>
+                  <option value="SUBMITTED">مرفوع</option>
+                  <option value="APPROVED">معتمد</option>
+                </select>
+              </Field>
             </div>
           </section>
         )}
@@ -233,18 +273,18 @@ export default function CreateProject() {
                 <input value={f.design_company} onChange={set('design_company')}
                   placeholder="اسم الشركة التي صمّمت المشروع" />
               </Field>
-      <Field label="تصريح بدء التنفيذ (Commencement)">
-        <select value={f.commencement_status} onChange={set('commencement_status')}>
-          <option value="PENDING_AUTHORITY">معلّق لدى الجهة</option>
-          <option value="ISSUED">معتمد / صادر</option>
-        </select>
-      </Field>
-      <label className="cp-check">
-        <input type="checkbox" checked={f.internal_design_review_required}
-          onChange={set('internal_design_review_required')} />
-        <span>يتطلب مراجعة تصميم داخلية (Internal Design Review)</span>
-      </label>
-    </div>
+              <Field label="تصريح بدء التنفيذ (Commencement)">
+                <select value={f.commencement_status} onChange={set('commencement_status')}>
+                  <option value="PENDING_AUTHORITY">معلّق لدى الجهة</option>
+                  <option value="ISSUED">معتمد / صادر</option>
+                </select>
+              </Field>
+              <label className="cp-check">
+                <input type="checkbox" checked={f.internal_design_review_required}
+                  onChange={set('internal_design_review_required')} />
+                <span>يتطلب مراجعة تصميم داخلية (Internal Design Review)</span>
+              </label>
+            </div>
 
             {/* المقاول: موجود أو جديد */}
             <div className="cp-contractor">
@@ -339,10 +379,6 @@ const CSS = `
 .cp-kicker{ font-family:'Space Grotesk'; font-size:11px; letter-spacing:.3em; color:var(--amber); }
 .cp-title{ font-family:'Space Grotesk','IBM Plex Sans Arabic'; font-size:clamp(30px,5vw,50px); font-weight:700; line-height:1; margin:6px 0 6px; letter-spacing:-.02em; color:#0f172a; }
 .cp-sub{ color:var(--mut); font-size:13.5px; max-width:52ch; margin:0; line-height:1.6; }
-.cp-lock{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600;
-  padding:7px 13px; border-radius:999px; border:1px solid; }
-.cp-lock.t-sky{ color:var(--sky); border-color:rgba(2,132,199,.3); background:rgba(2,132,199,.08); }
-.cp-lock.t-amber{ color:var(--amber); border-color:rgba(217,119,6,.3); background:rgba(217,119,6,.08); }
 
 .cp-scope{ margin-top:22px; }
 .cp-scope-pick{ display:inline-flex; gap:6px; background:#f1f5f9; border:1px solid var(--line); padding:5px; border-radius:12px; }
@@ -353,10 +389,6 @@ const CSS = `
 .cp-scope-btn.on.t-sky{ color:var(--sky); }
 .cp-scope-btn.on.t-amber{ color:var(--amber); }
 .cp-scope-btn.on.t-both{ color:var(--emerald); }
-.cp-scope-fixed{ display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600;
-  padding:9px 16px; border-radius:11px; border:1px solid; }
-.cp-scope-fixed.t-sky{ color:var(--sky); border-color:rgba(2,132,199,.3); background:rgba(2,132,199,.06); }
-.cp-scope-fixed.t-amber{ color:var(--amber); border-color:rgba(217,119,6,.3); background:rgba(217,119,6,.06); }
 
 .cp-dept-cards{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
 .cp-dept{ position:relative; display:flex; align-items:center; gap:13px; padding:16px 18px;
@@ -387,10 +419,10 @@ const CSS = `
 .cp-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
 .cp-field{ display:flex; flex-direction:column; gap:6px; }
 .cp-field>span{ font-size:12px; font-weight:500; color:#475569; }
-.cp-field input,.cp-field select{ background:var(--ink); border:1px solid #cbd5e1; border-radius:10px;
+.cp-field input,.cp-field select, .cp-field textarea{ background:var(--ink); border:1px solid #cbd5e1; border-radius:10px;
   padding:10px 12px; color:var(--paper); font-family:inherit; font-size:13.5px; outline:none; transition:.2s; box-shadow:inset 0 1px 2px rgba(0,0,0,.02); }
-.cp-field input:focus,.cp-field select:focus{ border-color:var(--sky); box-shadow:0 0 0 3px rgba(2,132,199,.15); }
-.cp-field input::placeholder { color: #94a3b8; }
+.cp-field input:focus,.cp-field select:focus, .cp-field textarea:focus{ border-color:var(--sky); box-shadow:0 0 0 3px rgba(2,132,199,.15); }
+.cp-field input::placeholder, .cp-field textarea::placeholder { color: #94a3b8; }
 .cp-check{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:500; color:var(--paper);
   grid-column:1/-1; padding:6px 0; cursor:pointer; }
 .cp-check input{ width:17px; height:17px; accent-color:var(--sky); cursor:pointer; }
@@ -412,4 +444,3 @@ const CSS = `
 .cp-save:hover{ filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 4px 6px rgba(5,150,105,.3); }
 .cp-save:disabled{ opacity:.6; cursor:not-allowed; transform:none; filter:grayscale(0.5); box-shadow:none; }
 `;
-

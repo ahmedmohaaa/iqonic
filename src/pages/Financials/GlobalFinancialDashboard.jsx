@@ -56,7 +56,7 @@ export default function GlobalFinancialDashboard() {
   const [expanded, setExpanded] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const wrap = useRef(null);
-
+const isAccountant = user?.role === 'ACCOUNTANT' || user?.groups?.includes('ACCOUNTANT');
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -101,15 +101,20 @@ export default function GlobalFinancialDashboard() {
       <div className="gfd-ambient" aria-hidden />
 
       {/* الرأس + شريط الأفعال */}
+{/* الرأس + شريط الأفعال */}
       <header className="gfd-head rv">
         <div>
           <span className="gfd-kicker">ACCOUNTANT · غرفة الخزنة</span>
           <h1 className="gfd-title">مركز التحكم المالي</h1>
           <p className="gfd-sub">مرحباً {user?.first_name || ''} — أنشئ الفواتير، سجّل الدفعات، وارفع المستندات من مكان واحد.</p>
         </div>
-        <button className="gfd-create" onClick={() => setCreateOpen(true)}>
-          <Plus size={18} /> فاتورة جديدة
-        </button>
+        {/* === تعديل: إظهار الزر للمحاسب فقط === */}
+        {isAccountant && (
+          <button className="gfd-create" onClick={() => setCreateOpen(true)}>
+            <Plus size={18} /> فاتورة جديدة
+          </button>
+        )}
+        {/* === نهاية التعديل === */}
       </header>
 
       {/* KPIs */}
@@ -136,6 +141,7 @@ export default function GlobalFinancialDashboard() {
       </section>
 
       {/* قائمة الفواتير الحيّة */}
+{/* قائمة الفواتير الحيّة */}
       <section className="gfd-list">
         {loading ? <div className="gfd-empty">جارٍ تحميل الخزنة…</div>
           : visible.length === 0 ? <div className="gfd-empty"><Receipt size={30} /> لا فواتير مطابقة. ابدأ بـ «فاتورة جديدة».</div>
@@ -145,6 +151,7 @@ export default function GlobalFinancialDashboard() {
               open={expanded === inv.id}
               onToggle={() => setExpanded(expanded === inv.id ? null : inv.id)}
               onChanged={load}
+              isAccountant={isAccountant} // === إضافة هذا البروب ===
             />
           ))}
       </section>
@@ -170,8 +177,8 @@ function Kpi({ tone, icon, label, value, pulse, plain }) {
 }
 
 /* ── صف فاتورة قابل للتوسع ─────────────────────────────────── */
-function InvoiceRow({ inv, idx, open, onToggle, onChanged }) {
-  const m = STATUS_META[inv.status] || STATUS_META.slate;
+function InvoiceRow({ inv, idx, open, onToggle, onChanged, isAccountant }) {
+    const m = STATUS_META[inv.status] || STATUS_META.slate;
   const paid = Number(inv.collected_amount || 0);
   const total = Number(inv.total_amount || 0);
   const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
@@ -195,15 +202,14 @@ function InvoiceRow({ inv, idx, open, onToggle, onChanged }) {
           : <span className={`gfd-badge t-${m.tone}`}>{m.label}</span>}
         <ChevronDown size={18} className={`gfd-chev ${open ? 'rot' : ''}`} />
       </div>
-
-      <div className={`gfd-detail ${open ? 'open' : ''}`}>
+<div className={`gfd-detail ${open ? 'open' : ''}`}>
         <div className="gfd-detail-grid">
           <Cell icon={<Calendar size={13} />} l="إصدار" v={inv.issue_date || '—'} />
           <Cell icon={<Calendar size={13} />} l="استحقاق" v={inv.due_date || '—'} danger={overdue > 0} />
           <Cell icon={<CheckCircle2 size={13} />} l="محصّل" v={<Money value={paid} />} good />
           <Cell icon={<Wallet size={13} />} l="متبقٍّ" v={<Money value={inv.outstanding_amount} />} warn />
         </div>
-        <RowActions inv={inv} onChanged={onChanged} />
+        <RowActions inv={inv} onChanged={onChanged} isAccountant={isAccountant} /> {/* === إضافة isAccountant === */}
       </div>
     </article>
   );
@@ -218,8 +224,8 @@ function Cell({ icon, l, v, good, warn, danger }) {
 }
 
 /* ── أفعال الصف: دفعة + PDF + حالة + إلغاء ─────────────────── */
-function RowActions({ inv, onChanged }) {
-  const [payOpen, setPayOpen] = useState(false);
+function RowActions({ inv, onChanged, isAccountant }) {
+    const [payOpen, setPayOpen] = useState(false);
   const [amt, setAmt] = useState('');
   const [status, setStatus] = useState(inv.status);
   const [busy, setBusy] = useState(false);
@@ -256,8 +262,7 @@ function RowActions({ inv, onChanged }) {
     if (!window.confirm('إلغاء الفاتورة نهائياً؟')) return;
     await changeStatus('CANCELLED');
   };
-
-  return (
+return (
     <div className="gfd-acts">
       {/* تسجيل دفعة */}
       <div className="gfd-act-block">
@@ -267,15 +272,19 @@ function RowActions({ inv, onChanged }) {
           : (inv.payments || []).map((p, i) => (
             <div key={i} className="gfd-pay"><span className="gfd-pay-dot" /><span className="gfd-pay-d">{p.payment_date}</span><span className="gfd-pay-a">+<Money value={p.amount_paid} /></span></div>
           ))}
-        {payOpen ? (
-          <form onSubmit={submitPay} className="gfd-payform">
-            <input type="number" step="0.01" max={remaining} placeholder={`الحدّ ${remaining}`} value={amt} onChange={(e) => setAmt(e.target.value)} required />
-            <button disabled={busy} type="submit">حفظ</button>
-            <button type="button" onClick={() => setPayOpen(false)}><X size={14} /></button>
-          </form>
-        ) : (
-          <button className="gfd-mini" onClick={() => setPayOpen(true)}><Plus size={13} /> تسجيل دفعة</button>
+        {/* === تعديل: إظهار تسجيل الدفعة للمحاسب فقط === */}
+        {isAccountant && (
+          payOpen ? (
+            <form onSubmit={submitPay} className="gfd-payform">
+              <input type="number" step="0.01" max={remaining} placeholder={`الحدّ ${remaining}`} value={amt} onChange={(e) => setAmt(e.target.value)} required />
+              <button disabled={busy} type="submit">حفظ</button>
+              <button type="button" onClick={() => setPayOpen(false)}><X size={14} /></button>
+            </form>
+          ) : (
+            <button className="gfd-mini" onClick={() => setPayOpen(true)}><Plus size={13} /> تسجيل دفعة</button>
+          )
         )}
+        {/* === نهاية التعديل === */}
       </div>
 
       {/* ملفات */}
@@ -285,19 +294,38 @@ function RowActions({ inv, onChanged }) {
           : files.map((f, i) => (
             <a key={i} href={f.file} target="_blank" rel="noreferrer" className="gfd-file"><FileText size={13} /> {f.file?.split('/').pop()}</a>
           ))}
-        <input ref={fileRef} type="file" hidden onChange={upload} />
-        <button className="gfd-mini" onClick={() => fileRef.current?.click()} disabled={busy}><Upload size={13} /> إرفاق PDF</button>
+        
+        {/* === تعديل: إظهار إرفاق الملفات للمحاسب فقط === */}
+        {isAccountant && (
+          <>
+            <input ref={fileRef} type="file" hidden onChange={upload} />
+            <button className="gfd-mini" onClick={() => fileRef.current?.click()} disabled={busy}><Upload size={13} /> إرفاق PDF</button>
+          </>
+        )}
+        {/* === نهاية التعديل === */}
       </div>
 
       {/* حالة + إلغاء */}
       <div className="gfd-act-block">
         <div className="gfd-act-h"><Clock size={14} /> الحالة</div>
-        <select className="gfd-status-sel" value={status} onChange={(e) => changeStatus(e.target.value)}>
-          {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-        {inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (
+        
+        {/* === تعديل: إذا لم يكن محاسباً نعرض الحالة كنص فقط بدون select === */}
+        {isAccountant ? (
+          <select className="gfd-status-sel" value={status} onChange={(e) => changeStatus(e.target.value)}>
+            {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        ) : (
+          <span className={`gfd-badge t-${STATUS_META[inv.status]?.tone || 'slate'}`} style={{ alignSelf: 'flex-start' }}>
+            {STATUS_META[inv.status]?.label || status}
+          </span>
+        )}
+        {/* === نهاية التعديل === */}
+
+        {/* === تعديل: إظهار زر إلغاء الفاتورة للمحاسب فقط === */}
+        {isAccountant && inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (
           <button className="gfd-mini rose" onClick={cancel}><Trash2 size={13} /> إلغاء الفاتورة</button>
         )}
+        {/* === نهاية التعديل === */}
       </div>
     </div>
   );

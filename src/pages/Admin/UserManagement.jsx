@@ -112,7 +112,6 @@ const UserManagement = () => {
                   <th className="p-4">Role</th>
                   <th className="p-4">Department</th>
                   <th className="p-4">Status</th>
-                  <th className="p-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -138,22 +137,7 @@ const UserManagement = () => {
                           {u.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="p-4">
-                        {isManager && u.id !== user?.id && (
-                          <div className="flex space-x-2">
-                            <button className="text-blue-600 hover:text-blue-800 transition-colors" title="Edit">
-                              <Edit size={16} />
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(u.id, u.username)}
-                              className="text-red-600 hover:text-red-800 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
+
                     </tr>
                   );
                 })}

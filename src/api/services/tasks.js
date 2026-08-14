@@ -29,3 +29,6 @@ export const updateTaskPriority = (id, data) => apiClient.patch(`tasks/${id}/upd
 
 // Assignment History
 export const getAssignmentHistory = (id) => apiClient.get(`tasks/${id}/assignment-history/`);
+
+export const getTaskFormOptions = (params) =>
+  apiClient.get('tasks/form-options/', { params });

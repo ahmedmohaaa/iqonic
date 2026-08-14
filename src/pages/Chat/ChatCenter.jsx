@@ -40,7 +40,35 @@ export default function ChatCenter() {
   const [mobileList, setMobileList] = useState(true);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+const [convQuery, setConvQuery] = useState('');
 
+
+// ✅ تصفير عداد الرسائل غير المقروءة فور فتح المحادثة
+// ✅ تصفير عداد الرسائل غير المقروءة عند فتح المحادثة، ومنع ظهور الرقم لرسالة أرسلتها أنت
+useEffect(() => {
+  if (!user?.id) return;
+
+  setConvs((prev) => {
+    let changed = false;
+
+    const next = prev.map((conv) => {
+      const isOpen = active?.id === conv.id;
+
+      const lastMessageIsMine =
+        conv.last_message?.sender_id === user.id ||
+        conv.last_message?.sender === user.id;
+
+      if ((isOpen || lastMessageIsMine) && conv.unread_count > 0) {
+        changed = true;
+        return { ...conv, unread_count: 0 };
+      }
+
+      return conv;
+    });
+
+    return changed ? next : prev;
+  });
+}, [convs, active?.id, user?.id]);
   /* ── تحميل المحادثات والمستخدمين ── */
   const loadConvs = useCallback(() => {
     getConversations().then((r) => setConvs(r.data.results || r.data || [])).catch(() => {});
@@ -119,7 +147,14 @@ export default function ChatCenter() {
   }, [users, draft, mentions]);
 
   const typeLabel = { DIRECT: 'محادثة خاصة', GENERAL: 'بث للجميع', PROJECT: 'غرفة مشروع' };
-
+const filteredConvs = useMemo(() => {
+  const q = convQuery.trim().toLowerCase();
+  if (!q) return convs;
+  
+  return convs.filter((c) => 
+    c.display_name?.toLowerCase().includes(q)
+  );
+}, [convs, convQuery]);
   return (
     <div className="cha" dir="rtl">
       <style>{CSS}</style>
@@ -135,13 +170,24 @@ export default function ChatCenter() {
           </div>
         </div>
 
-        <div className="cha-search"><Search size={14} /><input placeholder="ابحث في المحادثات…" /></div>
+<div className="cha-search">
+  <Search size={14} />
+  <input 
+    placeholder="ابحث في المحادثات…" 
+    value={convQuery}
+    onChange={(e) => setConvQuery(e.target.value)}
+  />
+</div>
+<div className="cha-conv-list">
+  {convs.length === 0 && <p className="cha-empty-side">لا محادثات بعد — ابدأ واحدة جديدة.</p>}
+  {convs.length > 0 && filteredConvs.length === 0 && (
+    <p className="cha-empty-side">لا توجد محادثات مطابقة للبحث.</p>
+  )}
+  
+  {filteredConvs.map((c) => {
+    const on = active?.id === c.id;
+    const lm = c.last_message;
 
-        <div className="cha-conv-list">
-          {convs.length === 0 && <p className="cha-empty-side">لا محادثات بعد — ابدأ واحدة جديدة.</p>}
-          {convs.map((c) => {
-            const on = active?.id === c.id;
-            const lm = c.last_message;
             return (
               <button key={c.id} className={`cha-conv ${on ? 'on' : ''}`} onClick={() => openConv(c)}>
                 <Avatar name={c.display_name} tone={c.avatar_tone} />

@@ -32,3 +32,7 @@ export const getTaskReport = (params) =>
 // التقرير المالي (FinancialReportAPIView → path: reports/financial/)
 export const getFinancialReport = (params) =>
   apiClient.get('reports/financial/', { params });
+
+
+export const engineerRespondToReplacement = (id, data) => apiClient.patch(`replacement-requests/${id}/engineer-respond/`, data);
+

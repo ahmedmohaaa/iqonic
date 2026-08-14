@@ -52,7 +52,7 @@ const ClientDetailsModal = ({ client, onClose }) => {
                 <tbody>
                   {projects.map(proj => (
                     <tr key={proj.id} className="border-b bg-gray-50">
-                      <td className="p-3 font-mono text-xs">{proj.project_no}</td>
+                      <td className="p-3 text-black font-mono text-xs">{proj.project_no}</td>
                       <td className="p-3 font-semibold text-gray-800">{proj.name}</td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded-full text-xs ${

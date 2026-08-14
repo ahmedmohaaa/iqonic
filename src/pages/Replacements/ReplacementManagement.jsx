@@ -5,28 +5,44 @@ import { UserX, Briefcase, HardHat, Loader, AlertCircle } from 'lucide-react';
 import ReplacementCard from './components/ReplacementCard';
 import RespondModal from './components/RespondModal';
 
+const SUPERVISION_TAB_ALLOWED_USERNAMES = ['ahmed.zabady'];
+const MANAGER_ROLES = ['SUP_MGR', 'PM', 'DESIGN_MGR', 'GM', 'AGM'];
+
 const ReplacementManagement = () => {
   const { user } = useAuth();
+  const canViewSupervisionTab = SUPERVISION_TAB_ALLOWED_USERNAMES.includes(user?.username);
+
   const [activeTab, setActiveTab] = useState('tasks');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState('task'); // 'task' or 'supervision'
+  const [modalType, setModalType] = useState('task');
 
   const tabs = [
     { id: 'tasks', label: 'Task Replacements', icon: Briefcase, fetchFn: getTaskReplacementRequests },
-    { id: 'supervision', label: 'Supervision Team Replacements', icon: HardHat, fetchFn: getSupervisionReplacementRequests },
+    ...(canViewSupervisionTab
+      ? [{ id: 'supervision', label: 'Supervision Team Replacements', icon: HardHat, fetchFn: getSupervisionReplacementRequests }]
+      : []),
   ];
 
   useEffect(() => {
-    const currentTab = tabs.find(t => t.id === activeTab);
+    const currentTab = tabs.find((t) => t.id === activeTab) || tabs[0];
+    if (!currentTab) return;
+
     setLoading(true);
     currentTab.fetchFn({ status: 'PENDING' })
-      .then(res => setRequests(res.data.results || res.data))
-      .catch(err => console.error(err))
+      .then((res) => setRequests(res.data.results || res.data))
+      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [activeTab]);
+  }, [activeTab, canViewSupervisionTab]);
+
+  // ═══ من يقدر يرد: المهندس المقترح أو المدير ═══
+  const canRespond = (req) => {
+    const isManager = MANAGER_ROLES.includes(user?.role);
+    const isSuggestedEngineer = user?.id === req.suggested_engineer?.id;
+    return isManager || isSuggestedEngineer;
+  };
 
   const handleRespond = (request, type) => {
     setSelectedRequest(request);
@@ -35,9 +51,10 @@ const ReplacementManagement = () => {
   };
 
   const refreshData = () => {
-    const currentTab = tabs.find(t => t.id === activeTab);
+    const currentTab = tabs.find((t) => t.id === activeTab) || tabs[0];
+    if (!currentTab) return;
     currentTab.fetchFn({ status: 'PENDING' })
-      .then(res => setRequests(res.data.results || res.data));
+      .then((res) => setRequests(res.data.results || res.data));
   };
 
   return (
@@ -45,9 +62,11 @@ const ReplacementManagement = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center">
           <UserX className="mr-2 text-red-500" size={28} />
-          Replacement Requests Management
+          Replacement Requests
         </h1>
-        <p className="text-sm text-gray-500">Review and respond to engineer replacement requests.</p>
+        <p className="text-sm text-gray-500">
+          Review and respond to engineer replacement requests.
+        </p>
       </div>
 
       {/* Tabs */}
@@ -57,10 +76,10 @@ const ReplacementManagement = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === tab.id
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 text-gray-700 border-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               <tab.icon size={18} className="mr-2" />
@@ -72,7 +91,9 @@ const ReplacementManagement = () => {
 
       {/* Requests List */}
       {loading ? (
-        <div className="flex justify-center py-12"><Loader className="animate-spin text-primary" size={32} /></div>
+        <div className="flex justify-center py-12">
+          <Loader className="animate-spin text-primary" size={32} />
+        </div>
       ) : requests.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow-sm">
           <AlertCircle className="mx-auto text-gray-400 mb-3" size={40} />
@@ -80,12 +101,13 @@ const ReplacementManagement = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {requests.map(req => (
-            <ReplacementCard 
-              key={req.id} 
-              request={req} 
+          {requests.map((req) => (
+            <ReplacementCard
+              key={req.id}
+              request={req}
               type={activeTab}
-              onRespond={() => handleRespond(req, activeTab)} 
+              canRespond={canRespond(req)}
+              onRespond={() => handleRespond(req, activeTab)}
             />
           ))}
         </div>
@@ -93,14 +115,14 @@ const ReplacementManagement = () => {
 
       {/* Respond Modal */}
       {showModal && (
-        <RespondModal 
-          request={selectedRequest} 
+        <RespondModal
+          request={selectedRequest}
           type={modalType}
-          onClose={() => setShowModal(false)} 
+          onClose={() => setShowModal(false)}
           onSuccess={() => {
             setShowModal(false);
             refreshData();
-          }} 
+          }}
         />
       )}
     </div>

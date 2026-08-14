@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { 
   ListTodo, Search, Filter, Loader, Plus, 
   AlertCircle, CheckCircle, Clock, PauseCircle,
-  User, Calendar, Flag
+  User, Calendar, Flag, GitBranch
 } from 'lucide-react';
 import PriorityDragDrop from './components/PriorityDragDrop';
 
@@ -21,12 +21,13 @@ const AllTasks = () => {
     priority: '',
     stage: '',
     is_on_hold: '',
+    department: '',
   });
   const [showFilters, setShowFilters] = useState(false);
   const [pagination, setPagination] = useState({ count: 0, next: null, previous: null });
   const [currentPage, setCurrentPage] = useState(1);
 
-  const canManage = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'SENIOR_ENG'].includes(user?.role);
+  const canManage = !!user;
 
   useEffect(() => {
     fetchTasks();
@@ -37,7 +38,6 @@ const AllTasks = () => {
     try {
       const params = { page: currentPage, page_size: 20 };
       
-      // إضافة الفلاتر غير الفارغة
       if (filters.search) params.search = filters.search;
       if (filters.project) params.project = filters.project;
       if (filters.assigned_to) params.assigned_to = filters.assigned_to;
@@ -45,7 +45,7 @@ const AllTasks = () => {
       if (filters.priority) params.priority = filters.priority;
       if (filters.stage) params.stage = filters.stage;
       if (filters.is_on_hold) params.is_on_hold = filters.is_on_hold;
-
+      if (filters.department) params.department = filters.department;
       const res = await getAllTasks(params);
       setTasks(res.data.results || res.data);
       setPagination({
@@ -93,6 +93,11 @@ const AllTasks = () => {
     return <AlertCircle size={14} />;
   };
 
+  const isUpdated = (task) => {
+    if (!task.updated_at || !task.created_at) return false;
+    return new Date(task.updated_at).getTime() !== new Date(task.created_at).getTime();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -126,11 +131,11 @@ const AllTasks = () => {
       <div className="bg-white p-4 rounded-lg shadow-sm">
         <div className="flex items-center space-x-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-2.5 text-gray-600" size={18} />
             <input
               type="text"
               placeholder="Search by task title, project name, or engineer..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
             />
@@ -149,11 +154,11 @@ const AllTasks = () => {
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4 pt-4 border-t">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+              <label className="block text-xs font-semibold text-gray-800 mb-1">Status</label>
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm bg-white"
+                className="w-full border border-gray-300 rounded-lg p-2 text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               >
                 <option value="">All Statuses</option>
                 <option value="UNCHARTED">Uncharted</option>
@@ -165,11 +170,11 @@ const AllTasks = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Priority</label>
+              <label className="block text-xs font-semibold text-gray-800 mb-1">Priority</label>
               <select
                 value={filters.priority}
                 onChange={(e) => handleFilterChange('priority', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm bg-white"
+                className="w-full border border-gray-300 rounded-lg p-2 text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               >
                 <option value="">All Priorities</option>
                 <option value="URGENT">Urgent</option>
@@ -179,11 +184,11 @@ const AllTasks = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Stage</label>
+              <label className="block text-xs font-semibold text-gray-800 mb-1">Stage</label>
               <select
                 value={filters.stage}
                 onChange={(e) => handleFilterChange('stage', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm bg-white"
+                className="w-full border border-gray-300 rounded-lg p-2 text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               >
                 <option value="">All Stages</option>
                 <option value="CONCEPT">Concept</option>
@@ -193,31 +198,46 @@ const AllTasks = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">On Hold</label>
+              <label className="block text-xs font-semibold text-gray-800 mb-1">On Hold</label>
               <select
                 value={filters.is_on_hold}
                 onChange={(e) => handleFilterChange('is_on_hold', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm bg-white"
+                className="w-full border border-gray-300 rounded-lg p-2 text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               >
                 <option value="">All</option>
                 <option value="true">On Hold Only</option>
                 <option value="false">Active Only</option>
               </select>
             </div>
-            <div className="md:col-span-2 flex items-end">
-              <button
-                onClick={() => {
-                  setFilters({
-                    search: '',
-                    project: '',
-                    assigned_to: '',
-                    status: '',
-                    priority: '',
-                    stage: '',
-                    is_on_hold: '',
-                  });
-                  setCurrentPage(1);
-                }}
+                 <div>
+          <label className="block text-xs font-semibold text-gray-800 mb-1">Department</label>
+          <select
+            value={filters.department}
+            onChange={(e) => handleFilterChange('department', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg p-2 text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+          >
+            <option value="">All Departments</option>
+            <option value="MECH">Mechanical</option>
+            <option value="ELEC">Electrical</option>
+            <option value="STRUCT">Structural</option>
+            <option value="ARCH">Architectural</option>
+          </select>
+        </div>
+        <div className="md:col-span-2 flex items-end">
+          <button
+            onClick={() => {
+              setFilters({
+                search: '',
+                project: '',
+                assigned_to: '',
+                status: '',
+                priority: '',
+                stage: '',
+                is_on_hold: '',
+                department: '',
+              });
+              setCurrentPage(1);
+            }}
                 className="w-full px-4 py-2 border border-red-300 text-red-600 rounded-lg bg-red-50 text-sm"
               >
                 Clear All Filters
@@ -249,6 +269,8 @@ const AllTasks = () => {
               <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
                 <tr>
                   <th className="p-4">Task</th>
+                      <th className="p-4">Discipline</th>  
+
                   <th className="p-4">Project</th>
                   <th className="p-4">Assigned To</th>
                   <th className="p-4">Stage</th>
@@ -283,6 +305,11 @@ const AllTasks = () => {
                       </div>
                     </td>
                     <td className="p-4">
+  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-medium">
+    {task.discipline_name || '—'}
+  </span>
+</td>
+                    <td className="p-4">
                       <div>
                         <p className="font-medium text-gray-800">{task.project_name}</p>
                         <p className="text-xs text-gray-500 font-mono">{task.project_no}</p>
@@ -306,10 +333,17 @@ const AllTasks = () => {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)}`}>
-                        {getStatusIcon(task.status)}
-                        <span>{task.status.replace('_', ' ')}</span>
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)}`}>
+                          {getStatusIcon(task.status)}
+                          <span>{task.status.replace('_', ' ')}</span>
+                        </span>
+                        {isUpdated(task) && (
+                          <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ring-1 ring-blue-200">
+                            Updated
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center space-x-1">
@@ -331,12 +365,21 @@ const AllTasks = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <Link 
-                        to={`/tasks/${task.id}`}
-                        className="text-primary text-blue-800 text-xs font-semibold"
-                      >
-                        View Details →
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link 
+                          to={`/tasks/${task.id}`}
+                          className="text-primary text-blue-800 text-xs font-semibold hover:underline"
+                        >
+                          View Details →
+                        </Link>
+                        <Link 
+                          to={`/tasks/${task.id}/edit`}
+                          className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold transition shadow-sm"
+                        >
+                          <GitBranch size={12} />
+                          Change Order
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

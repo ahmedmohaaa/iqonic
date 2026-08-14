@@ -124,7 +124,7 @@ const NotesSection = ({ projectId }) => {
         <textarea 
           value={newNote}
           onChange={e => setNewNote(e.target.value)}
-          placeholder="Write a note... Use @all to mention everyone."
+          placeholder="Write a note..."
           className="w-full border rounded-lg p-2 text-sm mb-2"
           rows="3"
         />

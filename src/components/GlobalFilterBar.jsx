@@ -83,19 +83,7 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
           </select>
         </div>
 
-        {/* Status */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-          <select
-            value={filters.is_active}
-            onChange={(e) => handleChange('is_active', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          >
-            <option value="" className="text-gray-900 bg-white">All Statuses</option>
-            <option value="true" className="text-gray-900 bg-white">Active</option>
-            <option value="false" className="text-gray-900 bg-white">Closed</option>
-          </select>
-        </div>
+  
 
         {/* Priority */}
         <div>
@@ -129,23 +117,26 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
         </div>
 
         {/* Stage */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Lifecycle Stage</label>
-          <select
-            value={filters.stage}
-            onChange={(e) => handleChange('stage', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          >
-            <option value="" className="text-gray-900 bg-white">All Stages</option>
-            <option value="OFFER" className="text-gray-900 bg-white">RFQ / Offer</option>
-            <option value="CONTRACT_SUBMITTED" className="text-gray-900 bg-white">Contract Submitted</option>
-            <option value="CONTRACT_SIGNED" className="text-gray-900 bg-white">Contract Signed</option>
-            <option value="DESIGN_PHASE" className="text-gray-900 bg-white">Design Phase</option>
-            <option value="COLLECTION" className="text-gray-900 bg-white">Collection</option>
-            <option value="CLOSED" className="text-gray-900 bg-white">Closed</option>
-          </select>
-        </div>
-
+           {/* Stage */}
+     <div>
+       <label className="block text-xs font-semibold text-gray-700 mb-1">Lifecycle Stage</label>
+       <select
+         value={filters.stage}
+         onChange={(e) => handleChange('stage', e.target.value)}
+         className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+       >
+         <option value="" className="text-gray-900 bg-white">All Stages</option>
+         <option value="OFFER" className="text-gray-900 bg-white">RFQ / Offer</option>
+         <option value="CONTRACT_SUBMITTED" className="text-gray-900 bg-white">Contract Submitted</option>
+         <option value="CONTRACT_SIGNED" className="text-gray-900 bg-white">Contract Signed</option>
+         <option value="CONCEPT" className="text-gray-900 bg-white">Concept Design</option>
+         <option value="DC1" className="text-gray-900 bg-white">DC1</option>
+         <option value="DC2" className="text-gray-900 bg-white">DC2</option>
+         <option value="TENDER" className="text-gray-900 bg-white">Tender Documents</option>
+         <option value="COLLECTION" className="text-gray-900 bg-white">Collection</option>
+         <option value="CLOSED" className="text-gray-900 bg-white">Closed</option>
+       </select>
+     </div>
         {/* Date Range */}
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date From</label>
@@ -172,3 +163,5 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
 };
 
 export default GlobalFilterBar;
+
+     

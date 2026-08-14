@@ -14,7 +14,7 @@ const ExternalLogs = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterProject, setFilterProject] = useState('');
-  const isSupervisionStaff = ['SUP_MGR', 'PM', 'ENGINEER', 'SENIOR_ENG', 'DRAFTSMAN', 'SECRETARY'].includes(user?.role);
+  const isSupervisionStaff = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'].includes(user?.role);
 
   useEffect(() => {
     fetchLogs();

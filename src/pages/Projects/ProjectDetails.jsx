@@ -10,58 +10,64 @@ import {
   ArrowLeft, Hash, Building2, Calendar, MapPin, Clock, Flag, Lock, FileText,
   Upload, StickyNote, Send, AtSign, CheckCircle2, Circle, AlertTriangle,
   Hammer, Wrench, Pencil, X, DollarSign, Layers, Activity, ChevronRight,
-  Workflow, Sparkles, Link2,Zap
+  Workflow, Sparkles, Link2, Zap, User
 } from 'lucide-react';
 import { activateInternalReview } from '../../api/services/internalReview';
+
 /* ═══════════════════════════════════════════════════════════════
-   خريطة الحالات → لون/تسمية (مصدر واحد للواجهة كلها)
-   ═══════════════════════════════════════════════════════════════ */
+Status map → color/label (single source of truth for the whole UI)
+═══════════════════════════════════════════════════════════════ */
 const SM = {
-  NOT_STARTED:    { c: 'slate',   t: 'لم يبدأ' },
-  PENDING:        { c: 'slate',   t: 'معلّق' },
-  UPCOMING:       { c: 'slate',   t: 'قادم' },
-  IN_PROGRESS:    { c: 'amber',   t: 'قيد التنفيذ' },
-  ON_GOING:       { c: 'amber',   t: 'جارٍ' },
-  COMPLETED:      { c: 'emerald', t: 'مكتمل' },
-  ACHIEVED:       { c: 'emerald', t: 'مُنجَز' },
-  APPROVED:       { c: 'emerald', t: 'معتمَد' },
-  PAID:           { c: 'emerald', t: 'مسدّد' },
-  PARTIALLY_PAID: { c: 'amber',   t: 'مسدّد جزئياً' },
-  ISSUED:         { c: 'sky',     t: 'مُصدَر' },
-  DRAFT:          { c: 'slate',   t: 'مسوّدة' },
-  OVERDUE:        { c: 'rose',    t: 'متأخر' },
-  ON_HOLD:        { c: 'rose',    t: 'موقوف' },
+  NOT_STARTED:    { c: 'slate',   t: 'Not Started' },
+  PENDING:        { c: 'slate',   t: 'Pending' },
+  UPCOMING:       { c: 'slate',   t: 'Upcoming' },
+  IN_PROGRESS:    { c: 'amber',   t: 'In Progress' },
+  ON_GOING:       { c: 'amber',   t: 'On Going' },
+  COMPLETED:      { c: 'emerald', t: 'Completed' },
+  ACHIEVED:       { c: 'emerald', t: 'Achieved' },
+  APPROVED:       { c: 'emerald', t: 'Approved' },
+  PAID:           { c: 'emerald', t: 'Paid' },
+  PARTIALLY_PAID: { c: 'amber',   t: 'Partially Paid' },
+  ISSUED:         { c: 'sky',     t: 'Issued' },
+  DRAFT:          { c: 'slate',   t: 'Draft' },
+  OVERDUE:        { c: 'rose',    t: 'Overdue' },
+  ON_HOLD:        { c: 'rose',    t: 'On Hold' },
 };
 const meta = (s) => SM[s] || { c: 'slate', t: s || '—' };
 
-/* ── صلاحيات الصفحة (مطابقة لـ permissions.py حرفياً) ─────── */
+/* ── Page permissions (mirror permissions.py literally) ─────── */
 function usePerms(user, project) {
-  const r = user?.role, u = user?.username, d = user?.department;
+  const r = user?.role;
+  const u = user?.username;
+  const d = user?.department;
   const isMgmt = r === 'GM' || r === 'AGM';
   const isDMgr = r === 'DESIGN_MGR';
   const isAcc = r === 'ACCOUNTANT';
   const isSec = r === 'SECRETARY';
-  const designMgrs = isMgmt || isDMgr; 
-const isSupMgr = r === 'SUP_MGR' || r === 'PM';
-return {
-    canManageOffer: ['GM','AGM','DESIGN_MGR'].includes(r) || (isSec && (d === 'Design' || d === 'Management')),
-    canEditInfo:     designMgrs || (isSec && (d === 'Design' || d === 'Management')),
-    canEditLifecycle:r === 'DESIGN_MGR' || r === 'AGM' || r === 'GM',
-    canEditTender:   r === 'AGM',                       // نسرين فقط
+  const isManagementSecretary = isSec && d === 'Management';
+  const designMgrs = isMgmt || isDMgr;
+  const isSupMgr = r === 'SUP_MGR' || r === 'PM';
+  return {
+    canManageOffer: isMgmt || isDMgr || isManagementSecretary,
+    canEditInfo: designMgrs || isManagementSecretary,
+    canEditLifecycle: r === 'DESIGN_MGR' || r === 'AGM' || r === 'GM',
+    canEditTender: r === 'AGM',
     canEditPriority: designMgrs,
-    canSeeContract:  isMgmt || isAcc,
-    canSeeNumbers:   isMgmt || isAcc || isDMgr || r === 'SUP_MGR' || r === 'PM',
-    canAddInvoice:   isMgmt || isAcc,
-    canEditStruct:   u === 'mohammad.mostafa' || isMgmt || isDMgr,
-    canEditIFC:      u === 'shaaban.karam' || isMgmt || isDMgr,
-canManageChangeOrder: isMgmt || isDMgr || isSupMgr || (isSec && (d === 'Design' || d === 'Management' || d === 'Supervision')),
-canConfirmChangeOrder: isMgmt || isDMgr,
-
+    canSeeContract: isMgmt || isAcc || isManagementSecretary,
+    canUploadContract: isMgmt || isManagementSecretary,
+    canSeeNumbers: isMgmt || isAcc || isDMgr || isSupMgr,
+    canAddInvoice: isMgmt || isAcc,
+    canEditStruct: u === 'mohammad.mostafa' || isMgmt || isDMgr,
+    canEditIFC: u === 'shaaban.karam' || isMgmt || isDMgr,
+    canManageChangeOrder:
+      isMgmt || isDMgr || isSupMgr ||
+      (isSec && ['Design', 'Management', 'Supervision'].includes(d)),
+    canConfirmChangeOrder: isMgmt || isDMgr,
     canActivateReview: ['SUP_MGR', 'PM', 'GM', 'AGM'].includes(r),
   };
 }
 
-/* ── خطّافات حيّة ─────────────────────────────────────────── */
+/* ── Live hooks ─────────────────────────────────────────── */
 function CountUp({ value, dec = 0, suffix = '' }) {
   const [n, setN] = useState(0);
   useEffect(() => {
@@ -69,13 +75,14 @@ function CountUp({ value, dec = 0, suffix = '' }) {
     let raf;
     const tick = (t) => {
       const p = Math.min(1, (t - start) / 900), e = 1 - Math.pow(1 - p, 3);
-      setN((to) * e); if (p < 1) raf = requestAnimationFrame(tick);
+      setN(to * e); if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [value]);
   return <>{dec ? n.toFixed(dec) : Math.round(n).toLocaleString('en-US')}{suffix}</>;
 }
+
 function useReveal(deps) {
   const ref = useRef(null);
   useEffect(() => {
@@ -89,6 +96,132 @@ function useReveal(deps) {
   return ref;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+Project Tasks by Stage & Department
+═══════════════════════════════════════════════════════════════ */
+function CompletedTasksSection({ tasks, user, onReload }) {
+  const [showModal, setShowModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  // The update button is hidden from everyone (not needed)
+  const canEdit = false;
+  const stages = [
+    { key: 'CONCEPT', label: 'Concept Design' },
+    { key: 'DC1',     label: 'DC1' },
+    { key: 'DC2',     label: 'DC2' },
+  ];
+  const deptMeta = {
+    ARCH:   { label: 'Architectural', color: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200' },
+    ELEC:   { label: 'Electrical',    color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+    MECH:   { label: 'Mechanical',    color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200' },
+    STRUCT: { label: 'Structural',    color: 'text-red-700',    bg: 'bg-red-50',    border: 'border-red-200' },
+  };
+  const statusMeta = {
+    UNCHARTED:   { label: 'Uncharted',   dot: 'bg-gray-400' },
+    UNDER_STUDY: { label: 'Under Study', dot: 'bg-blue-400' },
+    COMMENT:     { label: 'Comment',     dot: 'bg-indigo-400' },
+    ON_GOING:    { label: 'On Going',    dot: 'bg-amber-400' },
+    COMPLETED:   { label: 'Completed',   dot: 'bg-emerald-500' },
+    APPROVED:    { label: 'Approved',    dot: 'bg-emerald-600' },
+    ON_HOLD:     { label: 'On Hold',     dot: 'bg-rose-500' },
+  };
+  const openUpdate = (task) => {
+    setSelectedTask(task);
+    setShowModal(true);
+  };
+  const submitStatus = async (newStatus) => {
+    if (!selectedTask) return;
+    try {
+      await apiClient.patch(`tasks/${selectedTask.id}/status/`, { status: newStatus });
+      setShowModal(false);
+      onReload?.();
+    } catch (err) {
+      alert('Failed to update status');
+    }
+  };
+  return (
+    <div className="space-y-5">
+      {stages.map(({ key, label }) => {
+        // All tasks of the stage (regardless of status)
+        const stageTasks = (tasks || []).filter(t => t.stage === key);
+        if (stageTasks.length === 0) return null;
+        // Group by department (ARCH / ELEC / MECH / STRUCT)
+        const byDept = {};
+        stageTasks.forEach(t => {
+          const dept = t.discipline_code || 'GENERAL';
+          if (!byDept[dept]) byDept[dept] = [];
+          byDept[dept].push(t);
+        });
+        return (
+          <div key={key} className="border border-gray-200 rounded-xl p-4 bg-white">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">{label}</h4>
+            <div className="space-y-4">
+              {Object.entries(byDept).map(([dept, deptTasks]) => {
+                const dm = deptMeta[dept] || { label: dept, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' };
+                return (
+                  <div key={dept} className={`rounded-lg border ${dm.border} ${dm.bg} p-3`}>
+                    <h5 className={`text-xs font-bold mb-2 ${dm.color}`}>{dm.label}</h5>
+                    <div className="space-y-2">
+                      {deptTasks.map(task => {
+                        const sm = statusMeta[task.status] || statusMeta.UNCHARTED;
+                        return (
+                          <div key={task.id} className="flex items-start justify-between gap-3 p-2.5 rounded-md bg-white border border-gray-100">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-800 truncate">
+                                {task.title || task.discipline_name}
+                              </p>
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-600">
+                                <span className="inline-flex items-center gap-1">
+                                  <span className={`w-2 h-2 rounded-full ${sm.dot}`} />
+                                  <span className="font-medium">{sm.label}</span>
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <User size={12} /> {task.assigned_to_name || '—'}
+                                </span>
+                                {task.work_type_display && (
+                                  <span className="text-sky-600 font-medium">{task.work_type_display}</span>
+                                )}
+                              </div>
+                            </div>
+                            {canEdit && (
+                              <button onClick={() => openUpdate(task)} className="pd-mini shrink-0">
+                                <Pencil size={12} className="mr-1" /> Update
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {showModal && selectedTask && (
+        <Modal title="Update Task Status" onClose={() => setShowModal(false)}>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-2">
+              Task: <b>{selectedTask.title || selectedTask.discipline_name}</b>
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {['UNCHARTED', 'UNDER_STUDY', 'COMMENT', 'ON_GOING', 'COMPLETED', 'APPROVED', 'ON_HOLD'].map(st => (
+                <button
+                  key={st}
+                  className="pd-mini w-full justify-center"
+                  onClick={() => submitStatus(st)}
+                >
+                  {statusMeta[st]?.label || st}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════ */
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -96,27 +229,28 @@ export default function ProjectDetails() {
   const [p, setP] = useState(null);
   const [loading, setLoading] = useState(true);
   const wrap = useReveal([p]);
-
-  // حالات محلية للنوافذ
+  // Local modal states
   const [holdOpen, setHoldOpen] = useState(false);
   const [holdReason, setHoldReason] = useState('');
   const [prioOpen, setPrioOpen] = useState(false);
   const [prioForm, setPrioForm] = useState({ priority: 'MEDIUM', reason: '' });
   const [note, setNote] = useState('');
   const [contractFile, setContractFile] = useState(null);
-
   const P = usePerms(user, p);
-
+  // Internal Review action button: Ahmed Zabady (Supervision Mgr) or Supervision Secretary ONLY
+  const canReviewAction =
+    user?.username === 'ahmed.zabady' ||
+    (user?.role === 'SECRETARY' && user?.department === 'Supervision');
+  const canEditTasks = false;
   const load = () => {
     setLoading(true);
     getProjectDetails(id).then((r) => setP(r.data)).catch(() => setP(null)).finally(() => setLoading(false));
   };
   useEffect(() => { load(); }, [id]);
+  if (loading) return <div className="pd-root"><style>{CSS}</style><div className="pd-load"><Layers className="pd-spin" /> Loading project…</div></div>;
+  if (!p) return <div className="pd-root"><style>{CSS}</style><div className="pd-load">Project not found</div></div>;
 
-  if (loading) return <div className="pd-root"><style>{CSS}</style><div className="pd-load"><Layers className="pd-spin" /> جارٍ تحميل المشروع…</div></div>;
-  if (!p) return <div className="pd-root"><style>{CSS}</style><div className="pd-load">المشروع غير موجود</div></div>;
-
-  /* ── حساب حالات الأزرار الأربعة ─────────────────────── */
+  /* ── Compute the four flag states ─────────────────────── */
   const lc = (name) => (p.lifecycle_stages || []).find((s) => s.stage_name === name);
   const dc1 = p.dc1_status || {}, dc2 = p.dc2_status || {};
   const dc1Approved = lc('DC1')?.status === 'ACHIEVED';
@@ -128,13 +262,12 @@ export default function ProjectDetails() {
   const struct = p.structural_status || {}, ifc = p.ifc_status || {};
   const structState = struct.status || 'PENDING';
   const ifcState = ifc.status || 'NOT_STARTED';
-
   const overall = p.is_active ? 'ACTIVE' : 'CLOSED';
   const stages = [...(p.lifecycle_stages || [])].sort((a, b) => a.sequence_order - b.sequence_order);
   const done = stages.filter((s) => s.status === 'ACHIEVED' || s.status === 'APPROVED').length;
   const pct = stages.length ? Math.round((done / stages.length) * 100) : 0;
 
-  /* ── أفعال ──────────────────────────────────────────── */
+  /* ── Actions ──────────────────────────────────────────── */
   const cycleStruct = () => {
     const order = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
     const next = order[Math.min(order.indexOf(structState) + 1, 2)];
@@ -177,16 +310,14 @@ export default function ProjectDetails() {
     apiClient.post(`projects/${id}/contract-file/upload/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       .then(() => setContractFile(null)).then(load);
   };
-  const canViewFinancials = () =>
-    ['GM', 'AGM', 'ACCOUNTANT'].includes(user?.role);
-  
+  const canViewFinancials = () => ['GM', 'AGM', 'ACCOUNTANT'].includes(user?.role);
+
   return (
-    <div ref={wrap} className="pd-root" dir="rtl">
+    <div ref={wrap} className="pd-root" dir="ltr">
       <style>{CSS}</style>
       <div className="pd-ambient" aria-hidden />
-
       <div className="pd-shell">
-        {/* ── الرأس ─────────────────────────────────── */}
+        {/* ── Header ────────────────────────────────── */}
         <header className="rv pd-head">
           <Link to="/projects" className="pd-back"><ArrowLeft size={18} /></Link>
           <div className="pd-head-main">
@@ -195,146 +326,166 @@ export default function ProjectDetails() {
             <div className="pd-meta">
               <span><Building2 size={13} /> {p.client_name || '—'}</span>
               {p.location && <span><MapPin size={13} /> {p.location}</span>}
-              <span><Calendar size={13} /> {p.start_date || 'لم يبدأ'}</span>
-              {p.duration_days > 0 && <span><Clock size={13} /> {p.duration_days} يوم</span>}
+              <span><Calendar size={13} /> {p.start_date || 'Not started'}</span>
+              {p.duration_days > 0 && <span><Clock size={13} /> {p.duration_days} days</span>}
             </div>
           </div>
           <div className="pd-head-right">
             <Badge c={overall === 'ACTIVE' ? 'emerald' : 'slate'} pulse={overall === 'ACTIVE'}>
-              {overall === 'ACTIVE' ? 'نشط' : 'مغلق'}
+              {overall === 'ACTIVE' ? 'Active' : 'Closed'}
             </Badge>
             <div className="pd-ring-wrap">
               <Ring pct={pct} />
-              <div className="pd-ring-txt"><CountUp value={pct} suffix="%" /><span>إنجاز</span></div>
+              <div className="pd-ring-txt"><CountUp value={pct} suffix="%" /><span>Done</span></div>
             </div>
           </div>
         </header>
 
-        {/* ── ألواح المؤشرات (غير متساوية) ─────────── */}
+        {/* ── Indicator slabs ─────────── */}
         <div className="rv pd-slabs">
-          <Slab label="العميل" v={p.client_name || '—'} />
-          <Slab label="البداية الفعلية" v={p.start_date || 'مرهونة بأول دفعة'} mono />
-          <Slab label="الموقع" v={p.location || '—'} />
+          <Slab label="Client" v={p.client_name || '—'} />
+          <Slab label="Actual Start" v={p.start_date || 'Tied to first payment'} mono />
+          <Slab label="Location" v={p.location || '—'} />
           {P.canSeeNumbers && (
-            <Slab accent label="قيمة العقد" v={<CountUp value={p.contract_value} dec={0} />} money />
+            <Slab accent label="Contract Value" v={<CountUp value={p.contract_value} dec={0} />} money />
           )}
         </div>
 
-        {/* ── التخطيط: محتوى + أزرار عائمة ─────────── */}
+        {/* ── Layout: content + floating buttons ─────────── */}
         <div className="pd-grid">
           <div className="pd-main">
-
-            {/* دورة الحياة */}
-            <Block rv tag="LIFECYCLE" title="دورة حياة المشروع"
-              action={P.canEditLifecycle ? <span className="pd-editable">قابل للتحديث</span> : <span className="pd-readonly">للعرض</span>}>
+            {/* Lifecycle */}
+            <Block rv tag="LIFECYCLE" title="Project Lifecycle"
+              action={P.canEditLifecycle ? <span className="pd-editable">Editable</span> : <span className="pd-readonly">Read-only</span>}>
               <LifecycleRibbon
                 stages={stages}
-                canEdit={P.canEditLifecycle}
+                canEdit={user?.username === 'mohammad.fahmy' || user?.role === 'DESIGN_MGR'}
                 onReload={load}
                 projectId={id}
               />
             </Block>
 
-            {/* الأزرار الأربعة */}
-            <Block rv tag="FLAGS" title="أزرار الحالة والتخصصات">
-              <div className="pd-flags">
-                <FlagCard label="DC1" accent="sky" state={dc1State} pct={dc1Pct}
-                  sub={`${dc1.completed || 0}/${dc1.total || 0} تخصص`} />
-                <FlagCard label="DC2" accent="violet" state={dc2State} pct={dc2Pct}
-                  sub={`${dc2.completed || 0}/${dc2.total || 0} تخصص`} />
-                <FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
-                  interactive={P.canEditStruct} onCycle={cycleStruct}
-                  hold={structState === 'ON_HOLD'} holdInfo={struct}
-                  onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
-                <FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
-                  interactive={P.canEditIFC} onCycle={cycleIFC} />
-           </div>
-         </Block>
+            {/* The four flags */}
+            {p.scope !== 'SUPERVISION' && (
+              <Block rv tag="FLAGS" title="Status & Discipline Flags">
+                <div className="pd-flags">
+                  <FlagCard label="DC1" accent="sky" state={dc1State} pct={dc1Pct}
+                    sub={`${dc1.completed || 0}/${dc1.total || 0} disciplines`} />
+                  <FlagCard label="DC2" accent="violet" state={dc2State} pct={dc2Pct}
+                    sub={`${dc2.completed || 0}/${dc2.total || 0} disciplines`} />
+                  <FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
+                    interactive={P.canEditStruct} onCycle={cycleStruct}
+                    hold={structState === 'ON_HOLD'} holdInfo={struct}
+                    onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
+                  <FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
+                    interactive={P.canEditIFC} onCycle={cycleIFC} />
+                </div>
+              </Block>
+            )}
 
-         {/* ── Change Orders / Revisions ── */}
-         <Block rv tag="CHANGE ORDERS" title="أوامر التغيير / المراجعات (Revisions)"
-           action={P.canManageChangeOrder
-             ? <span className="pd-editable">إدارة مفعّلة</span>
-             : <span className="pd-readonly">للعرض</span>}>
-           <ChangeOrdersPanel
-             parentId={id}
-             parent={p}
-             canManage={P.canManageChangeOrder}
-             canConfirm={P.canConfirmChangeOrder}
-             onReload={load}
-           />
-         </Block>
+            {/* Project tasks by stage & department */}
+            <Block rv tag="TASKS" title="Project Tasks"
+              action={canEditTasks
+                ? <span className="pd-editable">Updates Enabled</span>
+                : <span className="pd-readonly">Read-only</span>}>
+              <CompletedTasksSection
+                tasks={p.tasks || []}
+                user={user}
+                onReload={load}
+              />
+            </Block>
 
-        {p.scope === 'SUPERVISION' && (
-          <Block rv tag="INTERNAL REVIEW" title="المراجعة التصميمية الداخلية"
-            action={p.internal_design_review_required
-              ? <span className="pd-editable">مفعّلة</span>
-              : <span className="pd-readonly">غير مفعّلة</span>}>
-            {p.internal_design_review_required
-              ? <InternalDesignReviewPanel project={p} onReload={load} />
-              : <ActivateReviewCard projectId={id} canActivate={P.canActivateReview} onDone={load} />}
-          </Block>
-        )}
+            {/* ── Change Orders / Revisions ── */}
+            <Block rv tag="CHANGE ORDERS" title="Change Orders / Revisions"
+              action={P.canManageChangeOrder
+                ? <span className="pd-editable">Management enabled</span>
+                : <span className="pd-readonly">Read-only</span>}>
+              <ChangeOrdersPanel
+                parentId={id}
+                parent={p}
+                canManage={P.canManageChangeOrder}
+                canConfirm={P.canConfirmChangeOrder}
+                onReload={load}
+              />
+            </Block>
 
-            {/* الأولوية */}
-            <Block rv tag="PRIORITY" title="أولوية المشروع"
+            {p.scope === 'SUPERVISION' && (
+              <Block rv tag="INTERNAL REVIEW" title="Internal Design Review"
+                action={p.internal_design_review_required
+                  ? <span className="pd-editable">Active</span>
+                  : <span className="pd-readonly">Not activated</span>}>
+                {p.internal_design_review_required
+                  ? <InternalDesignReviewPanel project={p} onReload={load} />
+                  : <ActivateReviewCard projectId={id} canActivate={canReviewAction} onDone={load} />}
+              </Block>
+            )}
+
+            {/* Priority */}
+            <Block rv tag="PRIORITY" title="Project Priority"
               action={P.canEditPriority
-                ? <button className="pd-mini" onClick={() => { setPrioForm({ priority: p.priority, reason: '' }); setPrioOpen(true); }}><Pencil size={13} /> تعديل</button>
-                : <span className="pd-readonly">معروضة للجميع</span>}>
+                ? <button className="pd-mini" onClick={() => { setPrioForm({ priority: p.priority, reason: '' }); setPrioOpen(true); }}><Pencil size={13} /> Edit</button>
+                : <span className="pd-readonly">Visible to all</span>}>
               <PriorityView priority={p.priority} history={p.priority_history} />
             </Block>
 
-            {/* المناقصات */}
-            <Block rv tag="TENDERING" title="بلوك المناقصات"
-              action={P.canEditTender ? <span className="pd-editable">تحرّره نسرين</span> : <span className="pd-readonly">للعرض</span>}>
-              <Tendering t={p.tendering} canEdit={P.canEditTender} onChanged={load} pid={id} />
-            </Block>
+            {/* Tendering */}
+            {p.scope !== 'SUPERVISION' && (
+              <Block rv tag="TENDERING" title="Tendering"
+                action={P.canEditTender ? <span className="pd-editable">Edited by Nisreen</span> : <span className="pd-readonly">Read-only</span>}>
+                <Tendering t={p.tendering} canEdit={P.canEditTender} onChanged={load} pid={id} />
+              </Block>
+            )}
 
-            {/* الحالة المالية — أرقام للمخوّلين، أسماء+نسب للجميع */}
-            <Block rv tag="FINANCE" title="الحالة المالية"
-              action={P.canSeeNumbers ? <span className="pd-editable">أرقام كاملة</span> : <span className="pd-readonly">الأسماء والنسب فقط</span>}>
+            {/* Financial status — figures for authorized, names+percentages for all */}
+            <Block rv tag="FINANCE" title="Financial Status"
+              action={P.canSeeNumbers ? <span className="pd-editable">Full figures</span> : <span className="pd-readonly">Names & percentages only</span>}>
               <FinanceStrip invoices={p.invoices} seeNumbers={P.canSeeNumbers} />
             </Block>
-            
             {canViewFinancials && <InvoiceConsole projectId={id} />}
 
-            {/* العقد + العرض */}
-            <Block rv tag="OFFER / CONTRACT" title="حالة العرض والعقد">
+            {/* Offer + Contract */}
+            <Block rv tag="OFFER / CONTRACT" title="Offer & Contract Status">
               <div className="pd-offer">
                 <div className="pd-srow">
-                  <span>حالة العرض</span>
+                  <span>Offer Status</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className={`pd-badge t-${meta(p.offer_status).c}`}>{meta(p.offer_status).t}</span>
                     {P.canManageOffer && (
-                      <button className="pd-mini" onClick={cycleOffer} title="تبديل حالة العرض">
+                      <button className="pd-mini" onClick={cycleOffer} title="Toggle offer status">
                         <ChevronRight size={12} />
                       </button>
                     )}
                   </span>
                 </div>
                 <div className="pd-srow">
-                  <span>حالة العقد</span>
+                  <span>Contract Status</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className={`pd-badge t-${meta(p.contract_status).c}`}>{meta(p.contract_status).t}</span>
                     {P.canManageOffer && (
-                      <button className="pd-mini" onClick={cycleContract} title="تبديل حالة العقد">
+                      <button className="pd-mini" onClick={cycleContract} title="Toggle contract status">
                         <ChevronRight size={12} />
                       </button>
                     )}
                   </span>
                 </div>
               </div>
-              <ContractSlot existingFile={p.contract_file} canSee={P.canSeeContract}
-                canUpload={P.canSeeContract} selectedFile={contractFile} setFile={setContractFile} onUpload={uploadContract} />
+              <ContractSlot
+                existingFile={p.contract_file}
+                canSee={P.canSeeContract}
+                canUpload={P.canUploadContract}
+                selectedFile={contractFile}
+                setFile={setContractFile}
+                onUpload={uploadContract}
+              />
             </Block>
 
-            {/* الملاحظات */}
-            <Block rv tag="NOTES" title="ملاحظات المشروع" sub="اكتب @all لتنبيه الجميع">
+            {/* Notes */}
+            <Block rv tag="NOTES" title="Project Notes">
               <NotesBlock notes={p.notes} note={note} setNote={setNote} onAdd={submitNote} />
             </Block>
           </div>
 
-          {/* ── الأزرار العائمة الجانبية (DC1 / DC2) ── */}
+          {/* ── Floating side buttons (DC1 / DC2) ── */}
           <aside className="pd-float">
             <FloatBtn label="DC1" accent="sky" state={dc1State} pct={dc1Pct} />
             <FloatBtn label="DC2" accent="violet" state={dc2State} pct={dc2Pct} />
@@ -342,23 +493,23 @@ export default function ProjectDetails() {
         </div>
       </div>
 
-      {/* ── نافذة سبب الإيقاف (Structural) ──────────── */}
+      {/* ── Structural hold reason modal ──────────── */}
       {holdOpen && (
-        <Modal title="إيقاف الزرّ الإنشائي" onClose={() => setHoldOpen(false)}>
-          <label className="pd-lbl">سبب الإيقاف <b>*</b></label>
+        <Modal title="Hold Structural Button" onClose={() => setHoldOpen(false)}>
+          <label className="pd-lbl">Hold Reason <b>*</b></label>
           <textarea className="pd-ta" rows={3} value={holdReason}
-            onChange={(e) => setHoldReason(e.target.value)} placeholder="لماذا أُوقف الزرّ؟" />
+            onChange={(e) => setHoldReason(e.target.value)} placeholder="Why was the button held?" />
           <div className="pd-modal-foot">
-            <button className="pd-ghost" onClick={() => setHoldOpen(false)}>إلغاء</button>
-            <button className="pd-solid rose" onClick={holdStruct} disabled={!holdReason.trim()}>تأكيد الإيقاف</button>
+            <button className="pd-ghost" onClick={() => setHoldOpen(false)}>Cancel</button>
+            <button className="pd-solid rose" onClick={holdStruct} disabled={!holdReason.trim()}>Confirm Hold</button>
           </div>
         </Modal>
       )}
 
-      {/* ── نافذة تعديل الأولوية ───────────────────── */}
+      {/* ── Edit priority modal ───────────────────── */}
       {prioOpen && (
-        <Modal title="تعديل أولوية المشروع" onClose={() => setPrioOpen(false)}>
-          <label className="pd-lbl">الأولوية</label>
+        <Modal title="Edit Project Priority" onClose={() => setPrioOpen(false)}>
+          <label className="pd-lbl">Priority</label>
           <div className="pd-prio-pick">
             {['URGENT', 'HIGH', 'MEDIUM', 'LOW'].map((x) => (
               <button key={x} type="button"
@@ -366,12 +517,12 @@ export default function ProjectDetails() {
                 onClick={() => setPrioForm({ ...prioForm, priority: x })}>{meta(x).t}</button>
             ))}
           </div>
-          <label className="pd-lbl">سبب التعديل <b>*</b></label>
+          <label className="pd-lbl">Reason for Change <b>*</b></label>
           <textarea className="pd-ta" rows={2} value={prioForm.reason}
             onChange={(e) => setPrioForm({ ...prioForm, reason: e.target.value })} />
           <div className="pd-modal-foot">
-            <button className="pd-ghost" onClick={() => setPrioOpen(false)}>إلغاء</button>
-            <button className="pd-solid" onClick={submitPrio} disabled={!prioForm.reason.trim()}>حفظ</button>
+            <button className="pd-ghost" onClick={() => setPrioOpen(false)}>Cancel</button>
+            <button className="pd-solid" onClick={submitPrio} disabled={!prioForm.reason.trim()}>Save</button>
           </div>
         </Modal>
       )}
@@ -380,11 +531,12 @@ export default function ProjectDetails() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   المكوّنات الفرعية
-   ═══════════════════════════════════════════════════════════════ */
+Sub-components
+═══════════════════════════════════════════════════════════════ */
 function Badge({ c, pulse, children }) {
   return <span className={`pd-badge t-${c}`}>{pulse && <i className="pd-pulse" />}{children}</span>;
 }
+
 function Ring({ pct }) {
   const r = 22, c = 2 * Math.PI * r, off = c - (pct / 100) * c;
   return (
@@ -396,6 +548,7 @@ function Ring({ pct }) {
     </svg>
   );
 }
+
 function Slab({ label, v, mono, accent, money }) {
   return (
     <div className={`pd-slab ${accent ? 'acc' : ''}`}>
@@ -406,6 +559,7 @@ function Slab({ label, v, mono, accent, money }) {
     </div>
   );
 }
+
 function Block({ rv, tag, title, sub, action, children }) {
   return (
     <section className={`${rv ? 'rv' : ''} pd-block`}>
@@ -421,6 +575,7 @@ function Block({ rv, tag, title, sub, action, children }) {
     </section>
   );
 }
+
 function StatusRow({ label, v }) {
   const m = meta(v);
   return (
@@ -433,49 +588,44 @@ function StatusRow({ label, v }) {
 
 function LifecycleRibbon({ stages, canEdit, onReload, projectId }) {
   const [busy, setBusy] = useState(null);
-
   const SHORT = {
-    OFFER: 'RFQ', CONTRACT_SUBMITTED: 'رفع العقد', CONTRACT_SIGNED: 'توقيع العقد',
-    CONCEPT: 'الفكرة', DC1: 'DC1', DC2: 'DC2', TENDER: 'المناقصة',
-    COLLECTION: 'الاستلام', CLOSED: 'الإغلاق', DESIGN_PHASE: 'التصميم',
+    OFFER: 'RFQ', CONTRACT_SUBMITTED: 'Contract Sub.', CONTRACT_SIGNED: 'Contract Signed',
+    CONCEPT: 'Concept', DC1: 'DC1', DC2: 'DC2', TENDER: 'Tender',
+    COLLECTION: 'Collection', CLOSED: 'Closed', DESIGN_PHASE: 'Design',
   };
-  
   const firstPending = (stages.find((s) => s.status !== 'ACHIEVED' && s.status !== 'APPROVED') || {}).sequence_order;
   const today = () => new Date().toISOString().split('T')[0];
-
   const achieveAll = async () => {
     setBusy('all');
     const ordered = [...stages].sort((a, b) => a.sequence_order - b.sequence_order);
     for (const s of ordered) {
       if (s.status === 'ACHIEVED' || s.status === 'APPROVED') continue;
-      try { 
-        await apiClient.patch(`lifecycle/${s.id}/update/`, { actual_date: today() }); 
-      } catch { 
-        break; 
+      try {
+        await apiClient.patch(`lifecycle/${s.id}/update/`, { actual_date: today() });
+      } catch {
+        break;
       }
     }
     setBusy(null);
     onReload?.();
   };
-
   const achieve = async (s) => {
     setBusy(s.id);
-    try { 
-      await apiClient.patch(`lifecycle/${s.id}/update/`, { actual_date: today() }); 
-    } catch (err) { 
-      console.error(err); 
+    try {
+      await apiClient.patch(`lifecycle/${s.id}/update/`, { actual_date: today() });
+    } catch (err) {
+      console.error(err);
     }
     setBusy(null);
     onReload?.();
   };
-
   return (
     <div>
       {canEdit && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-           <span className="pd-editable">قابل للتحديث</span>
-           <button className="pd-mini" onClick={achieveAll} disabled={busy === 'all'}>
-            ⚡ إنجاز الكل بالترتيب (اختبار سريع)
+          <span className="pd-editable">Editable</span>
+          <button className="pd-mini" onClick={achieveAll} disabled={busy === 'all'}>
+            ⚡ Achieve All in Order (quick test)
           </button>
         </div>
       )}
@@ -484,7 +634,6 @@ function LifecycleRibbon({ stages, canEdit, onReload, projectId }) {
           const m = meta(s.status);
           const done = s.status === 'ACHIEVED' || s.status === 'APPROVED';
           const live = !done && s.sequence_order === firstPending;
-          
           return (
             <li key={s.id} className={`pd-lc-node ${done ? 'done' : ''} ${live ? 'live' : ''} t-${m.c}`}>
               {i > 0 && <span className={`pd-lc-line ${stages[i - 1].status === 'ACHIEVED' ? 'lit done' : ''}`} />}
@@ -492,14 +641,13 @@ function LifecycleRibbon({ stages, canEdit, onReload, projectId }) {
               <span className="pd-lc-name" title={s.stage_name}>{SHORT[s.stage_name] || s.stage_name}</span>
               <span className="pd-lc-st">{m.t}</span>
               <span className="pd-lc-dates">
-                {s.planned_date && <span>م:{s.planned_date}</span>}
-                {s.actual_date && <span>ف:{s.actual_date}</span>}
+                {s.planned_date && <span>P:{s.planned_date}</span>}
+                {s.actual_date && <span>A:{s.actual_date}</span>}
               </span>
-              
               {canEdit && !done && (
                 <button className="pd-mini" style={{ marginTop: 6 }}
                   onClick={() => achieve(s)} disabled={busy === s.id}>
-                  {busy === s.id ? '…' : 'إنجاز'}
+                  {busy === s.id ? '…' : 'Achieve'}
                 </button>
               )}
             </li>
@@ -531,24 +679,23 @@ function FlagCard({ label, accent, state, pct, sub, icon, interactive, onCycle, 
       <div className="pd-flag-top">
         <span className="pd-flag-ic">{icon || <Flag size={14} />}</span>
         <span className="pd-flag-label">{label}</span>
-        <span className={`pd-badge t-${hold ? 'rose' : m.c}`}>{hold ? 'موقوف' : m.t}</span>
+        <span className={`pd-badge t-${hold ? 'rose' : m.c}`}>{hold ? 'On Hold' : m.t}</span>
       </div>
       {pct != null && (
-        <div className="pd-bar"><span style={{ width: `${pct}%` }} /><em>{pct}%</em></div>
+        <div className="pd-bar"> <span style={{ width: `${pct}%` }} /> <em>{pct}%</em> </div>
       )}
       {sub && <p className="pd-flag-sub">{sub}</p>}
-
       {hold ? (
         <div className="pd-hold">
           <span className="pd-hold-flag"><AlertTriangle size={12} /> {holdInfo.hold_date}</span>
           {holdInfo.hold_reason && <p className="pd-hold-reason">{holdInfo.hold_reason}</p>}
-          {interactive && <button className="pd-mini" onClick={onResume}>استئناف</button>}
+          {interactive && <button className="pd-mini" onClick={onResume}>Resume</button>}
         </div>
       ) : (
         interactive && (
           <div className="pd-flag-acts">
-            <button className="pd-mini" onClick={onCycle}>تبديل الحالة <ChevronRight size={12} /></button>
-            {onHold && <button className="pd-mini rose" onClick={onHold}>إيقاف</button>}
+            <button className="pd-mini" onClick={onCycle}>Toggle Status <ChevronRight size={12} /></button>
+            {onHold && <button className="pd-mini rose" onClick={onHold}>Hold</button>}
           </div>
         )
       )}
@@ -569,25 +716,24 @@ function PriorityView({ priority, history }) {
             <li key={i}>
               <span className={`pd-badge t-${meta(h.priority).c}`}>{meta(h.priority).t}</span>
               <span className="pd-log-reason">{h.reason}</span>
-              <span className="pd-log-by">{h.updated_by_name} · {new Date(h.created_at).toLocaleDateString('ar')}</span>
+              <span className="pd-log-by">{h.updated_by_name} · {new Date(h.created_at).toLocaleDateString('en-GB')}</span>
             </li>
           ))}
         </ul>
-      ) : <p className="pd-empty-mini">لا سجلّ تعديلات بعد.</p>}
+      ) : <p className="pd-empty-mini">No priority history yet.</p>}
     </div>
   );
 }
 
 function Tendering({ t, canEdit, onChanged, pid }) {
   const rows = [
-    ['boq_status', 'boq_notes', 'BOQ — جدول الكميات'],
-    ['specs_status', 'specs_notes', 'Specifications — المواصفات'],
+    ['boq_status', 'boq_notes', 'BOQ — Bill of Quantities'],
+    ['specs_status', 'specs_notes', 'Specifications'],
     ['conditions_status', 'conditions_notes', 'Conditions of Contract'],
   ];
   const cycle = (cur) => { const o = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED']; return o[Math.min(o.indexOf(cur) + 1, 2)]; };
   const update = (sk, nk) => apiClient.patch(`projects/${pid}/tendering/update/`, { [sk]: nk }).then(onChanged);
   const setNotes = (nk, v) => apiClient.patch(`projects/${pid}/tendering/update/`, { [nk]: v }).then(onChanged);
-
   return (
     <div className="pd-tender">
       {rows.map(([sk, nk, label]) => {
@@ -597,11 +743,11 @@ function Tendering({ t, canEdit, onChanged, pid }) {
             <div className="pd-trow-h">
               <span className="pd-trow-label">{label}</span>
               <span className={`pd-badge t-${m.c}`}>{m.t}</span>
-              {canEdit && <button className="pd-mini" onClick={() => update(sk, cycle(cur))}>تبديل</button>}
+              {canEdit && <button className="pd-mini" onClick={() => update(sk, cycle(cur))}>Toggle</button>}
             </div>
             {canEdit
               ? <textarea className="pd-ta mini" rows={1} defaultValue={t?.[nk] || ''}
-                  onBlur={(e) => setNotes(nk, e.target.value)} placeholder="ملاحظة تنفيذية…" />
+                  onBlur={(e) => setNotes(nk, e.target.value)} placeholder="Executive note…" />
               : (t?.[nk] ? <p className="pd-trow-note">{t[nk]}</p> : null)}
           </div>
         );
@@ -612,18 +758,18 @@ function Tendering({ t, canEdit, onChanged, pid }) {
 
 function FinanceStrip({ invoices, seeNumbers }) {
   const list = invoices || [];
-  if (!list.length) return <p className="pd-empty-mini">لا فواتير بعد.</p>;
+  if (!list.length) return <p className="pd-empty-mini">No invoices yet.</p>;
   return (
     <ul className="pd-fin">
       {list.map((iv) => {
-        // للمخوّلين: احسب من الأرقام الفعلية
-        // للمهندسين: استخدم النسبة المعقّمة من الباك‑إند
+        // For authorized: compute from actual figures
+        // For engineers: use the sanitized percentage from the backend
         const pct = seeNumbers
           ? (Number(iv.total_amount) > 0
-              ? Math.min(100, Math.round(
-                  ((iv.payments || []).reduce((s, x) => s + Number(x.amount_paid || 0), 0)
-                   / Number(iv.total_amount)) * 100))
-              : 0)
+            ? Math.min(100, Math.round(
+              ((iv.payments || []).reduce((s, x) => s + Number(x.amount_paid || 0), 0)
+                / Number(iv.total_amount)) * 100))
+            : 0)
           : (iv.payment_progress_percentage || 0);
         const m = meta(iv.status);
         return (
@@ -632,11 +778,11 @@ function FinanceStrip({ invoices, seeNumbers }) {
               <span className="pd-fin-title">{iv.title}</span>
               <span className="pd-fin-ms">{iv.milestone_type_display}</span>
             </div>
-            <div className="pd-fin-bar"><span style={{ width: `${pct}%` }} /><em>{pct}%</em></div>
+            <div className="pd-fin-bar"> <span style={{ width: `${pct}%` }} /> <em>{pct}%</em> </div>
             {seeNumbers && (
               <div className="pd-fin-nums">
-                <span>م: <CountUp value={iv.total_amount} /></span>
-                <span>ح: <CountUp value={(iv.payments || []).reduce((s, x) => s + Number(x.amount_paid || 0), 0)} /></span>
+                <span>Total: <CountUp value={iv.total_amount} /></span>
+                <span>Paid: <CountUp value={(iv.payments || []).reduce((s, x) => s + Number(x.amount_paid || 0), 0)} /></span>
               </div>
             )}
             <span className={`pd-badge t-${m.c}`}>{m.t}</span>
@@ -648,17 +794,44 @@ function FinanceStrip({ invoices, seeNumbers }) {
 }
 
 function ContractSlot({ existingFile, canSee, canUpload, selectedFile, setFile, onUpload }) {
-  if (!canSee && !canUpload) return <p className="pd-empty-mini">ملف العقد مرئي للإدارة والمحاسب فقط.</p>;
+  if (!canSee && !canUpload) {
+    return (
+      <p className="pd-empty-mini">
+        Contract file is available to management, the accountant, and the management secretary.
+      </p>
+    );
+  }
   return (
     <div className="pd-contract">
       <div className="pd-contract-now">
-        {existingFile ? <><FileText size={15} /> <a href={existingFile} target="_blank" rel="noreferrer">عرض ملف العقد</a></>
-                : <><Lock size={14} /> لا ملف مرفوع</>}
+        {existingFile ? (
+          <>
+            <FileText size={15} />
+            <a href={existingFile} target="_blank" rel="noreferrer">
+              View contract file
+            </a>
+          </>
+        ) : (
+          <>
+            <Lock size={14} />
+            No file uploaded
+          </>
+        )}
       </div>
       {canUpload && (
         <div className="pd-contract-up">
-          <input type="file" onChange={(e) => setFile(e.target.files[0])} />
-          <button className="pd-mini" onClick={onUpload} disabled={!selectedFile}><Upload size={12} /> رفع</button>
+          <input
+            type="file"
+            onChange={(e) => setFile(e.target.files[0])}
+          />
+          <button
+            className="pd-mini"
+            onClick={onUpload}
+            disabled={!selectedFile}
+          >
+            <Upload size={12} />
+            Upload
+          </button>
         </div>
       )}
     </div>
@@ -674,18 +847,18 @@ function NotesBlock({ notes, note, setNote, onAdd }) {
           <li key={n.id} className={n.is_pinned ? 'pinned' : ''}>
             <div className="pd-note-h">
               <span className="pd-note-by">{n.user_name}</span>
-              <span className="pd-note-date">{new Date(n.created_at).toLocaleString('ar')}</span>
+              <span className="pd-note-date">{new Date(n.created_at).toLocaleString('en-GB')}</span>
             </div>
             <p className="pd-note-body">{n.content}</p>
           </li>
         ))}
-        {!list.length && <p className="pd-empty-mini">لا ملاحظات بعد.</p>}
+        {!list.length && <p className="pd-empty-mini">No notes yet.</p>}
       </ul>
       <div className="pd-note-add">
         <AtSign size={14} />
         <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)}
-          placeholder="اكتب ملاحظة… استخدم @all لتنبيه الجميع" />
-        <button className="pd-solid" onClick={onAdd} disabled={!note.trim()}><Send size={14} /></button>
+          placeholder="Write a note…" />
+        <button className="pd-solid" onClick={onAdd} disabled={!note.trim()}> <Send size={14} /> </button>
       </div>
     </div>
   );
@@ -706,7 +879,7 @@ function Modal({ title, onClose, children }) {
   return (
     <div className="pd-mask" onClick={onClose}>
       <div className="pd-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="pd-modal-h"><h3>{title}</h3><button onClick={onClose}><X size={18} /></button></div>
+        <div className="pd-modal-h"> <h3>{title}</h3> <button onClick={onClose}><X size={18} /></button> </div>
         <div className="pd-modal-b">{children}</div>
       </div>
     </div>
@@ -714,134 +887,84 @@ function Modal({ title, onClose, children }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   الأنماط — لوحة حبرية هندسية، ألواح ورقية، عناصر حيّة
-   ═══════════════════════════════════════════════════════════════ */
-   /* ═══════════════════════════════════════════════════════════════
-   ActivateReviewCard — بطاقة تفعيل جسر المراجعة (حالة required=false)
-   ═══════════════════════════════════════════════════════════════ */
+ActivateReviewCard — review bridge activation card (required=false case)
+═══════════════════════════════════════════════════════════════ */
 function ActivateReviewCard({ projectId, canActivate, onDone }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState('');
-
   const activate = async () => {
     setBusy(true); setErr('');
     try {
       await activateInternalReview(projectId);
       setDone(true);
-      setTimeout(() => onDone?.(), 650);   // ومضة نجاح ثم إعادة الجلب
+      setTimeout(() => onDone?.(), 650);   // success flash then reload
     } catch (e) {
-      setErr(e.response?.data?.detail || 'تعذّر تفعيل المراجعة.');
+      setErr(e.response?.data?.detail || 'Failed to activate the review.');
     } finally { setBusy(false); }
   };
-
   return (
     <section className={`arc ${done ? 'arc-done' : ''}`}>
       <style>{ARC_CSS}</style>
       <div className="arc-ambient" aria-hidden />
-
       <div className="arc-orb"><Workflow size={22} /></div>
       <div className="arc-body">
-        <span className="arc-kicker">INTERNAL DESIGN REVIEW · جسر الإشراف ↔ التصميم</span>
-        <h3 className="arc-title">المراجعة التصميمية الداخلية غير مفعّلة</h3>
+        <span className="arc-kicker">INTERNAL DESIGN REVIEW · SUPERVISION ↔ DESIGN BRIDGE</span>
+        <h3 className="arc-title">Internal Design Review is not activated</h3>
         <p className="arc-sub">
-          هذا المشروع لم يُفتح فيه جسر المراجعة بعد. عند التفعيل، يظهر لمهندسي التصميم
-          المعيَّنين ليقيّموا المخططات عبر خمس مراحل (Design Criteria → IFC Package)،
-          وتنعكس نتائجهم هنا، ويُنبَّه مدير الإشراف عند الاعتماد الكامل.
+          This project has no review bridge yet. Once activated, it appears to the assigned
+          design engineers so they can evaluate the drawings through five stages
+          (Design Criteria → IFC Package); their results reflect here, and the
+          supervision manager is notified upon full approval.
         </p>
-
         {err && <div className="arc-err"><AlertTriangle size={14} /> {err}</div>}
-
         {canActivate ? (
           <button className="arc-cta" onClick={activate} disabled={busy || done}>
             <span className="arc-cta-shine" aria-hidden />
-            {done ? <><CheckCircle2 size={16} /> تم التفعيل</>
-              : busy ? <><Sparkles size={15} className="arc-spin" /> جارٍ التفعيل…</>
-              : <><Zap size={16} /> تفعيل المراجعة التصميمية</>}
+            {done ? <><CheckCircle2 size={16} /> Activated</>
+              : busy ? <><Sparkles size={15} className="arc-spin" /> Activating…</>
+                : <><Zap size={16} /> Activate Design Review</>}
           </button>
         ) : (
-          <span className="arc-lock"><Lock size={13} /> يُفعّلها مدير الإشراف / PM عند الحاجة.</span>
+          <span className="arc-lock"><Lock size={13} /> Activated by the Supervision Manager / PM when needed.</span>
         )}
       </div>
-
       <span className="arc-bridge" aria-hidden><Link2 size={40} /></span>
     </section>
   );
 }
 
-const ARC_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-.arc{ position:relative; overflow:hidden; display:flex; gap:18px; align-items:flex-start;
-  padding:22px; border:1.5px dashed rgba(139,92,246,.45); border-radius:16px;
-  background:linear-gradient(135deg, rgba(139,92,246,.08), rgba(14,165,233,.03) 60%, transparent);
-  animation:arc-rise .55s cubic-bezier(.2,.7,.2,1) both; transition:border-color .4s, background .4s; }
-@keyframes arc-rise{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:none;} }
-.arc-done{ border-style:solid; border-color:rgba(16,185,129,.55);
-  background:linear-gradient(135deg, rgba(16,185,129,.10), transparent 70%); }
-.arc-ambient{ position:absolute; inset:0; pointer-events:none;
-  background:radial-gradient(60% 80% at 100% 0%, rgba(139,92,246,.12), transparent 60%),
-    linear-gradient(rgba(139,92,246,.05) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(139,92,246,.05) 1px,transparent 1px);
-  background-size:auto,34px 34px,34px 34px; }
-.arc > *:not(.arc-ambient){ position:relative; }
-.arc-orb{ flex:none; width:52px; height:52px; border-radius:14px; display:grid; place-items:center;
-  background:linear-gradient(145deg, rgba(139,92,246,.22), rgba(139,92,246,.08));
-  color:var(--violet,#8b5cf6); border:1px solid rgba(139,92,246,.4);
-  animation:arc-pulse 2.6s ease-in-out infinite; }
-@keyframes arc-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(139,92,246,.35);} 50%{ box-shadow:0 0 0 8px rgba(139,92,246,0);} }
-.arc-done .arc-orb{ background:linear-gradient(145deg, rgba(16,185,129,.22), rgba(16,185,129,.08));
-  color:var(--emerald,#10b981); border-color:rgba(16,185,129,.4); animation:none; }
-.arc-body{ flex:1; min-width:0; }
-.arc-kicker{ font-family:'Space Grotesk'; font-size:10px; letter-spacing:.26em; color:var(--violet,#8b5cf6); }
-.arc-done .arc-kicker{ color:var(--emerald,#10b981); }
-.arc-title{ font-family:'Space Grotesk','IBM Plex Sans Arabic'; font-size:18px; font-weight:700; margin:5px 0 7px; color:var(--paper,#0f172a); }
-.arc-sub{ font-size:12.5px; line-height:1.7; color:var(--mut,#64748b); margin:0 0 14px; max-width:62ch; }
-.arc-err{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--rose,#ef4444);
-  background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.35); border-radius:9px; padding:8px 11px; margin-bottom:12px; }
-.arc-cta{ position:relative; overflow:hidden; display:inline-flex; align-items:center; gap:8px;
-  font-family:inherit; font-size:13px; font-weight:700; color:#ffffff; cursor:pointer; border:none;
-  padding:10px 20px; border-radius:11px; background:linear-gradient(120deg,#8b5cf6,#7c3aed);
-  box-shadow:0 12px 28px -14px rgba(124,58,237,.85); transition:transform .25s, filter .25s; }
-.arc-cta:hover:not(:disabled){ transform:translateY(-2px); filter:brightness(1.06); }
-.arc-cta:disabled{ cursor:default; }
-.arc-done .arc-cta{ background:linear-gradient(120deg,#10b981,#059669); color:#ffffff; box-shadow:0 12px 28px -14px rgba(5,150,105,.8); }
-.arc-cta-shine{ position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent); transform:translateX(-130%); }
-.arc-cta:hover:not(:disabled) .arc-cta-shine{ animation:arc-shine .8s ease; }
-@keyframes arc-shine{ to{ transform:translateX(130%);} }
-.arc-spin{ animation:arc-spin .8s linear infinite; } @keyframes arc-spin{ to{ transform:rotate(360deg);} }
-.arc-lock{ display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--mut,#64748b);
-  background:rgba(0,0,0,.03); border:1px solid var(--line,#e2e8f0); border-radius:9px; padding:8px 12px; }
-.arc-bridge{ position:absolute; inset-inline-end:14px; bottom:8px; color:rgba(139,92,246,.12); transform:rotate(-12deg); pointer-events:none; }
-@media (max-width:560px){ .arc{ flex-direction:column; } .arc-bridge{ display:none; } }
-`;
+/* ═══════════════════════════════════════════════════════════════
+Styles — engineering ink board, paper slabs, living elements
+═══════════════════════════════════════════════════════════════ */
+const ARC_CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap'); .arc{ position:relative; overflow:hidden; display:flex; gap:18px; align-items:flex-start; padding:22px; border:1.5px dashed rgba(139,92,246,.45); border-radius:16px; background:linear-gradient(135deg, rgba(139,92,246,.08), rgba(14,165,233,.03) 60%, transparent); animation:arc-rise .55s cubic-bezier(.2,.7,.2,1) both; transition:border-color .4s, background .4s; } @keyframes arc-rise{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:none;} } .arc-done{ border-style:solid; border-color:rgba(16,185,129,.55); background:linear-gradient(135deg, rgba(16,185,129,.10), transparent 70%); } .arc-ambient{ position:absolute; inset:0; pointer-events:none; background:radial-gradient(60% 80% at 100% 0%, rgba(139,92,246,.12), transparent 60%), linear-gradient(rgba(139,92,246,.05) 1px,transparent 1px), linear-gradient(90deg,rgba(139,92,246,.05) 1px,transparent 1px); background-size:auto,34px 34px,34px 34px; } .arc > *:not(.arc-ambient){ position:relative; } .arc-orb{ flex:none; width:52px; height:52px; border-radius:14px; display:grid; place-items:center; background:linear-gradient(145deg, rgba(139,92,246,.22), rgba(139,92,246,.08)); color:var(--violet,#8b5cf6); border:1px solid rgba(139,92,246,.4); animation:arc-pulse 2.6s ease-in-out infinite; } @keyframes arc-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(139,92,246,.35);} 50%{ box-shadow:0 0 0 8px rgba(139,92,246,0);} } .arc-done .arc-orb{ background:linear-gradient(145deg, rgba(16,185,129,.22), rgba(16,185,129,.08)); color:var(--emerald,#10b981); border-color:rgba(16,185,129,.4); animation:none; } .arc-body{ flex:1; min-width:0; } .arc-kicker{ font-family:'Space Grotesk'; font-size:10px; letter-spacing:.26em; color:var(--violet,#8b5cf6); } .arc-done .arc-kicker{ color:var(--emerald,#10b981); } .arc-title{ font-family:'Space Grotesk','IBM Plex Sans Arabic'; font-size:18px; font-weight:700; margin:5px 0 7px; color:var(--paper,#0f172a); } .arc-sub{ font-size:12.5px; line-height:1.7; color:var(--mut,#64748b); margin:0 0 14px; max-width:62ch; } .arc-err{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--rose,#ef4444); background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.35); border-radius:9px; padding:8px 11px; margin-bottom:12px; } .arc-cta{ position:relative; overflow:hidden; display:inline-flex; align-items:center; gap:8px; font-family:inherit; font-size:13px; font-weight:700; color:#ffffff; cursor:pointer; border:none; padding:10px 20px; border-radius:11px; background:linear-gradient(120deg,#8b5cf6,#7c3aed); box-shadow:0 12px 28px -14px rgba(124,58,237,.85); transition:transform .25s, filter .25s; } .arc-cta:hover:not(:disabled){ transform:translateY(-2px); filter:brightness(1.06); } .arc-cta:disabled{ cursor:default; } .arc-done .arc-cta{ background:linear-gradient(120deg,#10b981,#059669); color:#ffffff; box-shadow:0 12px 28px -14px rgba(5,150,105,.8); } .arc-cta-shine{ position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent); transform:translateX(-130%); } .arc-cta:hover:not(:disabled) .arc-cta-shine{ animation:arc-shine .8s ease; } @keyframes arc-shine{ to{ transform:translateX(130%);} } .arc-spin{ animation:arc-spin .8s linear infinite; } @keyframes arc-spin{ to{ transform:rotate(360deg);} } .arc-lock{ display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--mut,#64748b); background:rgba(0,0,0,.03); border:1px solid var(--line,#e2e8f0); border-radius:9px; padding:8px 12px; } .arc-bridge{ position:absolute; inset-inline-end:14px; bottom:8px; color:rgba(139,92,246,.12); transform:rotate(-12deg); pointer-events:none; } @media (max-width:560px){ .arc{ flex-direction:column; } .arc-bridge{ display:none; } }`;
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 .pd-root{
-  --ink:#ffffff; --ink2:#f8fafc; --surf:#ffffff; --surf2:#f1f5f9; --line:#e2e8f0;
-  --paper:#0f172a; --mut:#64748b; --amber:#f59e0b; --emerald:#10b981; --sky:#0ea5e9;
-  --rose:#ef4444; --violet:#8b5cf6; --slate:#64748b;
-  position:relative; min-height:100vh; color:var(--paper);
-  font-family:'IBM Plex Sans Arabic','Space Grotesk',sans-serif;
-  background:linear-gradient(180deg,#f8fafc,#f1f5f9);
+--ink:#ffffff; --ink2:#f8fafc; --surf:#ffffff; --surf2:#f1f5f9; --line:#e2e8f0;
+--paper:#0f172a; --mut:#64748b; --amber:#f59e0b; --emerald:#10b981; --sky:#0ea5e9;
+--rose:#ef4444; --violet:#8b5cf6; --slate:#64748b;
+position:relative; min-height:100vh; color:var(--paper);
+font-family:'IBM Plex Sans Arabic','Space Grotesk',sans-serif;
+background:linear-gradient(180deg,#f8fafc,#f1f5f9);
 }
 .pd-ambient{ position:absolute; inset:0; pointer-events:none;
-  background:
-    radial-gradient(58% 44% at 92% -6%, rgba(245,158,11,.08), transparent 60%),
-    radial-gradient(50% 42% at -4% 104%, rgba(14,165,233,.06), transparent 60%),
-    linear-gradient(rgba(14,165,233,.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(14,165,233,.03) 1px, transparent 1px);
-  background-size:auto,auto,46px 46px,46px 46px;
-  -webkit-mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
-          mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
+background:
+radial-gradient(58% 44% at 92% -6%, rgba(245,158,11,.08), transparent 60%),
+radial-gradient(50% 42% at -4% 104%, rgba(14,165,233,.06), transparent 60%),
+linear-gradient(rgba(14,165,233,.03) 1px, transparent 1px),
+linear-gradient(90deg, rgba(14,165,233,.03) 1px, transparent 1px);
+background-size:auto,auto,46px 46px,46px 46px;
+-webkit-mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
+mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 }
 .pd-shell{ position:relative; max-width:1180px; margin:0 auto; padding:26px clamp(16px,3vw,34px) 70px; }
 .pd-load{ display:flex; align-items:center; justify-content:center; gap:10px; min-height:60vh; color:var(--mut); }
 .pd-spin{ animation:pdspin .9s linear infinite; } @keyframes pdspin{ to{ transform:rotate(360deg); } }
 .rv{ opacity:0; transform:translateY(16px); transition:opacity .65s ease, transform .65s cubic-bezier(.2,.7,.2,1); }
 .rv.in{ opacity:1; transform:none; }
-
-/* الرأس */
+/* Header */
 .pd-head{ display:flex; align-items:flex-start; gap:16px; padding-bottom:20px; border-bottom:1px solid var(--line); }
 .pd-back{ display:grid; place-items:center; width:38px; height:38px; border:1px solid var(--line); border-radius:11px; color:var(--mut); background:var(--surf); transition:.25s; flex:none; box-shadow:0 1px 3px rgba(0,0,0,.02); }
 .pd-back:hover{ color:var(--sky); border-color:var(--sky); transform:translateX(3px); background:rgba(14,165,233,.05); }
@@ -858,8 +981,7 @@ const CSS = `
 .pd-ring-txt{ display:flex; flex-direction:column; align-items:flex-start; }
 .pd-ring-txt{ font-family:'Space Grotesk'; font-size:24px; font-weight:700; line-height:1; color:var(--paper); }
 .pd-ring-txt span{ font-family:'IBM Plex Sans Arabic'; font-size:10px; color:var(--mut); letter-spacing:.1em; font-weight:600;}
-
-/* الشارات والألوان */
+/* Badges & colors */
 .pd-badge{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; }
 .pd-badge.big{ font-size:13px; padding:5px 13px; }
 .t-slate{ background:rgba(100,116,139,.12); color:#475569; }
@@ -871,8 +993,7 @@ const CSS = `
 .pd-pulse{ width:7px; height:7px; border-radius:50%; background:currentColor; position:relative; }
 .pd-pulse::after{ content:""; position:absolute; inset:-3px; border-radius:50%; background:currentColor; opacity:.4; animation:pdping 1.8s infinite; }
 @keyframes pdping{ 70%,100%{ transform:scale(2.4); opacity:0; } }
-
-/* الألواح */
+/* Slabs */
 .pd-slabs{ display:grid; grid-template-columns:1.4fr 1.4fr 1fr 1fr; gap:12px; margin-top:18px; }
 .pd-slab{ background:var(--surf); border:1px solid var(--line); border-radius:14px; padding:13px 15px; transition:.3s; box-shadow:0 2px 8px rgba(0,0,0,.02); }
 .pd-slab:hover{ border-color:#cbd5e1; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.04); }
@@ -880,13 +1001,11 @@ const CSS = `
 .pd-slab-l{ display:block; font-size:10.5px; letter-spacing:.1em; color:var(--mut); font-weight:600; }
 .pd-slab-v{ display:flex; align-items:center; gap:5px; font-size:15px; font-weight:700; margin-top:5px; color:var(--paper); }
 .pd-slab-v.mono{ font-family:'JetBrains Mono',monospace; font-size:13px; color:#d97706; }
-
-/* التخطيط */
+/* Layout */
 .pd-grid{ display:grid; grid-template-columns:1fr 70px; gap:16px; margin-top:18px; align-items:start; }
 .pd-main{ display:flex; flex-direction:column; gap:16px; min-width:0; }
 @media(max-width:900px){ .pd-slabs{ grid-template-columns:1fr 1fr; } .pd-grid{ grid-template-columns:1fr; } .pd-float{ display:none; } }
-
-/* البلوكات */
+/* Blocks */
 .pd-block{ background:var(--surf); border:1px solid var(--line); border-radius:16px; padding:18px; transition:.3s; box-shadow:0 2px 10px rgba(0,0,0,.02); }
 .pd-block:hover{ border-color:#cbd5e1; }
 .pd-block-h{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
@@ -896,8 +1015,7 @@ const CSS = `
 .pd-editable{ font-size:10.5px; color:#059669; background:rgba(16,185,129,.12); padding:3px 9px; border-radius:999px; font-weight:600;}
 .pd-readonly{ font-size:10.5px; color:var(--mut); font-weight:600;}
 .pd-empty-mini{ font-size:12.5px; color:var(--mut); padding:8px 0; font-weight:500;}
-
-/* دورة الحياة */
+/* Lifecycle */
 .pd-lc{ list-style:none; margin:0; padding:0; display:flex; gap:0; overflow-x:auto; padding-bottom:6px; }
 .pd-lc-node{ position:relative; flex:1; min-width:108px; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:18px; }
 .pd-lc-line{ position:absolute; top:24px; right:50%; width:100%; height:2px; background:var(--line); }
@@ -909,8 +1027,7 @@ const CSS = `
 .pd-lc-name{ font-size:12px; font-weight:700; color:var(--paper); }
 .pd-lc-st{ font-size:10px; font-weight:600;}
 .pd-lc-dates{ display:flex; flex-direction:column; align-items:center; font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--mut); gap:1px; font-weight:600;}
-
-/* الأزرار الأربعة */
+/* The four flags */
 .pd-flags{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 @media(max-width:560px){ .pd-flags{ grid-template-columns:1fr; } }
 .pd-flag{ border:1px solid var(--line); border-radius:14px; padding:14px; border-top:3px solid var(--slate); transition:.3s; background:var(--surf); }
@@ -929,14 +1046,12 @@ const CSS = `
 .pd-hold{ margin-top:10px; }
 .pd-hold-flag{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; color:#dc2626; background:rgba(239,68,68,.1); padding:3px 8px; border-radius:999px; font-weight:600;}
 .pd-hold-reason{ font-size:11.5px; color:var(--paper); margin:6px 0; font-weight:500;}
-
-/* الأزرار الصغيرة */
+/* Small buttons */
 .pd-mini{ display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#0284c7; background:rgba(14,165,233,.1); border:1px solid rgba(14,165,233,.2); padding:4px 9px; border-radius:8px; cursor:pointer; transition:.2s; font-family:inherit; }
 .pd-mini:hover{ background:rgba(14,165,233,.2); }
 .pd-mini.rose{ color:#dc2626; background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.2); }
 .pd-mini:disabled{ opacity:.5; cursor:not-allowed; }
-
-/* الأولوية */
+/* Priority */
 .pd-prio-now{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
 .pd-prio-log{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
 .pd-prio-log li{ display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); }
@@ -945,15 +1060,13 @@ const CSS = `
 .pd-prio-pick{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:6px 0 14px; }
 .pd-prio-opt{ padding:8px; border-radius:9px; border:1px solid var(--line); background:var(--surf2); cursor:pointer; font-family:inherit; font-size:12px; font-weight:700; transition:.2s; color:var(--mut); }
 .pd-prio-opt.on{ outline:2px solid currentColor; background:var(--surf); color:var(--paper); }
-
-/* المناقصات */
+/* Tendering */
 .pd-tender{ display:flex; flex-direction:column; gap:12px; }
 .pd-trow{ border:1px solid var(--line); border-radius:12px; padding:12px; background:var(--surf); }
 .pd-trow-h{ display:flex; align-items:center; gap:8px; }
 .pd-trow-label{ flex:1; font-size:13px; font-weight:700; color:var(--paper); }
 .pd-trow-note{ font-size:11.5px; color:var(--mut); margin-top:6px; font-weight:500;}
-
-/* المالية */
+/* Finance */
 .pd-fin{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
 .pd-fin-row{ display:grid; grid-template-columns:1.4fr 1fr auto auto; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:11px; transition:.25s; background:var(--surf); }
 .pd-fin-row:hover{ border-color:#cbd5e1; transform:translateX(-2px); box-shadow:0 2px 8px rgba(0,0,0,.03); }
@@ -965,8 +1078,7 @@ const CSS = `
 .pd-fin-bar em{ position:absolute; inset-inline-end:0; top:-14px; font-style:normal; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--mut); font-weight:600;}
 .pd-fin-nums{ display:flex; flex-direction:column; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--mut); text-align:end; font-weight:600;}
 @media(max-width:640px){ .pd-fin-row{ grid-template-columns:1fr auto; } .pd-fin-bar,.pd-fin-nums{ display:none; } }
-
-/* العرض/العقد */
+/* Offer / Contract */
 .pd-offer{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
 .pd-srow{ display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border:1px solid var(--line); border-radius:11px; background:var(--surf); }
 .pd-srow span:first-child{ font-size:12px; color:var(--mut); font-weight:600;}
@@ -976,9 +1088,8 @@ const CSS = `
 .pd-contract-now a:hover{ text-decoration:underline; }
 .pd-contract-up{ display:flex; gap:8px; align-items:center; margin-top:10px; }
 .pd-contract-up input{ font-size:12px; color:var(--paper); }
-
-/* الملاحظات */
-.pd-notes{ list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:9px; max-height:280px; overflow-y:auto; }
+/* Notes */
+.pd-notes{ list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:9px; max-height:280px; overflow-y-auto; }
 .pd-notes li{ border-inline-start:3px solid var(--line); padding:8px 12px; background:var(--surf2); border-radius:0 10px 10px 0; }
 .pd-notes li.pinned{ border-inline-start-color:var(--amber); background:rgba(245,158,11,.05); }
 .pd-note-h{ display:flex; justify-content:space-between; margin-bottom:4px; }
@@ -990,8 +1101,7 @@ const CSS = `
 .pd-note-add svg{ margin-top:8px; color:var(--mut); flex:none; }
 .pd-note-add textarea{ flex:1; border:none; background:transparent; resize:none; color:var(--paper); font-family:inherit; font-size:13px; outline:none; font-weight:500;}
 .pd-note-add textarea::placeholder{ color:#94a3b8; }
-
-/* الأزرار العائمة */
+/* Floating buttons */
 .pd-float{ position:sticky; top:24px; display:flex; flex-direction:column; gap:12px; }
 .pd-fbtn{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:12px 8px; border:1px solid var(--line); border-radius:14px; background:var(--surf); transition:.3s; cursor:default; box-shadow:0 2px 10px rgba(0,0,0,.02); }
 .pd-fbtn:hover{ transform:scale(1.05); box-shadow:0 6px 16px rgba(0,0,0,.05); }
@@ -1000,8 +1110,7 @@ const CSS = `
 .pd-fbtn-dot.done{ background:var(--emerald); } .pd-fbtn-dot.live{ background:var(--amber); animation:pdping2 1.8s infinite; }
 .pd-fbtn-l{ font-family:'Space Grotesk'; font-weight:700; font-size:13px; color:var(--paper); }
 .pd-fbtn-p{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--mut); font-weight:600;}
-
-/* الحقول والنوافذ */
+/* Fields & modals */
 .pd-lbl{ display:block; font-size:12px; color:var(--mut); margin:4px 0 6px; font-weight:600;}
 .pd-lbl b{ color:var(--rose); }
 .pd-ta{ width:100%; border:1px solid var(--line); border-radius:10px; background:var(--surf); color:var(--paper); padding:9px 11px; font-family:inherit; font-size:13px; resize:vertical; outline:none; font-weight:500; transition:.2s; }

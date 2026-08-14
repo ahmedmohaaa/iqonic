@@ -3,8 +3,10 @@ import { getClientDirectory } from '../../api/services/clients';
 import { Users, Building2, Phone, Mail, Search, Plus, FolderOpen, Loader } from 'lucide-react';
 import ClientDetailsModal from './components/ClientDetailsModal';
 import AddClientModal from './components/AddClientModal';
-
+import { useAuth } from '../../context/AuthContext';
 const ClientDirectory = () => {
+    const { user } = useAuth();  // ← ضيف السطر ده
+
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,12 +53,14 @@ const ClientDirectory = () => {
           </h1>
           <p className="text-sm text-gray-500">Manage clients and view their project statistics.</p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center justify-center"
-        >
-          <Plus size={18} className="mr-1" /> Add New Client
-        </button>
+        {user?.role === 'SECRETARY' && (
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center justify-center"
+          >
+            <Plus size={18} className="mr-1" /> Add New Client
+          </button>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -136,20 +140,7 @@ const ClientCard = ({ client, onViewDetails }) => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-3 gap-2 mb-4 pt-4 border-t">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-800">{totalProjects}</p>
-            <p className="text-xs text-gray-500">Total</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">{activeProjects}</p>
-            <p className="text-xs text-gray-500">Active</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-gray-500">{closedProjects}</p>
-            <p className="text-xs text-gray-500">Closed</p>
-          </div>
-        </div>
+
       </div>
 
       <div className="bg-gray-50 px-5 py-3 border-t flex justify-end">

@@ -1,3 +1,4 @@
+import apiClient from '../../../api/axios';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { getInternalReview } from '../../../api/services/internalReview';
@@ -23,6 +24,25 @@ export default function InternalDesignReviewPanel({ project }) {
       .then((r) => setData(r.data))
       .catch((e) => { setData(null); setErrStatus(e.response?.status || 0); })
       .finally(() => setLoading(false));
+  };
+    // ✅ صلاحية زر الإنجاز: أحمد زبادي أو سكرتيرة الإشراف فقط
+  const canComplete =
+    user?.username === 'ahmed.zabady' ||
+    (user?.role === 'SECRETARY' && user?.department === 'Supervision');
+
+  const [busyId, setBusyId] = useState(null);
+
+  const completeStage = async (s) => {
+    if (!window.confirm(`إنجاز واعتماد مرحلة «${s.stage_name_display}» نهائيًا؟`)) return;
+    setBusyId(s.id);
+    try {
+      await apiClient.patch(`internal-review/stages/${s.id}/`, { status: 'APPROVED' });
+      load();
+    } catch (e) {
+      alert(e.response?.data?.detail || 'تعذّر إنجاز المرحلة.');
+    } finally {
+      setBusyId(null);
+    }
   };
   useEffect(() => { load(); }, [project.id]);
   useEffect(() => { const t = setTimeout(() => setReveal(true), 60); return () => clearTimeout(t); }, []);
@@ -103,28 +123,40 @@ export default function InternalDesignReviewPanel({ project }) {
       </div>
 
       {/* الخط الزمني — حالات للعرض فقط (بلا أزرار تدوير) */}
-      <ol className="rvp-track">
-        {stages.map((s, i) => {
-          const tone = STATUS_TONE[s.status];
-          return (
-            <li key={s.id} className={`rvp-stage t-${tone}`} style={{ '--i': i }}>
-              {i > 0 && <span className={`rvp-line ${stages[i - 1].status === 'APPROVED' ? 'lit' : ''}`} />}
-              <span className="rvp-node">{STAGE_ICON[s.sequence_order]}</span>
-              <div className="rvp-stage-body">
-                <span className="rvp-stage-name">{s.stage_name_display}</span>
-                <span className="rvp-stage-meta">
-                  {s.updated_by_name ? <>حدّثها {s.updated_by_name}</> : 'لم تُحدَّث بعد'}
-                  {s.updated_at && <> · {new Date(s.updated_at).toLocaleDateString('ar-EG')}</>}
-                </span>
-              </div>
-              <span className={`rvp-status t-${tone}`} title="حالة للقراءة فقط">
-                {s.status === 'APPROVED' ? <CheckCircle2 size={13} /> : s.status === 'UNDER_REVIEW' ? <Clock size={13} /> : <Circle size={13} />}
-                {STATUS_AR[s.status]}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+   <ol className="rvp-track">
+     {stages.map((s, i) => {
+       const tone = STATUS_TONE[s.status];
+       const prevOk = i === 0 || stages[i - 1].status === 'APPROVED';
+       return (
+         <li key={s.id} className={`rvp-stage t-${tone}`} style={{ '--i': i }}>
+           {i > 0 && <span className={`rvp-line ${stages[i - 1].status === 'APPROVED' ? 'lit' : ''}`} />}
+           <span className="rvp-node">{STAGE_ICON[s.sequence_order]}</span>
+           <div className="rvp-stage-body">
+             <span className="rvp-stage-name">{s.stage_name_display}</span>
+             <span className="rvp-stage-meta">
+               {s.updated_by_name ? <>حدّثها {s.updated_by_name}</> : 'لم تُحدَّث بعد'}
+               {s.updated_at && <> · {new Date(s.updated_at).toLocaleDateString('ar-EG')}</>}
+             </span>
+           </div>
+           <span className={`rvp-status t-${tone}`} title="حالة للقراءة فقط">
+             {s.status === 'APPROVED' ? <CheckCircle2 size={13} /> : s.status === 'UNDER_REVIEW' ? <Clock size={13} /> : <Circle size={13} />}
+             {STATUS_AR[s.status]}
+           </span>
+           {/* ✅ زر الإنجاز — يظهر فقط لأحمد زبادي وسكرتيرة الإشراف */}
+           {canComplete && s.status !== 'APPROVED' && prevOk && (
+             <button
+               type="button"
+               className="rvp-done-btn"
+               disabled={busyId === s.id}
+               onClick={() => completeStage(s)}
+             >
+               {busyId === s.id ? '…' : 'إنجاز'}
+             </button>
+           )}
+         </li>
+       );
+     })}
+   </ol>
     </section>
   );
 }
@@ -185,4 +217,6 @@ padding:5px 11px; border-radius:99px; border:1px solid transparent; white-space:
 .rvp-status.t-slate{ background:rgba(93,107,122,.18); color:#aeb9c5; }
 .rvp-status.t-amber{ background:rgba(230,171,76,.16); color:var(--amber); }
 .rvp-status.t-emerald{ background:rgba(63,178,134,.16); color:var(--emerald); }
+ .rvp-done-btn{ margin-inline-start:8px; flex:none; font-family:inherit; font-size:11px; font-weight:700; color:#06140e; background:var(--emerald); border:none; border-radius:99px; padding:6px 13px; cursor:pointer; transition:filter .2s, transform .2s; } .rvp-done-btn:hover{ filter:brightness(1.08); transform:translateY(-1px); } .rvp-done-btn:disabled{ opacity:.5; cursor:not-allowed; }
 `;
+
