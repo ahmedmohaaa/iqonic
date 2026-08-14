@@ -58,11 +58,12 @@ const Login = () => {
             <div className="pt-8 pb-4 flex flex-col items-center">
               <div className="flex items-center justify-center">
                 <span className="text-white" style={{ fontSize: '40px', fontWeight: 300, letterSpacing: '2px' }}>I</span>
-                <span
+
+                <span className="text-white" style={{ fontSize: '40px', fontWeight: 300, letterSpacing: '2px' }}>C</span>
+                                <span
                   className="inline-block"
                   style={{ width: '26px', height: '32px', border: '3px solid #e5e32a', borderRadius: '10px', margin: '0 5px' }}
                 />
-                <span className="text-white" style={{ fontSize: '40px', fontWeight: 300, letterSpacing: '2px' }}>C</span>
                 <span className="text-white" style={{ fontSize: '40px', fontWeight: 300, letterSpacing: '2px' }}>N</span>
               </div>
               <span className="text-white" style={{ fontSize: '10px', letterSpacing: '3px', marginTop: '8px' }}>
