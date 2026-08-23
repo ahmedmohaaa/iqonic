@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  // تم وضع رابط السيرفر المحلي مباشرة
-  baseURL: 'http://127.0.0.1:8000/api/',
+  // تم التعديل هنا: استخدام مسار نسبي بدلاً من الرابط المباشر
+  baseURL: '/api/', 
   headers: {
     'Content-Type': 'application/json',
   },
