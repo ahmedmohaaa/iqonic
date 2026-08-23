@@ -45,7 +45,7 @@ import ExportConsole from './pages/Admin/ExportConsole';
 import InvoiceConsole from './pages/Financials/InvoiceConsole';
 import ChatCenter from './pages/Chat/ChatCenter';
 import ReviewDirectory from './pages/InternalReview/ReviewDirectory';
-import EditTask from './pages/tasks/EditTask';  // غيّر المسار حسب مجلدك
+import EditTask from './pages/Tasks/EditTask';  // غيّر المسار حسب مجلدك
 import MySupervisionProjects from './pages/Supervision/MySupervisionProjects';  // غيّر المسار حسب مجلدك
 
 function App() {
