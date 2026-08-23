@@ -55,7 +55,6 @@ const Login = () => {
       <div className="w-full max-w-md relative">
         <div className="rounded-2xl overflow-hidden shadow-2xl border border-[#1d3a66] bg-[#0e2547]">
           {/* شعار ICON — نفس تصميم السايدبار */}
-<<<<<<< HEAD
 <div className="bg-[#0b1f3c]">
   <div className="pt-6 pb-4 flex justify-center">
     <img
@@ -66,7 +65,6 @@ const Login = () => {
   </div>
   <div style={{ height: '4px', backgroundColor: '#e5e32a' }} />
 </div>
-=======
           <div className="bg-[#0b1f3c]">
             <div className="pt-8 pb-4 flex flex-col items-center">
               <div className="flex items-center justify-center">
@@ -85,7 +83,6 @@ const Login = () => {
             </div>
             <div style={{ height: '4px', backgroundColor: '#e5e32a' }} />
           </div>
->>>>>>> e1d0f29f36e080bdebd6336e1b1c0dfb6ec65882
 
           {/* الفورم — نفس الوظائف بالكامل */}
           <div className="p-8">
