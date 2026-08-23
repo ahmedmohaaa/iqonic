@@ -50,13 +50,13 @@ function usePerms(user, project) {
   const isSupMgr = r === 'SUP_MGR' || r === 'PM';
   
   return {
-    canManageOffer: isMgmt || isDMgr || isManagementSecretary,
     canEditInfo: designMgrs || isManagementSecretary,
     canEditLifecycle: r === 'DESIGN_MGR' || r === 'AGM' || r === 'GM',
     canEditTender: r === 'AGM',
     canEditPriority: designMgrs,
     canSeeContract: isMgmt || isAcc || isManagementSecretary,
-    canUploadContract: isMgmt || isManagementSecretary,
+    canManageOffer: isManagementSecretary,
+canUploadContract: isManagementSecretary,
     canSeeNumbers: isMgmt || isAcc || isDMgr || isSupMgr,
     canAddInvoice: isMgmt || isAcc,
     canEditIFC: u === 'shaaban.karam' || isMgmt || isDMgr,
