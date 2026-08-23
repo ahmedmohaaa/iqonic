@@ -97,7 +97,7 @@ export default function CreateProject() {
       let contractorId = f.contractor || null;
 
       // وضع «مقاول جديد»: ننشئه أولاً ثم نربطه
-      if (showSup && contractorMode === 'new') {
+      if (contractorMode === 'new') {
         if (!f.newContractor.name.trim()) throw new Error('اسم المقاول مطلوب.');
         const co = await createContractor(f.newContractor);
         contractorId = co.data.id;
@@ -127,22 +127,19 @@ export default function CreateProject() {
         permit_deadline: f.permit_deadline || null,
         permit_status: f.permit_status,
         // ═════════════════════
-      ...(showDesign && {
-        offer_status: f.offer_status,
-        contract_status: f.contract_status,
-      }),
-      ...(showSup && {
-        contractor: contractorId || null,
-        design_company: f.design_company || null,
-        commencement_status: f.commencement_status,
-        internal_design_review_required: f.internal_design_review_required,
-      }),
+  // ✅ المقاول لكل المشاريع (تصميم وإشراف ومشترك)
+  contractor: contractorId || null,
+  ...(showSup && {
+    design_company: f.design_company || null,
+    commencement_status: f.commencement_status,
+    internal_design_review_required: f.internal_design_review_required,
+  }),
       };
 
       await createProject(payload);
       navigate('/projects');
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'تعذّر إنشاء المشروع.');
+      setError(err.response?.data?.detail || err.message || 'Unable to create the project..');
     } finally { setBusy(false); }
   };
 
@@ -155,12 +152,12 @@ export default function CreateProject() {
 
       <header className="cp-head cp-rv">
         <div>
-          <span className="cp-kicker">NEW PROJECT · إدخال مشروع</span>
-          <h1 className="cp-title">مشروع جديد</h1>
+          <span className="cp-kicker">NEW PROJECT · Create New Project</span>
+          <h1 className="cp-title">New Project</h1>
           <p className="cp-sub">
             {isSecretary
-              ? `أنتِ تسجّلين بصفتكِ سكرتيرة ${isDesignDept ? 'التصميم' : 'الإشراف'} — يمكنك اختيار قسمك أو مشروع مشترك (Both).`
-              : 'اختر نطاق المشروع لتظهر الحقول الخاصة به.'}
+              ? `You are registering as a ${isDesignDept ? 'Design' : 'Supervision'} secretary — you can choose your department or a shared project (Both).`
+              : 'Select the project scope to display the relevant fields.'}
           </p>
         </div>
       </header>
@@ -174,14 +171,14 @@ export default function CreateProject() {
               className={`cp-scope-btn ${scope === s ? 'on' : ''} t-${s === 'DESIGN' ? 'sky' : s === 'SUPERVISION' ? 'amber' : 'both'}`}
               onClick={() => setScope(s)}
             >
-              {s === 'DESIGN' ? 'تصميم' : s === 'SUPERVISION' ? 'إشراف' : 'مشترك (Both)'}
+              {s === 'DESIGN' ? 'Design' : s === 'SUPERVISION' ? 'Supervision' : 'Shared (Both)'}
             </button>
           ))}
         </div>
 
         <div className={`cp-dept-cards ${activeTone}`}>
-          <DeptCard tone="sky" Icon={Building2} label="التصميم" active={showDesign} hint="Offer · Contract" />
-          <DeptCard tone="amber" Icon={HardHat} label="الإشراف" active={showSup} hint="المقاول · Design Company · Commencement · Internal Review" />
+          <DeptCard tone="sky" Icon={Building2} label="Design" active={showDesign} hint="Offer · Contract" />
+          <DeptCard tone="amber" Icon={HardHat} label="Supervision" active={showSup} hint="Contractor · Design Company · Commencement · Internal Review" />
         </div>
       </div>
 
@@ -192,158 +189,135 @@ export default function CreateProject() {
       <form onSubmit={submit} className="cp-form">
         {/* ── مشترك دائماً ── */}
         <section className="cp-block cp-rv">
-          <h2 className="cp-block-h"><span className="cp-num">01</span> البيانات الأساسية</h2>
+          <h2 className="cp-block-h"><span className="cp-num">01</span> Basic Information</h2>
           <div className="cp-grid">
-            <Field label="الوصف (Description)">
+            <Field label="Description">
               <textarea value={f.description} onChange={set('description')} rows={2} placeholder="Proposed (B+G+3+PH) Residential Building" />
             </Field>
-            <Field label="اسم المشروع *"><input required value={f.name} onChange={set('name')} /></Field>
-            <Field label="رقم المشروع *"><input required value={f.project_no} onChange={set('project_no')} /></Field>
-            <Field label="العميل *">
+            <Field label="Project Name *"><input required value={f.name} onChange={set('name')} /></Field>
+            <Field label="Project Number *"><input required value={f.project_no} onChange={set('project_no')} /></Field>
+            <Field label="Client *">
               <select required value={f.client} onChange={set('client')}>
-                <option value="">— اختر —</option>
+                <option value="">— Select —</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </Field>
-            <Field label="الموقع"><input value={f.location} onChange={set('location')} /></Field>
-            <Field label="تاريخ البداية"><input type="date" value={f.start_date} onChange={set('start_date')} /></Field>
-            <Field label="المدة (يوم)"><input type="number" value={f.duration_days} onChange={set('duration_days')} /></Field>
-            <Field label="الأولوية">
+            <Field label="Location"><input value={f.location} onChange={set('location')} /></Field>
+            <Field label="Start Date"><input type="date" value={f.start_date} onChange={set('start_date')} /></Field>
+            <Field label="Duration (Days)"><input type="number" value={f.duration_days} onChange={set('duration_days')} /></Field>
+            <Field label="Priority">
               <select value={f.priority} onChange={set('priority')}>
-                <option value="URGENT">عاجل</option><option value="HIGH">مرتفع</option>
-                <option value="MEDIUM">متوسط</option><option value="LOW">منخفض</option>
+                <option value="URGENT">Urgent</option><option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option><option value="LOW">Low</option>
               </select>
             </Field>
-            <Field label="نوع المبنى"><input value={f.building_type} onChange={set('building_type')} /></Field>
-            <Field label="الأدوار"><input type="number" value={f.floors} onChange={set('floors')} /></Field>
-            <Field label="مساحة الأرض"><input value={f.plot_area} onChange={set('plot_area')} /></Field>
+            <Field label="Building Type"><input value={f.building_type} onChange={set('building_type')} /></Field>
+            <Field label="Floors"><input type="number" value={f.floors} onChange={set('floors')} /></Field>
+            <Field label="Plot Area"><input value={f.plot_area} onChange={set('plot_area')} /></Field>
             <Field label="BUA (M²)"><input value={f.bua} onChange={set('bua')} /></Field>
-            <Field label="الوحدات السكنية (Apartments)"><input type="number" value={f.apartments} onChange={set('apartments')} /></Field>
-            <Field label="المحلات (Shops)"><input type="number" value={f.shops} onChange={set('shops')} /></Field>
-            <Field label="المواقف (Parking)"><input value={f.parking} onChange={set('parking')} /></Field>
-            <Field label="رقم الطلب (Application No.)"><input value={f.application_no} onChange={set('application_no')} placeholder="N/2026/XXXXXXX" /></Field>
-            <Field label="رقم PIN"><input value={f.pin_no} onChange={set('pin_no')} /></Field>
+            <Field label="Apartments"><input type="number" value={f.apartments} onChange={set('apartments')} /></Field>
+            <Field label="Shops"><input type="number" value={f.shops} onChange={set('shops')} /></Field>
+            <Field label="Parking"><input value={f.parking} onChange={set('parking')} /></Field>
+            <Field label="Application No."><input value={f.application_no} onChange={set('application_no')} placeholder="N/2026/XXXXXXX" /></Field>
+            <Field label="PIN No."><input value={f.pin_no} onChange={set('pin_no')} /></Field>
             {/* ══ الحقول الناقصة ══ */}
-            <Field label="المالك (Owner)"><input value={f.owner} onChange={set('owner')} /></Field>
-            <Field label="استشاري الإشراف (Supervision Consultant)"><input value={f.supervision_consultant} onChange={set('supervision_consultant')} /></Field>
-            <Field label="رقم التصريح (Permit No.)"><input value={f.permit_no} onChange={set('permit_no')} /></Field>
-            <Field label="تاريخ التصريح (Permit Date)"><input type="date" value={f.permit_date} onChange={set('permit_date')} /></Field>
-            <Field label="موعد نهائي للتصريح (Permit Deadline)"><input type="date" value={f.permit_deadline} onChange={set('permit_deadline')} /></Field>
-            <Field label="حالة التصريح (Permit Status)">
+            <Field label="Owner"><input value={f.owner} onChange={set('owner')} /></Field>
+            <Field label="Supervision Consultant"><input value={f.supervision_consultant} onChange={set('supervision_consultant')} /></Field>
+            <Field label="Permit No."><input value={f.permit_no} onChange={set('permit_no')} /></Field>
+            <Field label="Permit Date"><input type="date" value={f.permit_date} onChange={set('permit_date')} /></Field>
+            <Field label="Permit Deadline"><input type="date" value={f.permit_deadline} onChange={set('permit_deadline')} /></Field>
+            <Field label="Permit Status">
               <select value={f.permit_status} onChange={set('permit_status')}>
                 <option value="NOT_ISSUED">Not Issued</option>
                 <option value="PENDING_AUTHORITY">Pending Authority</option>
                 <option value="ISSUED">Approved/Issued</option>
               </select>
             </Field>
-            {/* ═════════════════════ */}
-          </div>
-        </section>
-
-        {/* ── حقول التصميم ── */}
-        {showDesign && (
-          <section className="cp-block cp-block--sky cp-rv">
-            <h2 className="cp-block-h t-sky"><Building2 size={16} /><span className="cp-num">02</span> بيانات التصميم</h2>
-            <div className="cp-grid">
-              <Field label="حالة العرض">
-                <select value={f.offer_status} onChange={set('offer_status')}>
-                  <option value="NOT_SUBMITTED">لم يُرفع</option>
-                  <option value="SUBMITTED">مرفوع</option>
-                  <option value="APPROVED">معتمد</option>
-                </select>
-              </Field>
-              <Field label="حالة العقد">
-                <select value={f.contract_status} onChange={set('contract_status')}>
-                  <option value="NOT_SUBMITTED">لم يُرفع</option>
-                  <option value="SUBMITTED">مرفوع</option>
-                  <option value="APPROVED">معتمد</option>
-                </select>
-              </Field>
-            </div>
-          </section>
-        )}
-
-        {/* ── حقول الإشراف ── */}
-        {showSup && (
-          <section className="cp-block cp-block--amber cp-rv">
-            <h2 className="cp-block-h t-amber"><HardHat size={16} /><span className="cp-num">03</span> بيانات الإشراف</h2>
-
-            <div className="cp-grid">
-              <Field label="شركة التصميم (Design Company)">
-                <input value={f.design_company} onChange={set('design_company')}
-                  placeholder="اسم الشركة التي صمّمت المشروع" />
-              </Field>
-              <Field label="تصريح بدء التنفيذ (Commencement)">
-                <select value={f.commencement_status} onChange={set('commencement_status')}>
-                  <option value="PENDING_AUTHORITY">معلّق لدى الجهة</option>
-                  <option value="ISSUED">معتمد / صادر</option>
-                </select>
-              </Field>
-              <label className="cp-check">
-                <input type="checkbox" checked={f.internal_design_review_required}
-                  onChange={set('internal_design_review_required')} />
-                <span>يتطلب مراجعة تصميم داخلية (Internal Design Review)</span>
-              </label>
-            </div>
-
-            {/* المقاول: موجود أو جديد */}
-            <div className="cp-contractor">
+                        <div className="cp-contractor">
               <div className="cp-mode">
                 <button type="button" className={contractorMode === 'existing' ? 'on' : ''}
-                  onClick={() => setContractorMode('existing')}>مقاول مسجّل</button>
+                  onClick={() => setContractorMode('existing')}>Registered Contractor</button>
                 <button type="button" className={contractorMode === 'new' ? 'on' : ''}
-                  onClick={() => setContractorMode('new')}><UserPlus size={14} /> مقاول جديد</button>
+                  onClick={() => setContractorMode('new')}><UserPlus size={14} /> New Contractor</button>
               </div>
 
               {contractorMode === 'existing' ? (
-                <Field label="اختر المقاول">
+                <Field label="Choose Contractor">
                   <select value={f.contractor} onChange={set('contractor')}>
-                    <option value="">— اختر —</option>
+                    <option value="">— Choose —</option>
                     {contractors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </Field>
               ) : (
                 <div className="cp-new-co">
-                  <Field label="اسم المقاول *"><input value={f.newContractor.name} onChange={setNC('name')} /></Field>
-                  <Field label="شخص الاتصال"><input value={f.newContractor.contact_person} onChange={setNC('contact_person')} /></Field>
-                  <Field label="الموبايل"><input value={f.newContractor.phone} onChange={setNC('phone')} /></Field>
-                  <Field label="الإيميل"><input type="email" value={f.newContractor.email} onChange={setNC('email')} /></Field>
+                  <Field label="Contractor Name *"><input value={f.newContractor.name} onChange={setNC('name')} /></Field>
+                  <Field label="Contact Person"><input value={f.newContractor.contact_person} onChange={setNC('contact_person')} /></Field>
+                  <Field label="Phone"><input value={f.newContractor.phone} onChange={setNC('phone')} /></Field>
+                  <Field label="Email"><input type="email" value={f.newContractor.email} onChange={setNC('email')} /></Field>
                 </div>
               )}
             </div>
+            {/* ═════════════════════ */}
+          </div>
+        </section>
+
+
+
+        {/* ── حقول الإشراف ── */}
+        {showSup && (
+          <section className="cp-block cp-block--amber cp-rv">
+            <h2 className="cp-block-h t-amber"><HardHat size={16} /><span className="cp-num">03</span> Supervision Details</h2>
+
+            <div className="cp-grid">
+              <Field label="Design Company">
+                <input value={f.design_company} onChange={set('design_company')}
+                  placeholder="Name of the company that designed the project" />
+              </Field>
+              <Field label="Commencement Permit">
+                <select value={f.commencement_status} onChange={set('commencement_status')}>
+                  <option value="PENDING_AUTHORITY">Pending Authority</option>
+                  <option value="ISSUED">Approved/Issued</option>
+                </select>
+              </Field>
+              <label className="cp-check">
+                <input type="checkbox" checked={f.internal_design_review_required}
+                  onChange={set('internal_design_review_required')} />
+                <span>Internal Design Review Required</span>
+              </label>
+            </div>
+
+
           </section>
         )}
 
         <div className="cp-foot cp-rv">
-          <button type="button" className="cp-ghost" onClick={() => navigate(-1)}>إلغاء</button>
+          <button type="button" className="cp-ghost" onClick={() => navigate(-1)}>Cancel</button>
           <button type="submit" disabled={busy} className="cp-save">
-            {busy ? 'جارٍ الإنشاء…' : <><Check size={16} /> إنشاء المشروع</>}
+            {busy ? 'Creating…' : <><Check size={16} /> Create Project</>}
           </button>
         </div>
       </form>
     </div>
   );
 }
-
-/* ── مكوّنات فرعية ── */
-function Field({ label, children }) {
+export function Field({ label, children }) {
   return <label className="cp-field"><span>{label}</span>{children}</label>;
 }
-function DeptCard({ tone, Icon, label, active, hint }) {
+
+export function DeptCard({ tone, Icon, label, active, hint }) {
   return (
     <div className={`cp-dept t-${tone} ${active ? 'live' : 'dim'}`}>
       <Icon size={18} />
       <div>
         <b>{label}</b>
-        <span>{active ? hint : 'غير مفعّل لهذا النطاق'}</span>
+        <span>{active ? hint : 'Not enabled for this scope'}</span>
       </div>
       {active && <i className="cp-pulse" />}
     </div>
   );
 }
 
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+export const CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
 .cp-root{
   --ink: #ffffff; 
@@ -427,8 +401,21 @@ const CSS = `
   grid-column:1/-1; padding:6px 0; cursor:pointer; }
 .cp-check input{ width:17px; height:17px; accent-color:var(--sky); cursor:pointer; }
 
-.cp-contractor{ margin-top:16px; border-top:1px dashed var(--line); padding-top:18px; }
-.cp-mode{ display:inline-flex; gap:5px; background:#f1f5f9; border:1px solid var(--line); padding:4px; border-radius:10px; margin-bottom:16px; }
+.cp-contractor{ 
+  margin-top:16px; 
+  padding-top:18px; 
+  grid-column: 1 / -1; /* هذا السطر يمنع خروج الفورم ويجعله يأخذ العرض كاملاً */
+}
+.cp-new-co{ 
+  display:grid; 
+  /* تم تعديل هذا السطر ليكون متجاوباً مع الشاشات الصغيرة */
+  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); 
+  gap:14px; 
+  background:#fafafa; 
+  padding:16px; 
+  border-radius:12px; 
+  border:1px solid #e2e8f0; 
+}.cp-mode{ display:inline-flex; gap:5px; background:#f1f5f9; border:1px solid var(--line); padding:4px; border-radius:10px; margin-bottom:16px; }
 .cp-mode button{ display:inline-flex; align-items:center; gap:6px; border:none; background:transparent; color:var(--mut);
   font-family:inherit; font-weight:600; font-size:12.5px; padding:7px 14px; border-radius:8px; cursor:pointer; transition:.2s; }
 .cp-mode button:hover{ color:var(--paper); }
@@ -444,3 +431,4 @@ const CSS = `
 .cp-save:hover{ filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 4px 6px rgba(5,150,105,.3); }
 .cp-save:disabled{ opacity:.6; cursor:not-allowed; transform:none; filter:grayscale(0.5); box-shadow:none; }
 `;
+

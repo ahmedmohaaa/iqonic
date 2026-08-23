@@ -5,23 +5,6 @@ import { X, AlertTriangle, Shield } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-// ═══ مصدر واحد للأدوار والأقسام — لا تكرار ═══
-const ROLE_OPTIONS = [
-  { value: 'ENGINEER',   label: 'Engineer' },
-  { value: 'SENIOR_ENG', label: 'Senior Engineer' },
-  { value: 'PM',         label: 'Project Manager' },
-  { value: 'SUP_MGR',    label: 'Supervision Manager' },
-];
-
-const DEPARTMENT_OPTIONS = [
-  { value: 'Civil',        label: 'Civil' },
-  { value: 'Electrical',   label: 'Electrical' },
-  { value: 'Mechanical',   label: 'Mechanical' },
-  { value: 'Architecture', label: 'Architecture' },
-  { value: 'Planning',     label: 'Planning' },
-  { value: 'DC',           label: 'DC' },
-];
-
 const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSuccess }) => {
   const isEdit = !!assignment;
 
@@ -29,7 +12,6 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
-
   const [formData, setFormData] = useState({
     engineer: '',
     role: 'ENGINEER',
@@ -73,6 +55,20 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
   const setField = (key, value) =>
     setFormData(prev => ({ ...prev, [key]: value }));
 
+  // ✅ الدور والقسم يُجلبان تلقائيًا من قاعدة البيانات حسب المهندس المختار
+  const selectedEngineer = engineers.find((u) => String(u.id) === String(formData.engineer));
+
+  const handleEngineerChange = (e) => {
+    const id = e.target.value;
+    const eng = engineers.find((u) => String(u.id) === String(id));
+    setFormData((prev) => ({
+      ...prev,
+      engineer: id,
+      role: eng?.role || prev.role,
+      department: eng?.department || prev.department,
+    }));
+  };
+
   const handleDayToggle = (day) =>
     setFormData(prev => ({
       ...prev,
@@ -84,14 +80,11 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
   // ═══ الإرسال ═══
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!selectedProjectId) return setError('Please select a project.');
     if (!formData.engineer) return setError('Please select an engineer.');
     if (formData.days_of_week.length === 0) return setError('Please select at least one working day.');
-
     setLoading(true);
     setError('');
-
     try {
       if (isEdit) {
         await updateAssignment(assignment.id, formData);
@@ -144,13 +137,13 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
             </select>
           </div>
 
-          {/* ── Engineer + Role + Department + PM ── */}
+          {/* ── Engineer + PM ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Engineer *</label>
               <select
                 value={formData.engineer}
-                onChange={e => setField('engineer', e.target.value)}
+                onChange={handleEngineerChange}
                 disabled={isEdit}
                 className="w-full border rounded-lg p-2 text-sm bg-white disabled:bg-gray-100"
                 required
@@ -162,34 +155,12 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-              <select
-                value={formData.role}
-                onChange={e => setField('role', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm bg-white"
-                required
-              >
-                {ROLE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
-              <select
-                value={formData.department}
-                onChange={e => setField('department', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm bg-white"
-                required
-              >
-                {DEPARTMENT_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              {/* ✅ الدور والقسم من قاعدة البيانات (للتأكيد فقط) */}
+              {selectedEngineer && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {selectedEngineer.role} · {selectedEngineer.department || 'General'}
+                </p>
+              )}
             </div>
 
             {/* ── PM Checkbox ── */}
@@ -209,58 +180,55 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
             </div>
           </div>
 
-          {/* ── Work Schedule ── */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Work Schedule</h3>
-
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-600 mb-2">Days of Week *</label>
-              <div className="flex flex-wrap gap-2">
-                {DAYS_OF_WEEK.map(day => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => handleDayToggle(day)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-                      formData.days_of_week.includes(day)
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
+          {/* ── Working Days ── */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Working Days *</label>
+            <div className="flex flex-wrap gap-2">
+              {DAYS_OF_WEEK.map(day => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => handleDayToggle(day)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                    formData.days_of_week.includes(day)
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Time From</label>
-                <input
-                  type="time"
-                  value={formData.time_from}
-                  onChange={e => setField('time_from', e.target.value)}
-                  className="w-full border rounded-lg p-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Time To</label>
-                <input
-                  type="time"
-                  value={formData.time_to}
-                  onChange={e => setField('time_to', e.target.value)}
-                  className="w-full border rounded-lg p-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={formData.assignment_started_at}
-                  onChange={e => setField('assignment_started_at', e.target.value)}
-                  className="w-full border rounded-lg p-2 text-sm"
-                />
-              </div>
+          {/* ── Times + Start Date ── */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Time From</label>
+              <input
+                type="time"
+                value={formData.time_from}
+                onChange={e => setField('time_from', e.target.value)}
+                className="w-full border rounded-lg p-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Time To</label>
+              <input
+                type="time"
+                value={formData.time_to}
+                onChange={e => setField('time_to', e.target.value)}
+                className="w-full border rounded-lg p-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={formData.assignment_started_at}
+                onChange={e => setField('assignment_started_at', e.target.value)}
+                className="w-full border rounded-lg p-2 text-sm"
+              />
             </div>
           </div>
 
@@ -279,7 +247,7 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
             </div>
             <div className="border rounded-lg p-4 bg-purple-50 border-purple-100">
               <label className="block text-sm font-semibold text-purple-800 mb-1">Actual %</label>
-              <p className="text-xs text-purple-600 mb-2">Actual workload for this project.</p>
+              <p className="text-xs text-purple-600 mb-2">Real effort set by the manager.</p>
               <input
                 type="number"
                 min="0" max="100"

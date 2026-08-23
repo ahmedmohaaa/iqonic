@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getGlobalFilterProjects } from '../../api/services/projects';
 import GlobalFilterBar from '../../components/GlobalFilterBar';
 import { Link } from 'react-router-dom';
@@ -10,22 +10,35 @@ const ProjectDirectory = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
+  const [currentPage, setCurrentPage] = useState(1); // تم إضافتها لتتوافق مع بناء الباراميترات
 
   const roleString = String(user?.role || user?.groups?.[0] || user?.user_type || '').toUpperCase();
 
+  // ✅ كل الفلاتر بتتبعت كاملة بدون استثناء (permit_status / stage / scope / ...)
+  const params = useMemo(() => {
+    const p = { page: currentPage };
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== '' && v != null) p[k] = v;
+    });
+    return p;
+  }, [filters, currentPage]);
+
+  const paramsKey = JSON.stringify(params); // مفتاح ثابت يمنع اللوبات والتعليق
+
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-
-    // ═══ تنظيف الفلاتر: إزالة القيم الفارغة ═══
-    const cleanFilters = Object.fromEntries(
-      Object.entries(filters).filter(([_, value]) => value !== '')
-    );
-
-    getGlobalFilterProjects(cleanFilters)
-      .then((res) => setProjects(res.data.results || res.data || []))
-      .catch((err) => console.error('Failed to fetch projects', err))
-      .finally(() => setLoading(false));
-  }, [filters]);
+    getGlobalFilterProjects(params)
+      .then((res) => {
+        if (cancelled) return;
+        const data = res?.data;
+        setProjects(data?.results ?? data ?? []);
+      })
+      .catch(() => { if (!cancelled) setProjects([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramsKey]);
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);

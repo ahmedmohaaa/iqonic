@@ -46,7 +46,7 @@ import InvoiceConsole from './pages/Financials/InvoiceConsole';
 import ChatCenter from './pages/Chat/ChatCenter';
 import ReviewDirectory from './pages/InternalReview/ReviewDirectory';
 import EditTask from './pages/tasks/EditTask';  // غيّر المسار حسب مجلدك
-
+import MySupervisionProjects from './pages/Supervision/MySupervisionProjects';  // غيّر المسار حسب مجلدك
 function App() {
   return (
     <AuthProvider>
@@ -197,7 +197,7 @@ function App() {
 <Route path='/review-directory' element={<ReviewDirectory/>}/>
 
 <Route path="/tasks/:id/edit" element={<EditTask />} />
-
+<Route path="/my-supervision-projects" element={<MySupervisionProjects />} />
 
 
 

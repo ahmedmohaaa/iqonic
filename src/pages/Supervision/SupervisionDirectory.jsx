@@ -95,7 +95,7 @@ const SupervisionDirectory = () => {
           <input
             type="text"
             placeholder="Search by project name, number, or client..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-10 pr-4 py-2 border-2 border-gray-400 rounded-lg text-gray-900 font-semibold placeholder-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -107,7 +107,7 @@ const SupervisionDirectory = () => {
             placeholder="Filter by client..."
             value={filterClient}
             onChange={(e) => setFilterClient(e.target.value)}
-            className="border rounded-lg p-2 text-sm"
+            className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
         </div>
       </div>
@@ -156,9 +156,9 @@ const SupervisionDirectory = () => {
                 </div>
               </div>
               <div className="bg-gray-50 px-5 py-3 border-t flex justify-end">
-                <span className="text-primary text-sm font-semibold flex items-center">
-                  View Details <FolderOpen size={16} className="ml-1" />
-                </span>
+<span className="text-blue-800 text-sm font-bold flex items-center group-hover:underline">
+  View Details <FolderOpen size={16} className="ml-1" />
+</span>
               </div>
             </Link>
           ))}

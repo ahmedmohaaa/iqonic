@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { showChangeOrderInAllTasks } from './taskPermissions';
 import { getAllTasks } from '../../api/services/tasks';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -372,13 +373,13 @@ const AllTasks = () => {
                         >
                           View Details →
                         </Link>
-                        <Link 
+                      {showChangeOrderInAllTasks(user, task) && (  <Link 
                           to={`/tasks/${task.id}/edit`}
                           className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold transition shadow-sm"
                         >
                           <GitBranch size={12} />
                           Change Order
-                        </Link>
+                        </Link>)}
                       </div>
                     </td>
                   </tr>

@@ -17,10 +17,10 @@ import {
    ═══════════════════════════════════════════════════════════════ */
 
 const TABS = [
-  { id: 'projects',  label: 'المشاريع',  Icon: FolderKanban },
-  { id: 'tasks',     label: 'المهام',    Icon: ListChecks },
-  { id: 'employees', label: 'الموظفون',  Icon: UsersIcon },
-  { id: 'financial', label: 'المالي',    Icon: Wallet },
+  { id: 'projects',  label: 'Projects',  Icon: FolderKanban },
+  { id: 'tasks',     label: 'Tasks',     Icon: ListChecks },
+  { id: 'employees', label: 'Employees', Icon: UsersIcon },
+  { id: 'financial', label: 'Financial', Icon: Wallet },
 ];
 
 const fmt = (n) => Number(n || 0).toLocaleString('en-US');
@@ -123,7 +123,8 @@ function downloadCSV(filename, rows, columns) {
 export default function ReportsCenter() {
   const { user } = useAuth();
   const fullName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '';
-
+const [activeTab, setActiveTab] = useState('projects');
+const [taskStatusFilter, setTaskStatusFilter] = useState('ALL');
   const [tab, setTab] = useState('projects');
   const [stats, setStats] = useState(null);
   const [clients, setClients] = useState([]);
@@ -170,12 +171,12 @@ export default function ReportsCenter() {
       {/* ── الرأس ─────────────────────────────────────── */}
       <header className="rpt-head rv">
         <div>
-          <span className="rpt-kicker">ANALYTICS CONSOLE · وحدة التحليلات</span>
-          <h1 className="rpt-title">مركز التقارير</h1>
-          <p className="rpt-sub">قراءة موحّدة لأداء المكتب — مشاريع، مهام، كوادر، وماليّة.</p>
+          <span className="rpt-kicker">ANALYTICS CONSOLE </span>
+          <h1 className="rpt-title">Reports Center</h1>
+          <p className="rpt-sub">Unified view of office performance — projects, tasks, staff, and finance.</p>
         </div>
         <div className="rpt-head-right">
-          <span className="rpt-live"><i /> مباشر</span>
+          <span className="rpt-live"><i /> Live</span>
           <span className="rpt-who">{fullName}</span>
           <button className="rpt-iconbtn" onClick={refresh} title="تحديث"><RefreshCw size={16} /></button>
         </div>
@@ -184,32 +185,32 @@ export default function ReportsCenter() {
       {/* ── لوحة المؤشرات (شبكة غير متماثلة) ─────────── */}
       <section className="rpt-kpis rv">
         <div className="rpt-kpi rpt-kpi--hero">
-          <span className="rpt-kpi-lbl">إجمالي المشاريع</span>
+          <span className="rpt-kpi-lbl">Total Projects</span>
           <span className="rpt-kpi-num"><HeroNum v={pa.total_projects} /></span>
           <span className="rpt-kpi-foot">
-            <span className="dot dot--g" /> {pa.active_projects || 0} نشط
-            <span className="rpt-sep">·</span> {pa.closed_projects || 0} مغلق
+            <span className="dot dot--g" /> {pa.active_projects || 0} Active
+            <span className="rpt-sep">·</span> {pa.closed_projects || 0} Closed
           </span>
         </div>
         <div className="rpt-kpi">
-          <span className="rpt-kpi-lbl">معدل إنجاز المهام</span>
+          <span className="rpt-kpi-lbl">Task Completion Rate</span>
           <span className="rpt-kpi-num rpt-kpi-num--em"><HeroNum v={te.completion_rate_percentage} dec={1} suffix="%" /></span>
           <div className="rpt-mini-bar"><i style={{ width: `${pctNum(te.completion_rate_percentage)}%` }} /></div>
         </div>
         <div className="rpt-kpi">
-          <span className="rpt-kpi-lbl">إجمالي المفوتر</span>
+          <span className="rpt-kpi-lbl">Total Billed</span>
           <span className="rpt-kpi-num rpt-kpi-num--sky"><HeroNum v={fa.total_billed} /></span>
-          <span className="rpt-kpi-foot">ر.ق</span>
+          <span className="rpt-kpi-foot">USD</span>
         </div>
         <div className="rpt-kpi">
-          <span className="rpt-kpi-lbl">المحصّل</span>
+          <span className="rpt-kpi-lbl">Total Collected</span>
           <span className="rpt-kpi-num rpt-kpi-num--g"><HeroNum v={fa.total_collected} /></span>
-          <span className="rpt-kpi-foot">ر.ق</span>
+          <span className="rpt-kpi-foot">USD</span>
         </div>
         <div className="rpt-kpi">
-          <span className="rpt-kpi-lbl">المستحق</span>
+          <span className="rpt-kpi-lbl">Total Receivables</span>
           <span className="rpt-kpi-num rpt-kpi-num--r"><HeroNum v={fa.total_receivables} /></span>
-          <span className="rpt-kpi-foot">ر.ق</span>
+          <span className="rpt-kpi-foot">USD</span>
         </div>
       </section>
 
@@ -221,13 +222,13 @@ export default function ReportsCenter() {
           </button>
         ))}
         <button className="rpt-export" onClick={() => exportTab(tab, data)}>
-          <Download size={15} /> تصدير CSV
+          <Download size={15} /> Export CSV
         </button>
       </nav>
 
       {/* ── المحتوى ───────────────────────────────────── */}
       <div className="rpt-body">
-        {loading && <div className="rpt-loading">جارٍ تحميل البيانات…</div>}
+        {loading && <div className="rpt-loading">Loading data...</div>}
 
         {!loading && tab === 'projects' && (
           <ProjectsTab data={data.projects} pf={pf} setPf={setPf} clients={clients} wrap={wrap} />
@@ -249,57 +250,57 @@ function HeroNum({ v, dec = 0, suffix = '' }) {
 function ProjectsTab({ data, pf, setPf, clients }) {
   const rows = data?.projects || [];
   const donut = [
-    { value: data?.active || 0, color: '#3fae84', label: 'نشط' },
-    { value: data?.closed || 0, color: '#6b7682', label: 'مغلق' },
+    { value: data?.active || 0, color: '#3fae84', label: 'Active' },
+    { value: data?.closed || 0, color: '#6b7682', label: 'Closed' },
   ];
   return (
     <div className="rpt-grid-2">
       <div className="rpt-panel rv">
-        <div className="rpt-panel-h"><FolderKanban size={16} /> فلاتر التقرير</div>
+        <div className="rpt-panel-h"><FolderKanban size={16} /> Report Filters</div>
         <div className="rpt-filters">
-          <Field label="النطاق">
+          <Field label="Scope">
             <select value={pf.scope} onChange={(e) => setPf({ ...pf, scope: e.target.value })}>
-              <option value="">الكل</option><option value="DESIGN">تصميم</option>
-              <option value="SUPERVISION">إشراف</option><option value="BOTH">الاثنان</option>
+              <option value="">All</option><option value="DESIGN">Design</option>
+              <option value="SUPERVISION">Supervision</option><option value="BOTH">Both</option>
             </select>
           </Field>
-          <Field label="الحالة">
+          <Field label="Status">
             <select value={pf.status} onChange={(e) => setPf({ ...pf, status: e.target.value })}>
-              <option value="">الكل</option><option value="active">نشط</option><option value="closed">مغلق</option>
+              <option value="">All</option><option value="active">Active</option><option value="closed">Closed</option>
             </select>
           </Field>
-          <Field label="العميل">
+          <Field label="Client">
             <select value={pf.client} onChange={(e) => setPf({ ...pf, client: e.target.value })}>
-              <option value="">الكل</option>
+              <option value="">All</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
-          <Field label="من تاريخ"><input type="date" value={pf.date_from} onChange={(e) => setPf({ ...pf, date_from: e.target.value })} /></Field>
-          <Field label="إلى تاريخ"><input type="date" value={pf.date_to} onChange={(e) => setPf({ ...pf, date_to: e.target.value })} /></Field>
+          <Field label="From Date"><input type="date" value={pf.date_from} onChange={(e) => setPf({ ...pf, date_from: e.target.value })} /></Field>
+          <Field label="To Date"><input type="date" value={pf.date_to} onChange={(e) => setPf({ ...pf, date_to: e.target.value })} /></Field>
         </div>
       </div>
 
       <div className="rpt-panel rv">
-        <div className="rpt-panel-h">توزيع الحالة</div>
+        <div className="rpt-panel-h">Distribution by Status</div>
         <div className="rpt-donut-wrap">
           <Donut segments={donut} />
           <ul className="rpt-legend">
             {donut.map((s, i) => (
               <li key={i}><i style={{ background: s.color }} /> {s.label} <b>{s.value}</b></li>
             ))}
-            <li className="rpt-legend-total">المجموع <b>{data?.total || 0}</b></li>
+            <li className="rpt-legend-total">Total <b>{data?.total || 0}</b></li>
           </ul>
         </div>
       </div>
 
       <div className="rpt-panel rpt-panel--wide rv">
-        <div className="rpt-panel-h">سجلّ المشاريع <span className="rpt-count">{rows.length}</span></div>
-        <Table head={['الرقم', 'الاسم', 'العميل', 'النطاق', 'الحالة', 'الأولوية']}
+        <div className="rpt-panel-h">Project Records <span className="rpt-count">{rows.length}</span></div>
+        <Table head={['Number', 'Name', 'Client', 'Scope', 'Status', 'Priority']}
           rows={rows}
           cells={(p) => [
             <code>{p.project_no}</code>, p.name, p.client_name || '—',
             <Tag tone={p.scope === 'DESIGN' ? 'sky' : p.scope === 'SUPERVISION' ? 'violet' : 'amber'}>{p.scope}</Tag>,
-            <Tag tone={p.is_active ? 'g' : 'z'}>{p.is_active ? 'نشط' : 'مغلق'}</Tag>,
+            <Tag tone={p.is_active ? 'g' : 'z'}>{p.is_active ? 'Active' : 'Closed'}</Tag>,
             <Tag tone={prioTone(p.priority)}>{p.priority}</Tag>,
           ]} />
       </div>
@@ -311,34 +312,35 @@ function ProjectsTab({ data, pf, setPf, clients }) {
 function TasksTab({ data }) {
   const tasks = data?.tasks || [];
   const bars = [
-    { label: 'مكتمل', value: data?.completed || 0, color: '#3fae84' },
-    { label: 'جارٍ', value: data?.in_progress || 0, color: '#5cc8ff' },
-    { label: 'معلّق', value: data?.on_hold || 0, color: '#e3a948' },
-    { label: 'إجمالي', value: data?.total || 0, color: '#8a93a0' },
+    { label: 'Completed', value: data?.completed || 0, color: '#3fae84' },
+    { label: 'In Progress', value: data?.in_progress || 0, color: '#5cc8ff' },
+    { label: 'On Hold', value: data?.on_hold || 0, color: '#e3a948' },
+    { label: 'Total', value: data?.total || 0, color: '#8a93a0' },
   ];
   return (
     <div className="rpt-grid-2">
       <div className="rpt-panel rv">
-        <div className="rpt-panel-h">توزيع الحالات</div>
+        <div className="rpt-panel-h">Distribution by Status</div>
         <Bars data={bars} />
-        <p className="rpt-note">يعرض الباك إند عيّنة من أحدث 100 مهمة؛ الفلترة هنا محلية على هذه العيّنة.</p>
+        <p className="rpt-note">The backend displays a sample of the latest 100 tasks; filtering here is local to this sample.</p>
       </div>
       <div className="rpt-panel rv">
-        <div className="rpt-panel-h">مؤشرات الكفاءة</div>
+        <div className="rpt-panel-h">Performance Indicators</div>
         <div className="rpt-stat-rows">
-          <StatRow label="إجمالي المهام" value={fmt(data?.total)} />
-          <StatRow label="المكتملة" value={fmt(data?.completed)} tone="g" />
-          <StatRow label="قيد التنفيذ" value={fmt(data?.in_progress)} tone="sky" />
-          <StatRow label="المتأخرة / المعلّقة" value={fmt(data?.on_hold)} tone="r" />
-          <StatRow label="معدل الإنجاز" value={`${pctNum(data?.completion_rate_percentage).toFixed(1)}%`} tone="em" />
+          <StatRow label="Total Tasks" value={fmt(data?.total)} />
+          <StatRow label="Completed" value={fmt(data?.completed)} tone="g" />
+          <StatRow label="Approved Tasks" value={fmt(data?.approved)} tone="em" />
+          <StatRow label="In Progress" value={fmt(data?.in_progress)} tone="sky" />
+          <StatRow label="Delayed / On Hold" value={fmt(data?.on_hold)} tone="r" />
+          <StatRow label="Completion Rate" value={`${pctNum(data?.completion_rate_percentage).toFixed(1)}%`} tone="em" />
         </div>
       </div>
       <div className="rpt-panel rpt-panel--wide rv">
-        <div className="rpt-panel-h">قائمة المهام <span className="rpt-count">{tasks.length}</span></div>
-        <Table head={['المهمة', 'المشروع', 'المسند إليه', 'الحالة', 'التقدّم']}
+        <div className="rpt-panel-h">Task List <span className="rpt-count">{tasks.length}</span></div>
+        <Table head={['Task', 'Project', 'Assigned To', 'Status', 'Progress']}
           rows={tasks}
           cells={(t) => [
-            t.title || t.discipline_name || '—', t.project_name || '—', t.assigned_to_name || 'غير مسند',
+            t.title || t.discipline_name || '—', t.project_name || '—', t.assigned_to_name || 'Not Assigned',
             <Tag tone={statusTone(t.status)}>{t.status}</Tag>,
             <span className="rpt-prog"><i style={{ width: `${t.progress_percentage || 0}%` }} /><b>{t.progress_percentage || 0}%</b></span>,
           ]} />
@@ -355,7 +357,7 @@ function EmployeesTab({ data }) {
   return (
     <div className="rpt-grid-2">
       <div className="rpt-panel rpt-panel--wide rv">
-        <div className="rpt-panel-h">ترتيب الكوادر حسب الإنجاز <span className="rpt-count">{list.length}</span></div>
+        <div className="rpt-panel-h">Employee Rankings <span className="rpt-count">{list.length}</span></div>
         <div className="rpt-emp-list">
           {list.map((e, i) => {
             const rate = pctNum(e.completion_rate);
@@ -393,32 +395,32 @@ function FinancialTab({ data }) {
   return (
     <div className="rpt-grid-2">
       <div className="rpt-panel rv">
-        <div className="rpt-panel-h">التحصيل مقابل المستحق</div>
+        <div className="rpt-panel-h">Collection vs. Outstanding</div>
         <div className="rpt-donut-wrap">
           <Donut segments={donut} />
           <ul className="rpt-legend">
-            <li><i style={{ background: '#3fae84' }} /> محصّل <b>{money(collected)}</b></li>
-            <li><i style={{ background: '#d9606a' }} /> مستحق <b>{money(Math.max(outstanding, 0))}</b></li>
-            <li className="rpt-legend-total">مفوتر <b>{money(invoiced)}</b></li>
+            <li><i style={{ background: '#3fae84' }} /> Collected <b>{money(collected)}</b></li>
+            <li><i style={{ background: '#d9606a' }} /> Outstanding <b>{money(Math.max(outstanding, 0))}</b></li>
+            <li className="rpt-legend-total">Invoiced <b>{money(invoiced)}</b></li>
           </ul>
         </div>
-        <p className="rpt-note">قيمة «المستحق» محسوبة في الواجهة (مفوتر − محصّل) لتعويض حقل الباك إند غير المفعّل.</p>
+        <p className="rpt-note">The "Outstanding" value is calculated on the frontend (Invoiced − Collected) to compensate for the inactive backend field.</p>
       </div>
       <div className="rpt-panel rv">
-        <div className="rpt-panel-h">مؤشرات</div>
+        <div className="rpt-panel-h">Performance Indicators</div>
         <div className="rpt-stat-rows">
-          <StatRow label="إجمالي المفوتر" value={money(invoiced)} tone="sky" />
-          <StatRow label="إجمالي المحصّل" value={money(collected)} tone="g" />
-          <StatRow label="إجمالي المستحق" value={money(Math.max(outstanding, 0))} tone="r" />
-          <StatRow label="فواتير متأخرة" value={fmt(data?.overdue_count)} tone="r" />
+          <StatRow label="Total Invoiced" value={money(invoiced)} tone="sky" />
+          <StatRow label="Total Collected" value={money(collected)} tone="g" />
+          <StatRow label="Total Outstanding" value={money(Math.max(outstanding, 0))} tone="r" />
+          <StatRow label="Overdue Invoices" value={fmt(data?.overdue_count)} tone="r" />
         </div>
         {Number(data?.overdue_count) > 0 && (
-          <div className="rpt-alert"><AlertTriangle size={15} /> توجد فواتير تجاوزت تاريخ الاستحقاق — راجع لوحة التحصيل.</div>
+          <div className="rpt-alert"><AlertTriangle size={15} /> There are invoices that have exceeded their due dates — please review the collection panel.</div>
         )}
       </div>
       <div className="rpt-panel rpt-panel--wide rv">
-        <div className="rpt-panel-h">الفواتير <span className="rpt-count">{invoices.length}</span></div>
-        <Table head={['الفاتورة', 'المرحلة', 'المبلغ', 'الاستحقاق', 'الحالة']}
+        <div className="rpt-panel-h">Invoices <span className="rpt-count">{invoices.length}</span></div>
+        <Table head={['Invoice', 'Milestone', 'Amount', 'Due Date', 'Status']}
           rows={invoices}
           cells={(iv) => [
             iv.title || '—', iv.milestone_type || '—', money(iv.total_amount),
@@ -444,7 +446,7 @@ function StatRow({ label, value, tone = '' }) {
 function Tag({ tone = 'z', children }) { return <span className={`rpt-tag rpt-tag--${tone}`}>{children}</span>; }
 
 function Table({ head, rows, cells }) {
-  if (!rows.length) return <div className="rpt-empty">لا بيانات مطابقة.</div>;
+  if (!rows.length) return <div className="rpt-empty">No matching data.</div>;
   return (
     <div className="rpt-table-wrap">
       <table className="rpt-table">
@@ -465,15 +467,15 @@ function exportTab(tab, data) {
   if (tab === 'projects') {
     const rows = data.projects?.projects || [];
     downloadCSV(`projects-${stamp}.csv`, rows, [
-      { key: 'project_no', header: 'الرقم' }, { key: 'name', header: 'الاسم' },
-      { key: 'client_name', header: 'العميل' }, { key: 'scope', header: 'النطاق' },
-      { key: 'is_active', header: 'نشط' }, { key: 'priority', header: 'الأولوية' },
+      { key: 'project_no', header: 'Project Number' }, { key: 'name', header: 'Project Name' },
+      { key: 'client_name', header: 'Client Name' }, { key: 'scope', header: 'Scope' },
+      { key: 'is_active', header: 'Active' }, { key: 'priority', header: 'Priority' },
     ]);
   } else if (tab === 'tasks') {
     downloadCSV(`tasks-${stamp}.csv`, data.tasks?.tasks || [], [
-      { key: 'title', header: 'المهمة' }, { key: 'project_name', header: 'المشروع' },
-      { key: 'assigned_to_name', header: 'المسند إليه' }, { key: 'status', header: 'الحالة' },
-      { key: 'progress_percentage', header: 'التقدّم' },
+      { key: 'title', header: 'Task Title' }, { key: 'project_name', header: 'Project Name' },
+      { key: 'assigned_to_name', header: 'Assigned To' }, { key: 'status', header: 'Status' },
+      { key: 'progress_percentage', header: 'Progress' },
     ]);
   } else if (tab === 'employees') {
     const rows = (data.employees || []).map((e) => ({
@@ -482,13 +484,13 @@ function exportTab(tab, data) {
       completed: e.completed_tasks, rate: e.completion_rate,
     }));
     downloadCSV(`employees-${stamp}.csv`, rows, [
-      { key: 'name', header: 'الاسم' }, { key: 'role', header: 'الدور' },
-      { key: 'total', header: 'المهام' }, { key: 'completed', header: 'المكتمل' }, { key: 'rate', header: 'الإنجاز%' },
+      { key: 'name', header: 'Name' }, { key: 'role', header: 'Role' },
+      { key: 'total', header: 'Total Tasks' }, { key: 'completed', header: 'Completed' }, { key: 'rate', header: 'Completion Rate' },
     ]);
   } else {
     downloadCSV(`invoices-${stamp}.csv`, data.financial?.invoices || [], [
-      { key: 'title', header: 'الفاتورة' }, { key: 'milestone_type', header: 'المرحلة' },
-      { key: 'total_amount', header: 'المبلغ' }, { key: 'due_date', header: 'الاستحقاق' }, { key: 'status', header: 'الحالة' },
+      { key: 'title', header: 'Invoice' }, { key: 'milestone_type', header: 'Milestone' },
+      { key: 'total_amount', header: 'Amount' }, { key: 'due_date', header: 'Due Date' }, { key: 'status', header: 'Status' },
     ]);
   }
 }
@@ -663,3 +665,4 @@ const CSS = `
 .rpt-prog i{ background:linear-gradient(90deg,var(--sky),var(--g)) no-repeat; background-size:var(--w,0%) 100%; background-color:rgba(0,0,0,.06); }
 .rpt-prog b{ font-family:'JetBrains Mono'; font-size:11px; color:var(--paper); min-width:34px; text-align:end; }
 `;
+

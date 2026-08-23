@@ -6,12 +6,9 @@ export const respondToTaskReplacement = (id, data) => apiClient.patch(`replaceme
 
 // Supervision Team Replacement Requests
 export const getSupervisionReplacementRequests = (params) => apiClient.get('supervision-replacement-requests/', { params });
-export const respondToSupervisionReplacement = (id, data) => apiClient.patch(`supervision-team/replacement-request/`, { 
-    assignment_id: data.assignment_id,
-    new_engineer_id: data.new_engineer_id,
-    status: data.status,
-    response_reason: data.response_reason
-});
+// ✅ الرد الفعلي (المهندس المقترح أو زبادي) — نفس فيو الرد في الباك-إند
+export const respondToSupervisionReplacement = (id, data) =>
+  apiClient.patch(`supervision-replacement-requests/${id}/respond/`, data);
 
 // src/api/services/reports.js  — أضف هذا السطر
 export const getOverviewStatistics = () => apiClient.get('statistics/');

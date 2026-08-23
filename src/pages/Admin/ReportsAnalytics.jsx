@@ -84,19 +84,19 @@ const ReportsAnalytics = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCard
             title="Total Billed"
-            value={`$${financial_analytics?.total_billed?.toLocaleString() || 0}`}
+            value={`QR${financial_analytics?.total_billed?.toLocaleString() || 0}`}
             icon={<TrendingUp />}
             color="blue"
           />
           <MetricCard
             title="Total Collected"
-            value={`$${financial_analytics?.total_collected?.toLocaleString() || 0}`}
+            value={`QR${financial_analytics?.total_collected?.toLocaleString() || 0}`}
             icon={<CheckCircle />}
             color="green"
           />
           <MetricCard
             title="Total Outstanding"
-            value={`$${financial_analytics?.total_receivables?.toLocaleString() || 0}`}
+            value={`QR${financial_analytics?.total_receivables?.toLocaleString() || 0}`}
             icon={<Clock />}
             color="yellow"
           />
@@ -143,7 +143,7 @@ const ReportsAnalytics = () => {
   <MetricCard title="Approved"      value={tasks_efficiency?.approved_tasks || 0} color="emerald" />
   <MetricCard title="In Progress"   value={tasks_efficiency?.in_progress_tasks || 0} color="blue" />
   <MetricCard title="On Hold"       value={tasks_efficiency?.delayed_tasks || 0} color="red" />
-  <MetricCard title="Completion Rate" value={`${tasks_efficiency?.completion_rate_percentage || 0}%`} color="purple" />
+  <MetricCard title="Approval Rate" value={`${tasks_efficiency?.completion_rate_percentage || 0}%`} color="purple" />
 </div>
         {/* Progress Bar */}
         <div className="mt-6">

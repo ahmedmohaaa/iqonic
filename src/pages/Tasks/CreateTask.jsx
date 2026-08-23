@@ -68,6 +68,10 @@ const INTERNAL_REVIEW_STAGES = [
   { value: 'IFC_PACKAGE', label: 'IFC Package' },
   { value: 'OTHER', label: 'Other' },
 ];
+
+const EXTRA_ASSIGN = {
+  'mohammad.mostafa': ['jr.vicky', 'mohammad.alqadi', 'ahmad.alqadi', 'mohammad.mostafa'],
+};
 const CreateTask = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -126,11 +130,25 @@ const [allowedTaskTypes, setAllowedTaskTypes] = useState(
 
 const projectOptions = isCO ? changeOrders : typedProjects;
 
+// ✅ صلاحية التعيين الإضافية لمحمد مصطفى (تصميم فقط — مطابقة للباك-إند)
+const extraAssignees = isMain
+  ? (EXTRA_ASSIGN[user?.username] || [])
+      .map((uname) => legacyEngineers.find((e) => e.username === uname))
+      .filter(Boolean)
+  : [];
+
 const assigneeOptions =
-  isMain || isSupervision || isInternal ? filteredEngineers : legacyEngineers;
+  isMain || isSupervision || isInternal
+    ? [
+        ...filteredEngineers,
+        ...extraAssignees.filter((e) => !filteredEngineers.some((f) => f.id === e.id)),
+      ]
+    : legacyEngineers;
 
 const showAssignSelect =
-  isMain || isSupervision || isInternal ? canAssignOthers : !isEngineerOrDraftsman;
+  isMain || isSupervision || isInternal
+    ? canAssignOthers || extraAssignees.length > 0
+    : !isEngineerOrDraftsman;
 
 const shouldSelfAssign =
   isMain || isSupervision || isInternal ? !canAssignOthers : isEngineerOrDraftsman;
@@ -263,7 +281,8 @@ useEffect(() => {
 
   const onSubmit = async (data) => {
     setError('');
-
+// ✅ الإدارة العليا (ناصر/نسرين) لا ترى قسم الإشراف
+const isTopManagement = ['GM', 'AGM'].includes(user?.role);
 const payload = { ...data };
 
 if (isSupervision) {
@@ -782,7 +801,20 @@ if (!showAssignSelect && user?.id) {
                   </select>
                 </div>
               </div>
-
+              {/* Change Order Description */}
+              {isCO && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Task Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Describe the change order scope, reason and expected impact..."
+                    {...register('description')}
+                    className="w-full border border-violet-300 bg-violet-50/30 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-violet-300 outline-none transition"
+                  />
+                </div>
+              )}
               {/* Discipline + Assignee */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {showDiscipline ? (
@@ -948,3 +980,4 @@ if (!showAssignSelect && user?.id) {
 
 export default CreateTask;
 
+              {/* Discipline + Assignee */}

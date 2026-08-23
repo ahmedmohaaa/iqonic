@@ -53,14 +53,14 @@ const ClientDirectory = () => {
           </h1>
           <p className="text-sm text-gray-500">Manage clients and view their project statistics.</p>
         </div>
-        {user?.role === 'SECRETARY' && (
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center justify-center"
-          >
-            <Plus size={18} className="mr-1" /> Add New Client
-          </button>
-        )}
+{user?.role === 'SECRETARY' && ['Supervision', 'Design'].includes(user?.department) && (
+  <button 
+    onClick={() => setShowAddModal(true)}
+    className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center justify-center"
+  >
+    <Plus size={18} className="mr-1" /> Add New Client
+  </button>
+)}
       </div>
 
       {/* Search Bar */}
@@ -69,7 +69,7 @@ const ClientDirectory = () => {
         <input
           type="text"
           placeholder="Search by name, phone, or email..."
-          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full pl-10 pr-4 py-2 border-2 border-gray-400 rounded-lg text-gray-900 font-semibold placeholder-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-500"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -134,9 +134,9 @@ const ClientCard = ({ client, onViewDetails }) => {
               )}
             </div>
           </div>
-          <div className="bg-primary/10 p-2 rounded-full">
-            <Building2 className="text-primary" size={20} />
-          </div>
+<div className="bg-blue-100 p-2.5 rounded-full border border-blue-200">
+  <Building2 className="text-blue-800" size={20} />
+</div>
         </div>
 
         {/* Statistics */}

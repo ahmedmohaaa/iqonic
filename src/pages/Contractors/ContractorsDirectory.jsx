@@ -95,7 +95,7 @@ const ContractorsDirectory = () => {
           </h1>
           <p className="text-sm text-gray-500">Manage contractors and view their project statistics</p>
         </div>
-        {canManage && (
+{user?.role === 'SECRETARY' && ['Supervision', 'Design'].includes(user?.department) && (
           <button 
             onClick={() => setShowAddModal(true)}
             className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center"
@@ -140,7 +140,7 @@ const ContractorsDirectory = () => {
           <input
             type="text"
             placeholder="Search by name, contact person, phone, or email..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-10 pr-4 py-2 border-2 border-gray-400 rounded-lg text-gray-900 font-semibold placeholder-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -150,7 +150,7 @@ const ContractorsDirectory = () => {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="border rounded-lg p-2 text-sm bg-white"
+            className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
           >
             <option value="">All Contractors</option>
             <option value="active">With Active Projects</option>

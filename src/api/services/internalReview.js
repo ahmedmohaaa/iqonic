@@ -26,5 +26,4 @@ export const getReviewDisciplineItems = (reviewStage) =>
   apiClient.get('internal-review/discipline-items/', { params: { review_stage: reviewStage } });
 // ── تفعيل جسر المراجعة التصميمية الداخلية للمشروع ──
 export const activateInternalReview = (projectId) =>
-  apiClient.post(`projects/${projectId}/internal-review/activate/`);
-
+  apiClient.post(`projects/${projectId}/activate-internal-review/`);

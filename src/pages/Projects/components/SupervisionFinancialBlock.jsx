@@ -5,8 +5,8 @@ import { Calendar, Plus } from 'lucide-react';
 import { ModalWrapper, StatusBadge } from './DesignFinancialBlock'; // Reusing helpers
 
 const SupervisionFinancialBlock = ({ projectId }) => {
-  const { isAccountant, isManagement } = useAuth();
-  const canEdit = isAccountant() || isManagement();
+const { isAccountant, canViewSupervisionFinance } = useAuth();
+const canEdit = Boolean(canViewSupervisionFinance?.() && isAccountant());
 
   const [invoices, setInvoices] = useState([]);
   const [stats, setStats] = useState(null);

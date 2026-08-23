@@ -48,6 +48,8 @@ const ActiveProjects = () => {
   };
 
   const hasActionPermissions = checkPermissions();
+  // ✅ زر التعديل لا يظهر لناصر (GM) ولا نسرين (AGM)
+const canEditProject = !['GM', 'AGM'].includes(user?.role);
   // ------------------------------------------------------------------------
 
   useEffect(() => {
@@ -201,12 +203,13 @@ const ActiveProjects = () => {
                       <Flag size={14} /> Priority
                     </Link>
 
-                    <Link 
+  {canEditProject && (
+                  <Link 
                       to={`/projects/${project.id}/edit`}
                       className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 rounded transition"
                     >
                       <Edit size={14} /> Edit
-                    </Link>
+                    </Link>)}
                   </div>
                 )}
               </div>
@@ -244,3 +247,5 @@ const ActiveProjects = () => {
 };
 
 export default ActiveProjects;
+
+

@@ -6,11 +6,12 @@ import { useAuth } from '../../context/AuthContext';
 import ChangeOrdersPanel from './components/ChangeOrdersPanel';
 import InvoiceConsole from '../../pages/Financials/InvoiceConsole';
 import InternalDesignReviewPanel from './components/InternalDesignReviewPanel';
+import SupervisionFinancialBlock from './components/SupervisionFinancialBlock';
 import {
   ArrowLeft, Hash, Building2, Calendar, MapPin, Clock, Flag, Lock, FileText,
   Upload, StickyNote, Send, AtSign, CheckCircle2, Circle, AlertTriangle,
   Hammer, Wrench, Pencil, X, DollarSign, Layers, Activity, ChevronRight,
-  Workflow, Sparkles, Link2, Zap, User
+  Workflow, Sparkles, Link2, Zap, User,ExternalLink
 } from 'lucide-react';
 import { activateInternalReview } from '../../api/services/internalReview';
 
@@ -47,6 +48,7 @@ function usePerms(user, project) {
   const isManagementSecretary = isSec && d === 'Management';
   const designMgrs = isMgmt || isDMgr;
   const isSupMgr = r === 'SUP_MGR' || r === 'PM';
+  
   return {
     canManageOffer: isMgmt || isDMgr || isManagementSecretary,
     canEditInfo: designMgrs || isManagementSecretary,
@@ -57,13 +59,13 @@ function usePerms(user, project) {
     canUploadContract: isMgmt || isManagementSecretary,
     canSeeNumbers: isMgmt || isAcc || isDMgr || isSupMgr,
     canAddInvoice: isMgmt || isAcc,
-    canEditStruct: u === 'mohammad.mostafa' || isMgmt || isDMgr,
     canEditIFC: u === 'shaaban.karam' || isMgmt || isDMgr,
     canManageChangeOrder:
       isMgmt || isDMgr || isSupMgr ||
       (isSec && ['Design', 'Management', 'Supervision'].includes(d)),
     canConfirmChangeOrder: isMgmt || isDMgr,
     canActivateReview: ['SUP_MGR', 'PM', 'GM', 'AGM'].includes(r),
+    canEditStruct: user?.username === 'mohammad.mostafa',
   };
 }
 
@@ -169,6 +171,12 @@ function CompletedTasksSection({ tasks, user, onReload }) {
                               <p className="text-sm font-bold text-gray-800 truncate">
                                 {task.title || task.discipline_name}
                               </p>
+                              {/* ✅ اسم الـ Discipline لكل مهمة (بلون قسمها) */}
+{task.discipline_name && task.title && (
+  <p className={`mt-0.5 text-xs font-semibold`}>
+    {task.discipline_name}
+  </p>
+)}
                               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-600">
                                 <span className="inline-flex items-center gap-1">
                                   <span className={`w-2 h-2 rounded-full ${sm.dot}`} />
@@ -225,7 +233,7 @@ function CompletedTasksSection({ tasks, user, onReload }) {
 /* ═══════════════════════════════════════════════════════════════ */
 export default function ProjectDetails() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, canViewSupervisionFinance } = useAuth();
   const [p, setP] = useState(null);
   const [loading, setLoading] = useState(true);
   const wrap = useReveal([p]);
@@ -266,24 +274,20 @@ export default function ProjectDetails() {
   const stages = [...(p.lifecycle_stages || [])].sort((a, b) => a.sequence_order - b.sequence_order);
   const done = stages.filter((s) => s.status === 'ACHIEVED' || s.status === 'APPROVED').length;
   const pct = stages.length ? Math.round((done / stages.length) * 100) : 0;
+const isDesign = p.scope !== 'SUPERVISION';
 
   /* ── Actions ──────────────────────────────────────────── */
-  const cycleStruct = () => {
-    const order = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
-    const next = order[Math.min(order.indexOf(structState) + 1, 2)];
-    if (next === structState) return;
-    apiClient.patch(`projects/${id}/structural-status/`, { status: next }).then(load);
-  };
-  const cycleOffer = () => {
-    const order = ['NOT_SUBMITTED', 'SUBMITTED', 'APPROVED'];
-    const next = order[Math.min(order.indexOf(p.offer_status) + 1, 2)];
-    apiClient.patch(`projects/${id}/offer-status/`, { offer_status: next }).then(load);
-  };
-  const cycleContract = () => {
-    const order = ['NOT_SUBMITTED', 'SUBMITTED', 'APPROVED'];
-    const next = order[Math.min(order.indexOf(p.contract_status) + 1, 2)];
-    apiClient.patch(`projects/${id}/offer-status/`, { contract_status: next }).then(load);
-  };
+ // ✅ حالات الـ Structural (قائمة اختيار — مصدر واحد)
+const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
+
+const setStructStatus = (status) => {
+  apiClient.patch(`projects/${id}/structural-status/`, { status }).then(load);
+};
+// ✅ مراحل العرض/العقد (مصدر واحد) + دالة حفظ واحدة
+const OFFER_STAGES = ['NOT_SUBMITTED', 'SUBMITTED', 'APPROVED'];
+const patchOfferContract = (payload) =>
+  apiClient.patch(`projects/${id}/offer-status/`, payload).then(load);
+
   const holdStruct = () => {
     if (!holdReason.trim()) return;
     apiClient.patch(`projects/${id}/structural-status/`, { status: 'ON_HOLD', hold_reason: holdReason })
@@ -310,7 +314,10 @@ export default function ProjectDetails() {
     apiClient.post(`projects/${id}/contract-file/upload/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       .then(() => setContractFile(null)).then(load);
   };
-  const canViewFinancials = () => ['GM', 'AGM', 'ACCOUNTANT'].includes(user?.role);
+  const canViewFinancials = () =>
+  p?.scope === 'SUPERVISION'
+    ? (user?.username === 'ahmed.zabady' || user?.role === 'ACCOUNTANT')
+    : ['GM', 'AGM', 'ACCOUNTANT'].includes(user?.role);
 
   return (
     <div ref={wrap} className="pd-root" dir="ltr">
@@ -359,24 +366,24 @@ export default function ProjectDetails() {
               action={P.canEditLifecycle ? <span className="pd-editable">Editable</span> : <span className="pd-readonly">Read-only</span>}>
               <LifecycleRibbon
                 stages={stages}
-                canEdit={user?.username === 'mohammad.fahmy' || user?.role === 'DESIGN_MGR'}
+  canEdit={user?.username === 'mohammad.fahmy' || user?.role === 'DESIGN_MGR' || (p.scope === 'DESIGN' && user?.role === 'SECRETARY' && user?.department === 'Design')}
                 onReload={load}
                 projectId={id}
               />
             </Block>
 
             {/* The four flags */}
-            {p.scope !== 'SUPERVISION' && (
-              <Block rv tag="FLAGS" title="Status & Discipline Flags">
+{isDesign && (
+  <Block rv tag="FLAGS" title="Status & Discipline Flags">
                 <div className="pd-flags">
                   <FlagCard label="DC1" accent="sky" state={dc1State} pct={dc1Pct}
-                    sub={`${dc1.completed || 0}/${dc1.total || 0} disciplines`} />
+                    sub={`${dc1.total || 0}/${dc1.completed || 0} tasks`} />
                   <FlagCard label="DC2" accent="violet" state={dc2State} pct={dc2Pct}
-                    sub={`${dc2.completed || 0}/${dc2.total || 0} disciplines`} />
-                  <FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
-                    interactive={P.canEditStruct} onCycle={cycleStruct}
-                    hold={structState === 'ON_HOLD'} holdInfo={struct}
-                    onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
+                    sub={`${dc2.total || 0}/${dc2.completed || 0} tasks`} />
+<FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
+  interactive={P.canEditStruct} options={STRUCT_OPTIONS} onSelect={setStructStatus}
+  hold={structState === 'ON_HOLD'} holdInfo={struct}
+  onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
                   <FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
                     interactive={P.canEditIFC} onCycle={cycleIFC} />
                 </div>
@@ -441,7 +448,15 @@ export default function ProjectDetails() {
               action={P.canSeeNumbers ? <span className="pd-editable">Full figures</span> : <span className="pd-readonly">Names & percentages only</span>}>
               <FinanceStrip invoices={p.invoices} seeNumbers={P.canSeeNumbers} />
             </Block>
-            {canViewFinancials && <InvoiceConsole projectId={id} />}
+ {p.scope !== 'SUPERVISION' && canViewFinancials() && <InvoiceConsole projectId={id} />}
+
+{canViewSupervisionFinance?.() && p.scope === 'SUPERVISION' && (
+  <Block rv tag="SUPERVISION FINANCE" title="Supervision Financials"
+    action={<span className="pd-readonly">Restricted</span>}>
+    <SupervisionFinancialBlock projectId={id} />
+  </Block>
+)}
+
 
             {/* Offer + Contract */}
             <Block rv tag="OFFER / CONTRACT" title="Offer & Contract Status">
@@ -450,22 +465,36 @@ export default function ProjectDetails() {
                   <span>Offer Status</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className={`pd-badge t-${meta(p.offer_status).c}`}>{meta(p.offer_status).t}</span>
-                    {P.canManageOffer && (
-                      <button className="pd-mini" onClick={cycleOffer} title="Toggle offer status">
-                        <ChevronRight size={12} />
-                      </button>
-                    )}
+    {P.canManageOffer && (
+      <select
+        className="pd-select"
+        value={p.offer_status}
+        onChange={(e) => patchOfferContract({ offer_status: e.target.value })}
+        title="Offer status"
+      >
+        {OFFER_STAGES.map((s) => (
+          <option key={s} value={s}>{meta(s).t}</option>
+        ))}
+      </select>
+    )}
                   </span>
                 </div>
                 <div className="pd-srow">
                   <span>Contract Status</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className={`pd-badge t-${meta(p.contract_status).c}`}>{meta(p.contract_status).t}</span>
-                    {P.canManageOffer && (
-                      <button className="pd-mini" onClick={cycleContract} title="Toggle contract status">
-                        <ChevronRight size={12} />
-                      </button>
-                    )}
+    {P.canManageOffer && (
+      <select
+        className="pd-select"
+        value={p.contract_status}
+        onChange={(e) => patchOfferContract({ contract_status: e.target.value })}
+        title="Contract status"
+      >
+        {OFFER_STAGES.map((s) => (
+          <option key={s} value={s}>{meta(s).t}</option>
+        ))}
+      </select>
+    )}
                   </span>
                 </div>
               </div>
@@ -483,13 +512,23 @@ export default function ProjectDetails() {
             <Block rv tag="NOTES" title="Project Notes">
               <NotesBlock notes={p.notes} note={note} setNote={setNote} onAdd={submitNote} />
             </Block>
+
+
+
+{/* ✅ External Logs — سجلات هذا المشروع فقط */}
+<Block rv tag="EXTERNAL LOGS" title="External Logs">
+  <ExternalLogsBlock logs={p.external_logs} />
+</Block>
           </div>
 
           {/* ── Floating side buttons (DC1 / DC2) ── */}
-          <aside className="pd-float">
-            <FloatBtn label="DC1" accent="sky" state={dc1State} pct={dc1Pct} />
-            <FloatBtn label="DC2" accent="violet" state={dc2State} pct={dc2Pct} />
-          </aside>
+{/* ── Floating side buttons (DC1 / DC2) — design projects only ── */}
+{isDesign && (
+  <aside className="pd-float">
+    <FloatBtn label="DC1" accent="sky" state={dc1State} pct={dc1Pct} />
+    <FloatBtn label="DC2" accent="violet" state={dc2State} pct={dc2Pct} />
+  </aside>
+)}
         </div>
       </div>
 
@@ -624,9 +663,7 @@ function LifecycleRibbon({ stages, canEdit, onReload, projectId }) {
       {canEdit && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
           <span className="pd-editable">Editable</span>
-          <button className="pd-mini" onClick={achieveAll} disabled={busy === 'all'}>
-            ⚡ Achieve All in Order (quick test)
-          </button>
+
         </div>
       )}
       <ol className="pd-lc">
@@ -672,7 +709,7 @@ function LifecycleRibbon({ stages, canEdit, onReload, projectId }) {
   );
 }
 
-function FlagCard({ label, accent, state, pct, sub, icon, interactive, onCycle, hold, holdInfo, onHold, onResume }) {
+function FlagCard({ label, accent, state, pct, sub, icon, interactive, onCycle, onSelect, options, hold, holdInfo, onHold, onResume }) {
   const m = meta(state);
   return (
     <div className={`pd-flag acc-${accent} ${hold ? 'held' : ''}`}>
@@ -694,7 +731,19 @@ function FlagCard({ label, accent, state, pct, sub, icon, interactive, onCycle, 
       ) : (
         interactive && (
           <div className="pd-flag-acts">
-            <button className="pd-mini" onClick={onCycle}>Toggle Status <ChevronRight size={12} /></button>
+            {options?.length ? (
+              <select
+                className="pd-select"
+                value={state}
+                onChange={(e) => onSelect(e.target.value)}
+              >
+                {options.map((o) => (
+                  <option key={o} value={o}>{meta(o).t}</option>
+                ))}
+              </select>
+            ) : (
+              <button className="pd-mini" onClick={onCycle}>Toggle Status <ChevronRight size={12} /></button>
+            )}
             {onHold && <button className="pd-mini rose" onClick={onHold}>Hold</button>}
           </div>
         )
@@ -702,7 +751,6 @@ function FlagCard({ label, accent, state, pct, sub, icon, interactive, onCycle, 
     </div>
   );
 }
-
 function PriorityView({ priority, history }) {
   const m = meta(priority);
   return (
@@ -863,7 +911,35 @@ function NotesBlock({ notes, note, setNote, onAdd }) {
     </div>
   );
 }
-
+function ExternalLogsBlock({ logs }) {
+  const list = logs || [];
+  if (!list.length) return <p className="pd-empty-mini">No external logs yet.</p>;
+  return (
+    <ul className="pd-extlogs">
+      {list.map((l) => (
+        <li key={l.id} className="pd-extlog">
+          <div className="pd-extlog-main">
+            <span className={`pd-badge t-${l.sub_type === 'CRITICAL' ? 'rose' : 'amber'}`}>
+              {l.sub_type_display}
+            </span>
+            <span className="pd-extlog-type">{l.log_type}</span>
+          </div>
+          {l.description && <p className="pd-extlog-desc">{l.description}</p>}
+          <div className="pd-extlog-foot">
+            <span className="pd-extlog-date">
+              {l.created_at ? new Date(l.created_at).toLocaleDateString('en-GB') : ''}
+            </span>
+            {l.url && (
+              <a className="pd-extlog-link" href={l.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={13} /> View
+              </a>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
 function FloatBtn({ label, accent, state, pct }) {
   const m = meta(state);
   return (
@@ -1130,4 +1206,18 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-solid{ display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border:none; border-radius:9px; background:var(--emerald); color:#ffffff; font-weight:700; cursor:pointer; font-family:inherit; font-size:13px; transition:.2s; box-shadow:0 4px 10px -2px rgba(16,185,129,.4); }
 .pd-solid:hover{ filter:brightness(1.08); transform:translateY(-1px); } .pd-solid:disabled{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
 .pd-solid.rose{ background:var(--rose); color:#ffffff; box-shadow:0 4px 10px -2px rgba(239,68,68,.4); }
+
+/* External Logs */
+.pd-extlogs{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
+.pd-extlog{ border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--surf); transition:.25s; }
+.pd-extlog:hover{ border-color:#cbd5e1; transform:translateX(-2px); }
+.pd-extlog-main{ display:flex; align-items:center; gap:8px; }
+.pd-extlog-type{ font-size:13px; font-weight:700; color:var(--paper); }
+.pd-extlog-desc{ font-size:12px; color:var(--mut); margin:6px 0 0; line-height:1.6; }
+.pd-extlog-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+.pd-extlog-date{ font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--mut); }
+.pd-extlog-link{ display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:var(--sky); text-decoration:none; }
+.pd-extlog-link:hover{ text-decoration:underline; }
+.pd-select{ flex:1; border:1px solid var(--line); border-radius:8px; background:var(--surf); color:var(--paper); font-family:inherit; font-size:12px; font-weight:600; padding:5px 8px; outline:none; transition:border-color .2s; }
+.pd-select:focus{ border-color:var(--amber); }
 `;

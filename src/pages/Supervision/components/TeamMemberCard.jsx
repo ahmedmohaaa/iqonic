@@ -1,8 +1,7 @@
 import { User, Calendar, Clock, Edit, Trash2, AlertTriangle } from 'lucide-react';
 
 const TeamMemberCard = ({ assignment, onEdit, onRemove }) => {
-  const { engineer_name, role, days_of_week, time_from, time_to, contract_percentage, actual_percentage } = assignment;
-  
+  const { engineer_name, role, days_of_week, time_from, time_to, contract_percentage, actual_percentage ,is_pm} = assignment;
   // تنسيق الوقت (إزالة الثواني إن وجدت)
   const formatTime = (t) => t ? t.substring(0, 5) : '--:--';
 
@@ -19,8 +18,14 @@ const TeamMemberCard = ({ assignment, onEdit, onRemove }) => {
             <User className="text-primary" size={20} />
           </div>
           <div>
-            <h3 className="font-bold text-gray-800 text-sm">{engineer_name}</h3>
-            <p className="text-xs text-gray-500">{role}</p>
+<p className="font-bold text-gray-900 flex items-center gap-2">
+  {engineer_name}
+  {is_pm && (
+    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
+      PM
+    </span>
+  )}
+</p>            <p className="text-xs text-gray-500">{role}</p>
           </div>
         </div>
         <div className="flex space-x-1">

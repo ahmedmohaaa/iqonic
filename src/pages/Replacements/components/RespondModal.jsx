@@ -34,6 +34,13 @@ const RespondModal = ({ request, type, onClose, onSuccess }) => {
     setError('');
 
     try {
+            // ✅ طلبات استبدال الإشراف: تتعرف تلقائيًا بوجود حقل assignment
+  // ✅ طلبات استبدال الإشراف: تتعرف تلقائيًا بوجود حقل assignment
+  if (request.assignment) {
+    await respondToSupervisionReplacement(request.id, { status: action });
+    onSuccess();
+    return;
+  }
       if (type === 'tasks') {
         if (isSuggestedEngineer) {
           // ═══ المهندس المقترح يرد ═══
@@ -58,7 +65,7 @@ const RespondModal = ({ request, type, onClose, onSuccess }) => {
       }
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to process request.');
+      setError(err.response?.data?.detail || `Request failed (${err.response?.status ?? 'network'})`);
     } finally {
       setLoading(false);
     }

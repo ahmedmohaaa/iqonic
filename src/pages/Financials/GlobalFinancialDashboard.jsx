@@ -44,7 +44,6 @@ function useCountUp(target, dec = 0) {
   return dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US');
 }
 const Money = ({ value, dec = 0 }) => <span className="v-num">{useCountUp(value, dec)}</span>;
-
 export default function GlobalFinancialDashboard() {
   const { user } = useAuth();
   const [dash, setDash] = useState(null);
@@ -56,7 +55,9 @@ export default function GlobalFinancialDashboard() {
   const [expanded, setExpanded] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const wrap = useRef(null);
-const isAccountant = user?.role === 'ACCOUNTANT' || user?.groups?.includes('ACCOUNTANT');
+
+  const isAccountant = user?.role === 'ACCOUNTANT' || user?.groups?.includes('ACCOUNTANT');
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -72,28 +73,45 @@ const isAccountant = user?.role === 'ACCOUNTANT' || user?.groups?.includes('ACCO
     finally { setLoading(false); }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    const el = wrap.current; if (!el) return;
-    const io = new IntersectionObserver((es) =>
-      es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }),
-      { threshold: 0.08 });
-    el.querySelectorAll('.rv').forEach((n) => io.observe(n));
-    return () => io.disconnect();
-  }, [invoices, loading]);
+  // 1. نقل تعريف visible هنا قبل استخدامه
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return invoices.filter((i) =>
+      (!q ||
+        (i.title || '').toLowerCase().includes(q) ||
+        (i.project_name || '').toLowerCase().includes(q) ||
+        (i.project_no || '').toLowerCase().includes(q)) &&
+      (!filter || i.status === filter)
+    );
+  }, [invoices, query, filter]);
 
   const totals = dash?.company_totals || {};
   const overdueCount = dash?.alerts?.total_overdue_invoices || 0;
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return invoices;
-    return invoices.filter((i) =>
-      (i.title || '').toLowerCase().includes(q) ||
-      (i.project_name || '').toLowerCase().includes(q) ||
-      (i.project_no || '').toLowerCase().includes(q)
+  // 2. الـ useEffects تأتي بعد التعريفات
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const el = wrap.current; 
+    if (!el) return;
+    
+    const io = new IntersectionObserver((es) =>
+      es.forEach((e) => { 
+        if (e.isIntersecting) { 
+          e.target.classList.add('in'); 
+          io.unobserve(e.target); 
+        } 
+      }),
+      { threshold: 0.08 }
     );
-  }, [invoices, query]);
+    
+    el.querySelectorAll('.rv').forEach((n) => io.observe(n));
+    
+    return () => io.disconnect();
+  }, [invoices, loading, visible]);
+
+
+
 
   return (
     <div ref={wrap} className="gfd" dir="rtl">
@@ -102,56 +120,55 @@ const isAccountant = user?.role === 'ACCOUNTANT' || user?.groups?.includes('ACCO
 
       {/* الرأس + شريط الأفعال */}
 {/* الرأس + شريط الأفعال */}
-      <header className="gfd-head rv">
-        <div>
-          <span className="gfd-kicker">ACCOUNTANT · غرفة الخزنة</span>
-          <h1 className="gfd-title">مركز التحكم المالي</h1>
-          <p className="gfd-sub">مرحباً {user?.first_name || ''} — أنشئ الفواتير، سجّل الدفعات، وارفع المستندات من مكان واحد.</p>
-        </div>
-        {/* === تعديل: إظهار الزر للمحاسب فقط === */}
-        {isAccountant && (
-          <button className="gfd-create" onClick={() => setCreateOpen(true)}>
-            <Plus size={18} /> فاتورة جديدة
-          </button>
-        )}
-        {/* === نهاية التعديل === */}
-      </header>
+<header className="gfd-head rv">
+  <div>
+    <span className="gfd-kicker">ACCOUNTANT · Vault Room</span>
+    <h1 className="gfd-title">Financial Control Center</h1>
+    <p className="gfd-sub">Welcome, {user?.first_name || ''} — Create invoices, record payments, and upload documents all in one place.</p>
+  </div>
+  {/* === Edit: Show button to accountant only === */}
+  {isAccountant && (
+    <button className="gfd-create" onClick={() => setCreateOpen(true)}>
+      <Plus size={18} /> New Invoice
+    </button>
+  )}
+  {/* === End of edit === */}
+</header>
 
-      {/* KPIs */}
+{/* KPIs */}
       <section className="gfd-kpis rv">
-        <Kpi tone="sky" icon={<Receipt size={18} />} label="إجمالي المفوتر" value={totals.total_contract_values_invoiced} />
-        <Kpi tone="emerald" icon={<CheckCircle2 size={18} />} label="المحصّل" value={totals.total_collected} />
-        <Kpi tone="amber" icon={<Wallet size={18} />} label="المعلّق" value={totals.total_outstanding} />
-        <Kpi tone="rose" icon={<AlertOctagon size={18} />} label="فواتير متأخرة" value={overdueCount} pulse={overdueCount > 0} plain />
+        <Kpi tone="sky" icon={<Receipt size={18} />} label="Total Invoiced" value={totals.total_contract_values_invoiced} />
+        <Kpi tone="emerald" icon={<CheckCircle2 size={18} />} label="Collected" value={totals.total_collected} />
+        <Kpi tone="amber" icon={<Wallet size={18} />} label="Outstanding" value={totals.total_outstanding} />
+        <Kpi tone="rose" icon={<AlertOctagon size={18} />} label="Overdue Invoices" value={overdueCount} pulse={overdueCount > 0} plain />
       </section>
 
-      {/* بحث + فلتر */}
+      {/* Search + Filter */}
       <section className="gfd-toolbar rv">
         <div className="gfd-search">
           <Search size={15} />
-          <input placeholder="ابحث بالاسم أو رقم المشروع أو عنوان الفاتورة…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input placeholder="Search by name, project number, or invoice title…" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         <select className="gfd-filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="">كل الحالات</option>
-          <option value="ISSUED">مُصدَرة</option>
-          <option value="PARTIALLY_PAID">جزئية</option>
-          <option value="PAID">مسدّدة</option>
-          <option value="OVERDUE">متأخرة</option>
+          <option value="">All Statuses</option>
+          <option value="ISSUED">Issued</option>
+          <option value="PARTIALLY_PAID">Partially Paid</option>
+          <option value="PAID">Paid</option>
+          <option value="OVERDUE">Overdue</option>
         </select>
       </section>
-
       {/* قائمة الفواتير الحيّة */}
 {/* قائمة الفواتير الحيّة */}
-      <section className="gfd-list">
-        {loading ? <div className="gfd-empty">جارٍ تحميل الخزنة…</div>
-          : visible.length === 0 ? <div className="gfd-empty"><Receipt size={30} /> لا فواتير مطابقة. ابدأ بـ «فاتورة جديدة».</div>
+<section className="gfd-list">
+        {loading ? <div className="gfd-empty">Loading vault…</div>
+          : visible.length === 0 ? <div className="gfd-empty"><Receipt size={30} /> No matching invoices. Start with "New Invoice".</div>
           : visible.map((inv, idx) => (
             <InvoiceRow
               key={inv.id} inv={inv} idx={idx}
               open={expanded === inv.id}
               onToggle={() => setExpanded(expanded === inv.id ? null : inv.id)}
               onChanged={load}
-              isAccountant={isAccountant} // === إضافة هذا البروب ===
+              isAccountant={isAccountant} // === Add this prop ===
             />
           ))}
       </section>
@@ -162,7 +179,6 @@ const isAccountant = user?.role === 'ACCOUNTANT' || user?.groups?.includes('ACCO
     </div>
   );
 }
-
 /* ── بطاقة KPI ─────────────────────────────────────────────── */
 function Kpi({ tone, icon, label, value, pulse, plain }) {
   return (
@@ -192,24 +208,24 @@ function InvoiceRow({ inv, idx, open, onToggle, onChanged, isAccountant }) {
           <span className="gfd-row-title">{inv.title}</span>
           <span className="gfd-row-ms">{inv.project_name || '—'} · {inv.project_no || ''} · {inv.milestone_type_display}</span>
         </div>
-        <div className="gfd-row-amt"><Money value={total} /> <i>ر.ق</i></div>
+<div className="gfd-row-amt"><Money value={total} /> <i>QAR</i></div>
         <div className="gfd-row-prog">
           <div className="gfd-prog-bar"><span style={{ width: `${pct}%` }} /></div>
           <em>{Math.round(pct)}%</em>
         </div>
         {overdue > 0
-          ? <span className="gfd-over"><span className="gfd-pdot" /> متأخر {overdue}ي</span>
+          ? <span className="gfd-over"><span className="gfd-pdot" /> Overdue {overdue}d</span>
           : <span className={`gfd-badge t-${m.tone}`}>{m.label}</span>}
         <ChevronDown size={18} className={`gfd-chev ${open ? 'rot' : ''}`} />
       </div>
 <div className={`gfd-detail ${open ? 'open' : ''}`}>
         <div className="gfd-detail-grid">
-          <Cell icon={<Calendar size={13} />} l="إصدار" v={inv.issue_date || '—'} />
-          <Cell icon={<Calendar size={13} />} l="استحقاق" v={inv.due_date || '—'} danger={overdue > 0} />
-          <Cell icon={<CheckCircle2 size={13} />} l="محصّل" v={<Money value={paid} />} good />
-          <Cell icon={<Wallet size={13} />} l="متبقٍّ" v={<Money value={inv.outstanding_amount} />} warn />
+          <Cell icon={<Calendar size={13} />} l="Issue Date" v={inv.issue_date || '—'} />
+          <Cell icon={<Calendar size={13} />} l="Due Date" v={inv.due_date || '—'} danger={overdue > 0} />
+          <Cell icon={<CheckCircle2 size={13} />} l="Collected" v={<Money value={paid} />} good />
+          <Cell icon={<Wallet size={13} />} l="Remaining" v={<Money value={inv.outstanding_amount} />} warn />
         </div>
-        <RowActions inv={inv} onChanged={onChanged} isAccountant={isAccountant} /> {/* === إضافة isAccountant === */}
+        <RowActions inv={inv} onChanged={onChanged} isAccountant={isAccountant} /> {/* === Add isAccountant === */}
       </div>
     </article>
   );
@@ -241,7 +257,7 @@ function RowActions({ inv, onChanged, isAccountant }) {
   const submitPay = async (e) => {
     e.preventDefault(); setBusy(true);
     try { await apiClient.post('invoices/payment/', { invoice: inv.id, amount_paid: Number(amt) }); setAmt(''); setPayOpen(false); onChanged(); }
-    catch (err) { alert(err.response?.data?.detail || 'تعذّر تسجيل الدفعة'); }
+    catch (err) { alert(err.response?.data?.detail || 'Unable to record the payment'); }
     finally { setBusy(false); }
   };
   const upload = async (e) => {
@@ -259,57 +275,57 @@ function RowActions({ inv, onChanged, isAccountant }) {
     catch { setStatus(inv.status); }
   };
   const cancel = async () => {
-    if (!window.confirm('إلغاء الفاتورة نهائياً؟')) return;
+    if (!window.confirm('Cancel the invoice permanently?')) return;
     await changeStatus('CANCELLED');
   };
 return (
     <div className="gfd-acts">
       {/* تسجيل دفعة */}
-      <div className="gfd-act-block">
-        <div className="gfd-act-h"><DollarSign size={14} /> الدفعات</div>
+    <div className="gfd-act-block">
+        <div className="gfd-act-h"><DollarSign size={14} /> Payments</div>
         {(inv.payments || []).length === 0
-          ? <p className="gfd-muted">لا دفعات بعد.</p>
+          ? <p className="gfd-muted">No payments yet.</p>
           : (inv.payments || []).map((p, i) => (
             <div key={i} className="gfd-pay"><span className="gfd-pay-dot" /><span className="gfd-pay-d">{p.payment_date}</span><span className="gfd-pay-a">+<Money value={p.amount_paid} /></span></div>
           ))}
-        {/* === تعديل: إظهار تسجيل الدفعة للمحاسب فقط === */}
+        {/* === Edit: Show payment recording for accountant only === */}
         {isAccountant && (
           payOpen ? (
             <form onSubmit={submitPay} className="gfd-payform">
-              <input type="number" step="0.01" max={remaining} placeholder={`الحدّ ${remaining}`} value={amt} onChange={(e) => setAmt(e.target.value)} required />
-              <button disabled={busy} type="submit">حفظ</button>
+              <input type="number" step="0.01" max={remaining} placeholder={`Max ${remaining}`} value={amt} onChange={(e) => setAmt(e.target.value)} required />
+              <button disabled={busy} type="submit">Save</button>
               <button type="button" onClick={() => setPayOpen(false)}><X size={14} /></button>
             </form>
           ) : (
-            <button className="gfd-mini" onClick={() => setPayOpen(true)}><Plus size={13} /> تسجيل دفعة</button>
+            <button className="gfd-mini" onClick={() => setPayOpen(true)}><Plus size={13} /> Record Payment</button>
           )
         )}
-        {/* === نهاية التعديل === */}
+        {/* === End of edit === */}
       </div>
 
-      {/* ملفات */}
+      {/* Documents */}
       <div className="gfd-act-block">
-        <div className="gfd-act-h"><Paperclip size={14} /> المستندات</div>
-        {files.length === 0 ? <p className="gfd-muted">لا ملفات.</p>
+        <div className="gfd-act-h"><Paperclip size={14} /> Documents</div>
+        {files.length === 0 ? <p className="gfd-muted">No files.</p>
           : files.map((f, i) => (
             <a key={i} href={f.file} target="_blank" rel="noreferrer" className="gfd-file"><FileText size={13} /> {f.file?.split('/').pop()}</a>
           ))}
         
-        {/* === تعديل: إظهار إرفاق الملفات للمحاسب فقط === */}
+        {/* === Edit: Show file attachment for accountant only === */}
         {isAccountant && (
           <>
             <input ref={fileRef} type="file" hidden onChange={upload} />
-            <button className="gfd-mini" onClick={() => fileRef.current?.click()} disabled={busy}><Upload size={13} /> إرفاق PDF</button>
+            <button className="gfd-mini" onClick={() => fileRef.current?.click()} disabled={busy}><Upload size={13} /> Attach PDF</button>
           </>
         )}
-        {/* === نهاية التعديل === */}
+        {/* === End of edit === */}
       </div>
 
-      {/* حالة + إلغاء */}
+      {/* Status + Cancel */}
       <div className="gfd-act-block">
-        <div className="gfd-act-h"><Clock size={14} /> الحالة</div>
+        <div className="gfd-act-h"><Clock size={14} /> Status</div>
         
-        {/* === تعديل: إذا لم يكن محاسباً نعرض الحالة كنص فقط بدون select === */}
+        {/* === Edit: If not an accountant, display status as text only without select === */}
         {isAccountant ? (
           <select className="gfd-status-sel" value={status} onChange={(e) => changeStatus(e.target.value)}>
             {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -319,13 +335,13 @@ return (
             {STATUS_META[inv.status]?.label || status}
           </span>
         )}
-        {/* === نهاية التعديل === */}
+        {/* === End of edit === */}
 
-        {/* === تعديل: إظهار زر إلغاء الفاتورة للمحاسب فقط === */}
+        {/* === Edit: Show cancel invoice button for accountant only === */}
         {isAccountant && inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (
-          <button className="gfd-mini rose" onClick={cancel}><Trash2 size={13} /> إلغاء الفاتورة</button>
+          <button className="gfd-mini rose" onClick={cancel}><Trash2 size={13} /> Cancel Invoice</button>
         )}
-        {/* === نهاية التعديل === */}
+        {/* === End of edit === */}
       </div>
     </div>
   );
@@ -344,61 +360,70 @@ function CreateInvoiceModal({ projects, onClose, onDone }) {
     try {
       await apiClient.post('invoices/create/', { ...f, project: Number(f.project), total_amount: Number(f.total_amount) });
       onDone();
-    } catch (err) { alert(err.response?.data?.detail || 'تعذّر إنشاء الفاتورة'); }
+    } catch (err) { alert(err.response?.data?.detail || 'Unable to create the invoice.'); }
     finally { setBusy(false); }
   };
 
   return (
-    <div className="gfd-mask" onClick={onClose}>
+  <div className="gfd-mask" onClick={onClose}>
       <form className="gfd-modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <div className="gfd-modal-h"><h3><Receipt size={18} /> فاتورة جديدة</h3><button type="button" onClick={onClose}><X size={18} /></button></div>
+        <div className="gfd-modal-h"><h3><Receipt size={18} /> New Invoice</h3><button type="button" onClick={onClose}><X size={18} /></button></div>
         <div className="gfd-modal-b">
-          <label className="gfd-lbl">المشروع</label>
-          <input className="gfd-in" placeholder="ابحث برقم أو اسم المشروع…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <label className="gfd-lbl">Project</label>
+          <input className="gfd-in" placeholder="Search by project number or name…" value={q} onChange={(e) => setQ(e.target.value)} />
           <div className="gfd-projlist">
             {filtered.map((p) => (
               <button type="button" key={p.id} className={`gfd-proj ${f.project == p.id ? 'on' : ''}`} onClick={() => { setF((x) => ({ ...x, project: p.id })); setQ(`${p.project_no} — ${p.name}`); }}>
                 <b>{p.project_no}</b><span>{p.name}</span>
               </button>
             ))}
-            {filtered.length === 0 && <span className="gfd-muted">لا نتائج.</span>}
+            {filtered.length === 0 && <span className="gfd-muted">No results.</span>}
           </div>
 
           <div className="gfd-two">
-            <label className="gfd-lbl">المرحلة
+            <label className="gfd-lbl">Milestone
               <select className="gfd-in" value={f.milestone_type} onChange={set('milestone_type')}>
                 {MILESTONES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </label>
-            <label className="gfd-lbl">المبلغ
+            <label className="gfd-lbl">Amount
               <input className="gfd-in" type="number" step="0.01" value={f.total_amount} onChange={set('total_amount')} required />
             </label>
           </div>
-          <label className="gfd-lbl">عنوان الفاتورة
-            <input className="gfd-in" value={f.title} onChange={set('title')} placeholder="مثال: دفعة DC1 — المرحلة الثانية" required />
+          <label className="gfd-lbl">Invoice Title
+            <input className="gfd-in" value={f.title} onChange={set('title')} placeholder="Example: DC1 Payment — Second Milestone" required />
           </label>
           <div className="gfd-two">
-            <label className="gfd-lbl">تاريخ الإصدار<input className="gfd-in" type="date" value={f.issue_date} onChange={set('issue_date')} /></label>
-            <label className="gfd-lbl">تاريخ الاستحقاق<input className="gfd-in" type="date" value={f.due_date} onChange={set('due_date')} /></label>
+            <label className="gfd-lbl">Issue Date<input className="gfd-in" type="date" value={f.issue_date} onChange={set('issue_date')} /></label>
+            <label className="gfd-lbl">Due Date<input className="gfd-in" type="date" value={f.due_date} onChange={set('due_date')} /></label>
           </div>
         </div>
         <div className="gfd-modal-f">
-          <button type="button" className="gfd-ghost" onClick={onClose}>إلغاء</button>
-          <button type="submit" className="gfd-solid" disabled={busy || !f.project}>{busy ? 'جارٍ الإنشاء…' : 'إنشاء الفاتورة'}</button>
+          <button type="button" className="gfd-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="gfd-solid" disabled={busy || !f.project}>{busy ? 'Creating…' : 'Create Invoice'}</button>
         </div>
       </form>
     </div>
   );
 }
-
 /* ═══════════════════════════════════════════════════════════════ */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-.gfd{ --ink:#0c141d; --surf:#131c27; --surf2:#18222f; --line:#26323f; --paper:#e9eff5; --mut:#8694a4;
-  --amber:#e6ab4c; --emerald:#3fb286; --sky:#5cc6ef; --rose:#e3707e; --slate:#5d6b7a;
+.gfd{   --ink:#f8fafc;      /* خلفية الصفحة (كانت داكنة) */
+  --surf:#ffffff;     /* الكروت والأسطح */
+  --line:#e2e8f0; --surf2:#18222f;
+    --mut:#64748b;      /* النص الثانوي */
+  --paper:#0f172a;    /* النص الأساسي (صار داكنًا على خلفية فاتحة) */
+  --amber:#d97706;
+  --sky:#0284c7;
+  --emerald:#059669;
+  --rose:#dc2626;
+
+  
+  --slate:#5d6b7a;
   position:relative; min-height:100vh; color:var(--paper); padding:30px clamp(16px,4vw,44px) 70px;
   font-family:'IBM Plex Sans Arabic','Space Grotesk',sans-serif;
-  background:linear-gradient(180deg,#0a0f16,#080c12); }
+  background:linear-gradient(180deg,#ffff0,#fff); }
 .gfd-ambient{ position:absolute; inset:0; pointer-events:none;
   background:
     radial-gradient(56% 44% at 92% -6%, rgba(230,171,76,.10), transparent 60%),
@@ -486,8 +511,8 @@ const CSS = `
 
 .gfd-acts{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:16px 18px; }
 @media(max-width:760px){ .gfd-acts{ grid-template-columns:1fr; } }
-.gfd-act-block{ background:var(--surf2); border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; }
-.gfd-act-h{ display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:var(--paper); padding-bottom:8px; border-bottom:1px solid var(--line); }
+.gfd-act-block{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; }
+.gfd-act-h{ display:flex; align-items:center; gap:7px; font-size:12px; font-weight:600; color:#000; padding-bottom:8px; border-bottom:1px solid var(--line); }
 .gfd-muted{ font-size:12px; color:var(--mut); }
 .gfd-pay{ display:flex; align-items:center; gap:8px; font-size:12px; }
 .gfd-pay-dot{ width:7px; height:7px; border-radius:50%; background:var(--emerald); }
@@ -525,4 +550,5 @@ const CSS = `
 .gfd-solid{ display:inline-flex; align-items:center; gap:7px; padding:9px 20px; border:none; border-radius:10px; background:linear-gradient(180deg,#f0bd5e,var(--amber)); color:#1a1206; font-weight:700; cursor:pointer; font-family:inherit; transition:filter .2s; }
 .gfd-solid:hover{ filter:brightness(1.06); } .gfd-solid:disabled{ opacity:.5; cursor:not-allowed; }
 `;
+
 

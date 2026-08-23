@@ -366,3 +366,5 @@ background:var(--emerald,#3fb286); color:#06140e; font-weight:700; cursor:pointe
 .lcx-head{ padding-inline-end:0; }
 }
 `;
+
+

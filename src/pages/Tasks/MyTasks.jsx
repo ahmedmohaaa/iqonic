@@ -5,11 +5,13 @@ import {
   getMyChangeOrders,
   selfAssignTask
 } from '../../api/services/tasks';
+import { Link } from 'react-router-dom';
+import { GitBranch } from 'lucide-react';
+import { showChangeOrderInMyTasks } from './taskPermissions';
 import { useAuth } from '../../context/AuthContext';
 import {
   CheckSquare,
   FileText,
-  GitBranch,
   UserPlus,
   AlertCircle,
   Loader,
@@ -235,23 +237,32 @@ const TaskCard = ({
             </button>
           )}
 
-          {isAssignedToMe && task.status !== 'APPROVED' && (
-            <>
-              <button
-                onClick={onUpdateStatus}
-                className="flex-1 inline-flex items-center justify-center bg-gray-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
-              >
-                Update Status
-              </button>
+{isAssignedToMe && task.status !== 'APPROVED' && (
+  <>
+    <button
+      onClick={onUpdateStatus}
+      className="flex-1 inline-flex items-center justify-center bg-gray-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+    >
+      Update Status
+    </button>
+    <button
+      onClick={onRequestReplacement}
+      className="flex-1 inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+    >
+      Replacement
+    </button>
+  </>
+)}
 
-              <button
-                onClick={onRequestReplacement}
-                className="flex-1 inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
-              >
-                Replacement
-              </button>
-            </>
-          )}
+{/* ✅ Change Order يظهر حتى لو المهمة APPROVED */}
+{showChangeOrderInMyTasks(currentUser, task) && (
+  <Link
+    to={`/projects/${task.project}/change-order`}
+    className="flex-1 inline-flex items-center justify-center gap-1 bg-violet-50 text-violet-700 hover:bg-violet-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+  >
+    <GitBranch size={14} /> Change Order
+  </Link>
+)}
         </div>
       </div>
     </div>
@@ -270,7 +281,7 @@ const MyTasks = () => {
   const [showReplacementModal, setShowReplacementModal] = useState(false);
 
   const tabs = [
-    { id: 'main', label: 'Main Design Tasks', icon: CheckSquare, fetchFn: getMyTasks },
+    { id: 'main', label: 'Main Tasks', icon: CheckSquare, fetchFn: getMyTasks },
     { id: 'internal', label: 'Internal Design Reviews', icon: FileText, fetchFn: getMyInternalReviews },
     { id: 'change', label: 'Change Orders', icon: GitBranch, fetchFn: getMyChangeOrders }
   ];
@@ -495,4 +506,3 @@ const MyTasks = () => {
 
 export default MyTasks;
 
-TaskCard

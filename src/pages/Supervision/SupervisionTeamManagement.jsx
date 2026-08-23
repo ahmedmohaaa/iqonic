@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import apiClient from '../../api/axios';
 import { getSupervisionTeam, removeAssignment } from '../../api/services/supervision';
 import { getProjects } from '../../api/services/projects'; // Assuming a generic getProjects exists
 import { useAuth } from '../../context/AuthContext';
@@ -18,15 +19,17 @@ const SupervisionTeamManagement = () => {
 console.log("projects =", projects);
 console.log("selectedProject =", selectedProject);
   // جلب مشاريع الإشراف فقط
-  useEffect(() => {
-    getProjects({ scope: 'SUPERVISION' })
-      .then(res => {
-        const projs = res.data.results || res.data;
-        setProjects(projs);
-        if (projs.length > 0) setSelectedProject(projs[0]);
-      })
-      .catch(err => console.error(err));
-  }, []);
+useEffect(() => {
+  apiClient.get('projects/supervision/')
+    .then((r) => {
+      const list = r.data.results || r.data || [];
+      setProjects(list);
+      if (list.length > 0 && !selectedProject) {
+        setSelectedProject(list[0]);   // ✅ تعيين تلقائي لأول مشروع
+      }
+    })
+    .catch(() => setProjects([]));
+}, []);
 
   // جلب فريق الإشراف عند تغيير المشروع
   useEffect(() => {
@@ -76,15 +79,20 @@ console.log("selectedProject =", selectedProject);
           <p className="text-sm text-gray-500">Assign engineers, manage schedules, and track workloads.</p>
         </div>
         <div className="flex items-center gap-3">
-          <select 
-            value={selectedProject?.id || ''} 
-            onChange={e => setSelectedProject(projects.find(p => p.id === parseInt(e.target.value)))}
-            className="border rounded-lg p-2 text-sm bg-white w-64"
-          >
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.project_no} - {p.name}</option>
-            ))}
-          </select>
+<select
+value={selectedProject?.id ?? ''}
+onChange={e => {
+  const id = Number(e.target.value);
+  setSelectedProject(projects.find(p => p.id === id) || null);
+}}  className="min-w-[240px] border-2 border-gray-500 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+>
+  <option value="" className="text-gray-900 font-semibold">Select Project</option>
+  {projects.map((p) => (
+    <option key={p.id} value={p.id} className="text-gray-900">
+      {p.project_no} - {p.name}
+    </option>
+  ))}
+</select>
           <button 
             onClick={() => { setEditingAssignment(null); setShowAssignModal(true); }}
             className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center"

@@ -14,8 +14,10 @@ const ExternalLogs = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterProject, setFilterProject] = useState('');
-  const isSupervisionStaff = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'].includes(user?.role);
-
+// نفس قاعدة الكتابة في CanManageExternalLogs (والباك-إند يفرضها أيضًا)
+const canAddLog =
+  ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'].includes(user?.role) ||
+  user?.username === 'ahmed.zabady';
   useEffect(() => {
     fetchLogs();
   }, []);
@@ -60,36 +62,25 @@ const ExternalLogs = () => {
 
 return (
     <div className="space-y-6">
-      {/* 3. تعديل زر الإضافة ليقوم بفتح النافذة */}
-      <div className="flex items-center justify-between">
-        {/* ... (عنوان الصفحة) */}
-        {isSupervisionStaff && (
-          <button 
-            onClick={() => setIsAddModalOpen(true)} 
-            className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center"
-          >
-            <Plus size={18} className="mr-1" /> Add External Log
-          </button>
-        )}
+
+    {/* Header */}
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+          <FileText className="mr-2 text-primary" size={28} />
+          External Logs
+        </h1>
+        <p className="text-sm text-gray-500">Track external documents and critical issues</p>
       </div>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-            <FileText className="mr-2 text-primary" size={28} />
-            External Logs
-          </h1>
-          <p className="text-sm text-gray-500">Track external documents and critical issues</p>
-        </div>
-{isSupervisionStaff && (
-  <button
-    onClick={() => setIsAddModalOpen(true)}
-    className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center"
-  >
-    <Plus size={18} className="mr-1" /> Add External Log
-  </button>
-)}
-      </div>
+      {canAddLog && (
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center"
+        >
+          <Plus size={18} className="mr-1" /> Add External Log
+        </button>
+      )}
+    </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -118,7 +109,7 @@ return (
           <input
             type="text"
             placeholder="Search logs..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-10 pr-4 py-2 border-2 border-gray-400 rounded-lg text-gray-900 font-semibold placeholder-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -128,7 +119,7 @@ return (
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="border rounded-lg p-2 text-sm bg-white"
+            className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
           >
             <option value="">All Types</option>
             <option value="PENDING_DOCUMENTS">Pending Documents</option>
@@ -199,3 +190,4 @@ return (
 };
 
 export default ExternalLogs;
+

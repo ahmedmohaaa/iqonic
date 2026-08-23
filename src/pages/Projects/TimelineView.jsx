@@ -168,24 +168,13 @@ const TimelineView = () => {
         </div>
         {analytics && (
           <div className="bg-primary/10 px-4 py-2 rounded-lg">
-            <span className="text-sm text-primary font-semibold">
+            <span className="text-sm text-black text-primary font-semibold">
               Progress: {analytics.progress_percentage}
             </span>
           </div>
         )}
       </div>
 
-      {/* Analytics Summary */}
-      {analytics && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <StatCard label="Total Stages" value={analytics.total_stages} color="blue" />
-          <StatCard label="Upcoming" value={analytics.upcoming} color="gray" />
-          <StatCard label="Overdue" value={analytics.overdue} color="red" />
-          <StatCard label="Late" value={analytics.late} color="orange" />
-          <StatCard label="Early" value={analytics.early} color="green" />
-          <StatCard label="On Time" value={analytics.on_time} color="teal" />
-        </div>
-      )}
 
       {/* Gantt Chart */}
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -218,7 +207,7 @@ const TimelineView = () => {
 
         {/* Stages */}
         <div className="space-y-4">
-          {stages.map((stage, index) => (
+          {stages.map((stage) => (
             <div key={stage.id} className="relative">
               <div className="flex items-center space-x-4">
                 <div className="w-48 flex-shrink-0">
@@ -227,7 +216,7 @@ const TimelineView = () => {
                       <p className="font-semibold text-sm text-gray-800">
                         {stage.stage_name_display}
                       </p>
-                      <p className="text-xs text-gray-500">Stage {index + 1}</p>
+                      <p className="text-xs text-gray-500">{stage.stage_name}</p>
                     </div>
                   </div>
                 </div>
@@ -326,3 +315,4 @@ const StatCard = ({ label, value, color }) => (
 );
 
 export default TimelineView;
+

@@ -101,11 +101,11 @@ useEffect(() => {
   const openConv = (c) => { setActive(c); setMobileList(false); };
   const startDirect = async (u) => {
     try { const r = await openDirect(u.id); openConv(r.data); setNewOpen(false); setUserQuery(''); }
-    catch { alert('تعذّر فتح المحادثة'); }
+    catch { alert('Unable to open the conversation.'); }
   };
   const startGeneral = async () => {
     try { const r = await openGeneral(); openConv(r.data); setNewOpen(false); }
-    catch { alert('تعذّر فتح البث العام'); }
+    catch { alert('Unable to open the general broadcast.'); }
   };
 
   /* ── الإرسال ── */
@@ -117,7 +117,7 @@ useEffect(() => {
       await sendMessage(active.id, { message: draft.trim(), mentions: mentions.map((m) => m.id) });
       setDraft(''); setMentions([]); setMentionOpen(false);
       loadMsgs(); loadConvs();
-    } catch { alert('تعذّر الإرسال'); }
+    } catch { alert('Unable to send the message.'); }
     finally { setSending(false); }
   };
 
@@ -146,7 +146,7 @@ useEffect(() => {
     ).slice(0, 6);
   }, [users, draft, mentions]);
 
-  const typeLabel = { DIRECT: 'محادثة خاصة', GENERAL: 'بث للجميع', PROJECT: 'غرفة مشروع' };
+  const typeLabel = { DIRECT: 'Private conversation', GENERAL: 'General broadcast', PROJECT: 'Project room' };
 const filteredConvs = useMemo(() => {
   const q = convQuery.trim().toLowerCase();
   if (!q) return convs;
@@ -163,25 +163,25 @@ const filteredConvs = useMemo(() => {
       {/* ═══ قائمة المحادثات ═══ */}
       <aside className={`cha-side ${mobileList ? 'show' : ''}`}>
         <div className="cha-side-h">
-          <div className="cha-brand"><MessageSquare size={18} /><b>المراسلات</b></div>
+          <div className="cha-brand"><MessageSquare size={18} /><b>Correspondence</b></div>
           <div className="cha-side-acts">
-            <button className="cha-ic" title="بث للجميع" onClick={startGeneral}><Megaphone size={16} /></button>
-            <button className="cha-ic primary" title="محادثة جديدة" onClick={() => setNewOpen(true)}><Plus size={16} /></button>
+            <button className="cha-ic" title="Broadcast to All" onClick={startGeneral}><Megaphone size={16} /></button>
+            <button className="cha-ic primary" title="New Conversation" onClick={() => setNewOpen(true)}><Plus size={16} /></button>
           </div>
         </div>
 
 <div className="cha-search">
   <Search size={14} />
   <input 
-    placeholder="ابحث في المحادثات…" 
+    placeholder="Search conversations..." 
     value={convQuery}
     onChange={(e) => setConvQuery(e.target.value)}
   />
 </div>
 <div className="cha-conv-list">
-  {convs.length === 0 && <p className="cha-empty-side">لا محادثات بعد — ابدأ واحدة جديدة.</p>}
+  {convs.length === 0 && <p className="cha-empty-side">No conversations yet — start a new one.</p>}
   {convs.length > 0 && filteredConvs.length === 0 && (
-    <p className="cha-empty-side">لا توجد محادثات مطابقة للبحث.</p>
+    <p className="cha-empty-side">No matching conversations found.</p>
   )}
   
   {filteredConvs.map((c) => {
@@ -217,11 +217,11 @@ const filteredConvs = useMemo(() => {
         {!active ? (
           <div className="cha-noconv">
             <div className="cha-noconv-orb"><MessageSquare size={34} /></div>
-            <h2>اختر محادثة أو ابدأ واحدة جديدة</h2>
-            <p>تواصل مع أي زميل مباشرة، أو ابثّ إعلاناً لكل الفريق من غرفة «الإعلانات العامة».</p>
+            <h2>Select a conversation or start a new one.</h2>
+            <p>Communicate directly with any colleague, or broadcast an announcement to the entire team from the «General Announcements» room.</p>
             <div className="cha-noconv-acts">
-              <button className="cha-btn primary" onClick={() => setNewOpen(true)}><Plus size={16} /> محادثة جديدة</button>
-              <button className="cha-btn" onClick={startGeneral}><Megaphone size={16} /> بث للجميع</button>
+              <button className="cha-btn primary" onClick={() => setNewOpen(true)}><Plus size={16} /> New Conversation</button>
+              <button className="cha-btn" onClick={startGeneral}><Megaphone size={16} /> Broadcast to All</button>
             </div>
           </div>
         ) : (
@@ -237,12 +237,12 @@ const filteredConvs = useMemo(() => {
                   {active.room_type !== 'DIRECT' && <em>· {active.participant_count} مشارك</em>}
                 </span>
               </div>
-              <span className="cha-live"><span className="cha-live-dot" /> متزامن</span>
+              <span className="cha-live"><span className="cha-live-dot" /> Live</span>
             </header>
 
             {/* الرسائل */}
             <div className="cha-msgs" ref={scrollRef}>
-              {msgs.length === 0 && <p className="cha-empty-msgs">لا رسائل بعد. ابدأ المحادثة 👋</p>}
+              {msgs.length === 0 && <p className="cha-empty-msgs">No messages yet. Start the conversation 👋</p>}
               {msgs.map((m, i) => {
                 const mine = m.sender === user?.id || m.sender_id === user?.id;
                 const prev = msgs[i - 1];
@@ -281,10 +281,10 @@ const filteredConvs = useMemo(() => {
 
               <div className="cha-compose-row">
                 <div className="cha-mention-wrap">
-                  <button type="button" className="cha-ic" title="تنبيه شخص @" onClick={() => setMentionOpen((o) => !o)}><AtSign size={16} /></button>
+                  <button type="button" className="cha-ic" title="Mention a person @" onClick={() => setMentionOpen((o) => !o)}><AtSign size={16} /></button>
                   {mentionOpen && (
                     <div className="cha-mention-pop">
-                      <div className="cha-mention-search"><Search size={12} /><input autoFocus placeholder="ابحث…" value={userQuery} onChange={(e) => setUserQuery(e.target.value)} /></div>
+                      <div className="cha-mention-search"><Search size={12} /><input autoFocus placeholder="search…" value={userQuery} onChange={(e) => setUserQuery(e.target.value)} /></div>
                       <div className="cha-mention-list">
                         {mentionFiltered.map((u) => (
                           <button type="button" key={u.id} className="cha-mention-item" onClick={() => addMention(u)}>
@@ -292,7 +292,7 @@ const filteredConvs = useMemo(() => {
                             <span><b>{u.first_name} {u.last_name}</b><em>{u.role_display || u.role}</em></span>
                           </button>
                         ))}
-                        {mentionFiltered.length === 0 && <p className="cha-empty-mini">لا نتائج</p>}
+                        {mentionFiltered.length === 0 && <p className="cha-empty-mini">No results found</p>}
                       </div>
                     </div>
                   )}
@@ -301,7 +301,7 @@ const filteredConvs = useMemo(() => {
                 <input
                   ref={inputRef}
                   className="cha-input"
-                  placeholder={active.room_type === 'GENERAL' ? 'اكتب بثّاً للجميع…' : 'اكتب رسالتك…'}
+                  placeholder={active.room_type === 'GENERAL' ? 'Write a broadcast to everyone…' : 'Write your message…'}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) send(e); }}
@@ -319,11 +319,11 @@ const filteredConvs = useMemo(() => {
       {newOpen && (
         <div className="cha-mask" onClick={() => setNewOpen(false)}>
           <div className="cha-new" onClick={(e) => e.stopPropagation()}>
-            <div className="cha-new-h"><h3>محادثة جديدة</h3><button onClick={() => setNewOpen(false)}><X size={18} /></button></div>
+            <div className="cha-new-h"><h3>New Conversation</h3><button onClick={() => setNewOpen(false)}><X size={18} /></button></div>
             <button className="cha-new-broadcast" onClick={startGeneral}>
-              <Megaphone size={18} /><div><b>بث للجميع</b><span>إرسال إعلان لكل الفريق دفعة واحدة</span></div>
+              <Megaphone size={18} /><div><b>Broadcast to All</b><span>Send an announcement to the entire team</span></div>
             </button>
-            <div className="cha-new-search"><Search size={14} /><input autoFocus placeholder="ابحث عن زميل بالاسم…" value={userQuery} onChange={(e) => setUserQuery(e.target.value)} /></div>
+            <div className="cha-new-search"><Search size={14} /><input autoFocus placeholder="Search for a colleague…" value={userQuery} onChange={(e) => setUserQuery(e.target.value)} /></div>
             <div className="cha-new-list">
               {filteredUsers.map((u) => (
                 <button key={u.id} className="cha-new-item" onClick={() => startDirect(u)}>
@@ -332,7 +332,7 @@ const filteredConvs = useMemo(() => {
                   <MessageSquare size={15} />
                 </button>
               ))}
-              {filteredUsers.length === 0 && <p className="cha-empty-mini">لا زملاء مطابقون</p>}
+              {filteredUsers.length === 0 && <p className="cha-empty-mini">No colleagues found</p>}
             </div>
           </div>
         </div>

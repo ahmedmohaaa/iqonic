@@ -166,7 +166,7 @@ const ContractorDetails = () => {
               <tbody className="divide-y">
                 {projects.map(project => (
                   <tr key={project.id} className="bg-gray-50">
-                    <td className="p-3 font-mono text-xs">{project.project_no}</td>
+                    <td className="p-3 font-mono text-blue-500">{project.project_no}</td>
                     <td className="p-3 font-semibold text-gray-800">{project.name}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded-full text-xs ${

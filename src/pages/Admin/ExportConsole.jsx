@@ -66,85 +66,85 @@ const filterRowsByDateRange = (rows, dateFields, dateFrom, dateTo) => {
 
 const SOURCES = {
   projects: {
-    label: 'تقرير المشاريع',
+    label: 'projects report',
     endpoint: 'reports/projects',
     rowsKey: 'projects',
     Icon: Database,
     backendDateFilter: true,
     dateFields: [],
     columns: [
-      { key: 'project_no', label: 'رقم المشروع', width: 14 },
-      { key: 'name', label: 'اسم المشروع', width: 32 },
-      { key: 'client_name', label: 'العميل', width: 22 },
-      { key: 'scope', label: 'النطاق', width: 12 },
-      { id: 'active', label: 'نشط', width: 8, get: (r) => r.is_active },
-      { key: 'priority', label: 'الأولوية', width: 10 },
-      { key: 'start_date', label: 'تاريخ البدء', width: 13 },
+      { key: 'project_no', label: 'Project Number', width: 14 },
+      { key: 'name', label: 'Project Name', width: 32 },
+      { key: 'client_name', label: 'Client Name', width: 22 },
+      { key: 'scope', label: 'Scope', width: 12 },
+      { id: 'active', label: 'Active', width: 8, get: (r) => r.is_active },
+      { key: 'priority', label: 'Priority', width: 10 },
+      { key: 'start_date', label: 'Start Date', width: 13 },
     ],
   },
 
   tasks: {
-    label: 'تقرير المهام',
+    label: 'tasks report',
     endpoint: 'reports/tasks',
     rowsKey: 'tasks',
     Icon: Columns3,
     backendDateFilter: false,
     dateFields: ['start_date', 'created_at', 'status_date', 'end_date'],
     columns: [
-      { key: 'title', label: 'المهمة', width: 30, get: (r) => r.title || r.discipline_name || '—' },
-      { id: 'project', label: 'المشروع', width: 16, get: (r) => r.project_name || r.project || '' },
-      { id: 'owner', label: 'المسند إليه', width: 18, get: (r) => r.assigned_to_name || 'غير مسند' },
-      { key: 'status', label: 'الحالة', width: 12 },
-      { key: 'priority', label: 'الأولوية', width: 10 },
-      { id: 'prog', label: 'التقدّم %', width: 9, get: (r) => r.progress_percentage ?? 0 },
+      { key: 'title', label: 'Task Title', width: 30, get: (r) => r.title || r.discipline_name || '—' },
+      { id: 'project', label: 'Project Name', width: 16, get: (r) => r.project_name || r.project || '' },
+      { id: 'owner', label: 'Assigned To', width: 18, get: (r) => r.assigned_to_name || 'Not Assigned' },
+      { key: 'status', label: 'Status', width: 12 },
+      { key: 'priority', label: 'Priority', width: 10 },
+      { id: 'prog', label: 'Progress %', width: 9, get: (r) => r.progress_percentage ?? 0 },
     ],
   },
 
   employees: {
-    label: 'تقرير الموظفين',
+    label: 'employees report',
     endpoint: 'reports/employees',
     self: true,
     Icon: Hash,
     backendDateFilter: false,
     dateFields: [],
     columns: [
-      { id: 'name', label: 'الاسم', width: 24, get: (r) => `${r.user?.first_name || ''} ${r.user?.last_name || ''}`.trim() },
-      { id: 'role', label: 'الدور', width: 16, get: (r) => r.user?.role || '' },
-      { key: 'total_tasks', label: 'إجمالي المهام', width: 12 },
-      { key: 'completed_tasks', label: 'المكتملة', width: 10 },
-      { id: 'rate', label: 'نسبة الإنجاز %', width: 13, get: (r) => r.completion_rate ?? 0 },
+      { id: 'name', label: 'Name', width: 24, get: (r) => `${r.user?.first_name || ''} ${r.user?.last_name || ''}`.trim() },
+      { id: 'role', label: 'Role', width: 16, get: (r) => r.user?.role || '' },
+      { key: 'total_tasks', label: 'Total Tasks', width: 12 },
+      { key: 'completed_tasks', label: 'Completed', width: 10 },
+      { id: 'rate', label: 'Completion Rate %', width: 13, get: (r) => r.completion_rate ?? 0 },
     ],
   },
 
   financial: {
-    label: 'التقرير المالي',
+    label: 'financial report',
     endpoint: 'reports/financial',
     rowsKey: 'invoices',
     Icon: FileText,
     backendDateFilter: false,
     dateFields: ['issue_date', 'created_at', 'due_date'],
     columns: [
-      { key: 'title', label: 'الفاتورة', width: 26 },
-      { key: 'milestone_type', label: 'المرحلة', width: 16 },
-      { id: 'amount', label: 'المبلغ', width: 12, get: (r) => r.total_amount ?? 0 },
-      { key: 'status', label: 'الحالة', width: 12 },
-      { key: 'due_date', label: 'الاستحقاق', width: 13 },
+      { key: 'title', label: 'Invoice', width: 26 },
+      { key: 'milestone_type', label: 'Milestone', width: 16 },
+      { id: 'amount', label: 'Amount', width: 12, get: (r) => r.total_amount ?? 0 },
+      { key: 'status', label: 'Status', width: 12 },
+      { key: 'due_date', label: 'Due Date', width: 13 },
     ],
   },
 };
 
 const FORMATS = [
-  { id: 'pdf', label: 'PDF', ext: 'pdf', Icon: Printer, tone: 'rose', desc: 'مستند للطباعة والأرشفة' },
-  { id: 'xlsx', label: 'Excel', ext: 'xlsx', Icon: FileSpreadsheet, tone: 'emerald', desc: 'جدول قابل للتحليل' },
-  { id: 'csv', label: 'CSV', ext: 'csv', Icon: FileJson, tone: 'sky', desc: 'نصّ مفصول بفواصل' },
-  { id: 'json', label: 'JSON', ext: 'json', Icon: Braces, tone: 'amber', desc: 'بيانات خام للتكامل' },
+  { id: 'pdf', label: 'PDF', ext: 'pdf', Icon: Printer, tone: 'rose', desc: 'Document for printing and archiving' },
+  { id: 'xlsx', label: 'Excel', ext: 'xlsx', Icon: FileSpreadsheet, tone: 'emerald', desc: 'Table for analysis' },
+  { id: 'csv', label: 'CSV', ext: 'csv', Icon: FileJson, tone: 'sky', desc: 'Comma-separated values' },
+  { id: 'json', label: 'JSON', ext: 'json', Icon: Braces, tone: 'amber', desc: 'Raw data for integration' },
 ];
 
 const STATUS_LABEL = {
-  [EXPORT_STATUS.PREPARING]: 'تجهيز البيانات…',
-  [EXPORT_STATUS.RENDERING]: 'بناء الملف…',
-  [EXPORT_STATUS.DONE]: 'تم التصدير بنجاح',
-  [EXPORT_STATUS.ERROR]: 'تعذّر التصدير',
+  [EXPORT_STATUS.PREPARING]: 'Preparing data…',
+  [EXPORT_STATUS.RENDERING]: 'Rendering file…',
+  [EXPORT_STATUS.DONE]: 'Export completed successfully',
+  [EXPORT_STATUS.ERROR]: 'Export failed',
 };
 
 export default function ExportConsole() {
@@ -243,16 +243,16 @@ export default function ExportConsole() {
         </div>
 
         <div className="xc-head-text">
-          <span className="xc-kicker">EXPORT PRESS · ورشة التصدير</span>
-          <h1 className="xc-title">صدّر بياناتك كما تشاء</h1>
+          <span className="xc-kicker">EXPORT PRESS </span>
+          <h1 className="xc-title">Export Your Data As You Like</h1>
           <p className="xc-sub">
-            اختر المصدر، انتقِ الأعمدة، ثم اطبع الصيغة التي تحتاجها — PDF أو Excel أو CSV أو JSON.
+            Choose the source, select the columns, then print the format you need — PDF or Excel or CSV or JSON.
           </p>
         </div>
 
         <div className="xc-head-stat">
           <span className="xc-stat-num">{rows.length}</span>
-          <span className="xc-stat-lbl">صف جاهز</span>
+          <span className="xc-stat-lbl">Rows Ready</span>
         </div>
       </header>
 
@@ -274,7 +274,7 @@ export default function ExportConsole() {
         <aside className="xc-panel xc-reveal">
           {/* اختيار المصدر */}
           <div className="xc-block">
-            <span className="xc-block-h">المصدر</span>
+            <span className="xc-block-h">Source</span>
             <div className="xc-src-list">
               {Object.entries(SOURCES).map(([id, s]) => (
                 <button
@@ -292,7 +292,7 @@ export default function ExportConsole() {
           {/* النطاق الزمني */}
           <div className="xc-block">
             <span className="xc-block-h">
-              <Calendar size={13} /> النطاق الزمني
+              <Calendar size={13} /> Time Range
             </span>
 
             <div className="xc-dates">
@@ -310,14 +310,14 @@ export default function ExportConsole() {
             </div>
 
             <button className="xc-apply" onClick={load} disabled={loading}>
-              {loading ? 'جارٍ الجلب…' : 'تطبيق وجلب'}
+              {loading ? 'Fetching…' : 'Apply and Fetch'}
             </button>
           </div>
 
           {/* اختيار الأعمدة */}
           <div className="xc-block">
             <span className="xc-block-h">
-              <Columns3 size={13} /> الأعمدة ({activeCols.length}/{columns.length})
+              <Columns3 size={13} /> Columns ({activeCols.length}/{columns.length})
             </span>
 
             <div className="xc-cols">
@@ -341,7 +341,7 @@ export default function ExportConsole() {
 
           {/* حجم تقديري */}
           <div className="xc-est">
-            <span>الحجم التقديري</span>
+            <span>Estimated Size</span>
             <b>≈ {estKB} KB</b>
           </div>
         </aside>
@@ -380,19 +380,19 @@ export default function ExportConsole() {
           <div className="xc-preview">
             <div className="xc-preview-h">
               <span>
-                <Eye size={14} /> معاينة حيّة
+                <Eye size={14} /> Live preview
               </span>
               <span className="xc-preview-meta">
-                {preview.length} من {rows.length} صف
+                {preview.length} of {rows.length} rows
               </span>
             </div>
 
             {loading ? (
               <div className="xc-empty">
-                <Loader2 size={20} className="xc-spin" /> جارٍ تحميل البيانات…
+                <Loader2 size={20} className="xc-spin" /> Fetching data…
               </div>
             ) : rows.length === 0 ? (
-              <div className="xc-empty">لا بيانات في هذا النطاق.</div>
+              <div className="xc-empty">No data available in this range.</div>
             ) : (
               <div className="xc-table-wrap">
                 <table className="xc-table">
@@ -437,7 +437,7 @@ function colValue(c, r) {
   let v = c.get ? c.get(r) : c.key != null ? r[c.key] : '';
 
   if (v === null || v === undefined) v = '';
-  if (typeof v === 'boolean') v = v ? 'نعم' : 'لا';
+  if (typeof v === 'boolean') v = v ? 'yes' : 'no';
 
   return String(v);
 }

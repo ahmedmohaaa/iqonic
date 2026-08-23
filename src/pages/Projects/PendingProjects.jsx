@@ -54,7 +54,7 @@ const PendingProjects = () => {
           <input
             type="text"
             placeholder="Search pending projects..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-10 pr-4 py-2 border-2 border-gray-400 rounded-lg text-gray-900 font-semibold placeholder-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -87,9 +87,9 @@ const PendingProjects = () => {
                     <span><span className="font-semibold">Scope:</span> {project.scope}</span>
                   </div>
                 </div>
-                <div className="text-primary font-semibold flex items-center">
-                  View <FolderOpen size={16} className="ml-1" />
-                </div>
+        <div className="text-blue-600 font-bold flex items-center hover:text-blue-800 transition-colors cursor-pointer">
+  View <FolderOpen size={16} className="ml-1" />
+</div>
               </div>
             </Link>
           ))}

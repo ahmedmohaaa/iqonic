@@ -5,17 +5,19 @@ import {
   DollarSign, Users, FileText, Bell, Search, LogOut,
   ShellIcon, Building2, MessageSquare, Printer,
   PlayCircle, Archive, Clock, TrendingUp, UserX,
-  User, ListTodo, Shield, BarChart3, Loader2
+  User, ListTodo, Shield, BarChart3, Loader2,HardHat,Menu
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getGlobalSearch } from '../../api/services/dashboard';
 import NotificationBell from './NotificationBell';
-
+import logo from '../../assets/logo.jfif';
 const MainLayout = () => {
   const { user, logout, isManagement, isDesignManager, isSupervisionManager, isAccountant, isSecretary } = useAuth();
   const navigate = useNavigate();
 
   // Search states
+
+const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -107,7 +109,13 @@ const MainLayout = () => {
     { path: '/client-directory', label: 'Client Directory', icon: Users, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT', 'SECRETARY'] },
     { path: '/audit-logs', label: 'Audit Logs', icon: FileText, roles: ['GM', 'AGM', 'SUP_MGR', 'DESIGN_MGR'] },
     { path: '/replacements', label: 'Replacement Requests', icon: UserX, roles: ['ALL'] },
-    { path: '/supervision-team', label: 'Supervision Team', icon: Users, roles: ['SUP_MGR', 'PM', 'GM', 'AGM'] },
+    { path: '/supervision-team', label: 'Supervision Team', icon: Users, roles: ['SUP_MGR', 'PM'] },
+{ 
+  path: '/my-supervision-projects', 
+  label: 'My Supervision Projects', 
+  icon: HardHat, 
+  roles: ['ALL'], 
+},    
     { path: '/review-directory', label: 'Internal Design Review', icon: ShellIcon, roles: ['GM', 'AGM', 'SUP_MGR', 'PM', 'DESIGN_MGR', 'ENGINEER', 'SENIOR_ENG'] },
     { path: '/chat', label: 'Messages', icon: MessageSquare, roles: 'ALL' },
     { path: '/profile', label: 'Profile', icon: User, roles: ['ALL'] },
@@ -121,46 +129,44 @@ const MainLayout = () => {
     { path: '/reports/export', label: 'Export Reports', icon: Printer, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'] },
   ];
 
-  const filteredMenu = menuItems.filter(item =>
-    item.roles.includes('ALL') || item.roles.includes(user?.role)
-  );
+const filteredMenu = menuItems.filter(item => {
+  // 1. فحص الصلاحية (Role)
+  const hasRole = item.roles.includes('ALL') || item.roles.includes(user?.role);
+  
+  // 2. فحص القسم (Department) - لو العنصر ملوش قسم مخصص، هيعدي، ولو ليه قسم هيتأكد إنه مطابق لقسم المستخدم
+  const hasDepartment = !item.department || item.department === user?.department;
 
+  // يرجع true لو الشرطين متحققين
+  return hasRole && hasDepartment;
+});
   return (
-    <div className="flex h-screen bg-gray-100" dir="ltr">
-      {/* Sidebar — full navy background */}
-      <aside className="w-64 shadow-md flex flex-col bg-[#0b1f3c]">
+<div className="flex h-screen bg-gray-100" dir="ltr">
+  {/* ✅ خلفية معتمة للموبايل — تقفل القائمة بالضغط عليها */}
+  {sidebarOpen && (
+    <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+  )}
+
+  {/* Sidebar — منزلق على الموبايل / ثابت على الشاشات الكبيرة */}
+  <aside className={`w-64 shadow-md flex flex-col bg-[#0b1f3c] fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:translate-x-0 lg:z-auto`}>
         {/* ICON Logo */}
-        <div style={{ backgroundColor: '#0b1f3c' }}>
-          <div className="p-4 pb-3 flex flex-col items-center">
-            <div className="flex items-center justify-center">
-              <span style={{ color: '#ffffff', fontSize: '40px', fontWeight: 300, letterSpacing: '2px' }}>I</span>
-
-              <span style={{ color: '#ffffff', fontSize: '40px', fontWeight: 300, letterSpacing: '2px' }}>C</span>
-
-                           <span
-                style={{
-                  display: 'inline-block',
-                  width: '26px',
-                  height: '32px',
-                  border: '3px solid #e5e32a',
-                  borderRadius: '10px',
-                  margin: '0 5px',
-                }}
-              /> 
-              <span style={{ color: '#ffffff', fontSize: '40px', fontWeight: 300, letterSpacing: '2px' }}>N</span>
-            </div>
-            <span style={{ color: '#ffffff', fontSize: '10px', letterSpacing: '3px', marginTop: '6px' }}>
-              CONSULTING ENGINEERING
-            </span>
-          </div>
-          <div style={{ height: '4px', backgroundColor: '#e5e32a' }} />
-        </div>
+<div style={{ backgroundColor: '#0b1f3c' }}>
+  <div className="p-4 pb-3 flex flex-col items-center">
+    <img
+      src={logo}
+      alt="ICON Consulting Engineering"
+      className="w-full max-w-[210px] h-auto object-contain select-none"
+      draggable={false}
+    />
+  </div>
+</div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
           {filteredMenu.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
+                onClick={() => setSidebarOpen(false)}   // ✅ يقفل بعد الاختيار على الموبايل
+
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2 rounded-lg transition-colors font-medium ${
                   isActive
@@ -189,10 +195,18 @@ const MainLayout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Navbar — full navy background */}
-        <header className="shadow-sm h-16 flex items-center justify-between px-6 bg-[#0b1f3c]">
-          {/* Search container and dropdown */}
-          <div className="relative w-96" ref={searchRef}>
-            <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
+<header className="shadow-sm h-16 flex items-center gap-2 sm:gap-4 px-3 sm:px-6 bg-[#0b1f3c]">
+  {/* ✅ زرار القائمة للموبايل فقط */}
+  <button
+    className="lg:hidden p-2 rounded-lg text-white hover:bg-[#16305a] transition shrink-0"
+    onClick={() => setSidebarOpen(true)}
+    aria-label="Open menu"
+  >
+    <Menu size={22} />
+  </button>          {/* Search container and dropdown */}
+<div className="relative flex-1 min-w-0 max-w-2xl" ref={searchRef}>
+  
+              <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Global search (projects, tasks, clients...)"
@@ -239,18 +253,22 @@ const MainLayout = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
-            <NotificationBell />
-            <div className="text-right border-r pr-4 border-[#1d3a66]">
-              <p className="text-sm font-semibold text-white">{user?.first_name} {user?.last_name}</p>
-              <p className="text-xs text-gray-300">{user?.role_display || user?.role}</p>
-            </div>
-          </div>
+<div className="flex items-center gap-2 sm:gap-4 shrink-0">
+  <NotificationBell />
+  <div className="text-right border-r pr-2 sm:pr-4 border-[#1d3a66] min-w-0">
+    <p className="text-sm font-semibold text-white truncate max-w-[110px] sm:max-w-none">
+      {user?.first_name} {user?.last_name}
+    </p>
+    <p className="text-xs text-gray-300 truncate max-w-[110px] sm:max-w-none">
+      {user?.role_display || user?.role}
+    </p>
+  </div>
+</div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <Outlet />
+<main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 bg-gray-50">
+            <Outlet />
         </main>
       </div>
     </div>

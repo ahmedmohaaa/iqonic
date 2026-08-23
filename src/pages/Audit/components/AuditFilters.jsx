@@ -30,7 +30,7 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
             value={filters.search}
             onChange={e => onFilterChange('search', e.target.value)}
             placeholder="Search..."
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
           />
         </div>
 
@@ -40,7 +40,7 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
           <select
             value={filters.user}
             onChange={e => onFilterChange('user', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
           >
             <option value="">All Users</option>
             {users.map(u => (
@@ -55,7 +55,7 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
           <select
             value={filters.action_type}
             onChange={e => onFilterChange('action_type', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
           >
             <option value="">All Actions</option>
             {actionTypes.map(at => (
@@ -72,7 +72,7 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
             value={filters.project}
             onChange={e => onFilterChange('project', e.target.value)}
             placeholder="Project Name / No."
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
           />
         </div>
 
@@ -83,7 +83,7 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
             type="date"
             value={filters.date_from}
             onChange={e => onFilterChange('date_from', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
           />
         </div>
         <div>
@@ -92,7 +92,7 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
             type="date"
             value={filters.date_to}
             onChange={e => onFilterChange('date_to', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
           />
         </div>
       </div>
