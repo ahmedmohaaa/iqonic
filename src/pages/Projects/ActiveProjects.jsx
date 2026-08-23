@@ -24,7 +24,9 @@ const ActiveProjects = () => {
   });
   const [pagination, setPagination] = useState({ count: 0, next: null, previous: null });
   const [currentPage, setCurrentPage] = useState(1);
-
+// ✅ زر التعديل لسكرتيرة التصميم وسكرتيرة الإشراف فقط — لا أحد غيرهما
+const isDeptSecretary =
+  user?.role === 'SECRETARY' && ['Design', 'Supervision'].includes(user?.department);
   // ------------------------------------------------------------------------
   // نظام شامل للتحقق من الصلاحيات (يقرأ كل بيانات المستخدم للبحث عن المنصب)
   // ------------------------------------------------------------------------
@@ -203,7 +205,7 @@ const canEditProject = !['GM', 'AGM'].includes(user?.role);
                       <Flag size={14} /> Priority
                     </Link>
 
-  {canEditProject && (
+  {isDeptSecretary && (
                   <Link 
                       to={`/projects/${project.id}/edit`}
                       className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 rounded transition"
