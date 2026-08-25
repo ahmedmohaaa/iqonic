@@ -110,12 +110,13 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     { path: '/audit-logs', label: 'Audit Logs', icon: FileText, roles: ['GM', 'AGM', 'SUP_MGR', 'DESIGN_MGR'] },
     { path: '/replacements', label: 'Replacement Requests', icon: UserX, roles: ['ALL'] },
     { path: '/supervision-team', label: 'Supervision Team', icon: Users, roles: ['SUP_MGR', 'PM'] },
-{ 
-  path: '/my-supervision-projects', 
-  label: 'My Supervision Projects', 
-  icon: HardHat, 
-  roles: ['ALL'], 
-},    
+{
+  path: '/my-supervision-projects',
+  label: 'My Supervision Projects',
+  icon: HardHat,
+  roles: ['ENGINEER', 'SENIOR_ENG', 'SUP_MGR', 'PM'],
+  departments: ['Supervision'],  // ✅ يظهر فقط لقسم الإشراف
+},
     { path: '/review-directory', label: 'Internal Design Review', icon: ShellIcon, roles: ['GM', 'AGM', 'SUP_MGR', 'PM', 'DESIGN_MGR', 'ENGINEER', 'SENIOR_ENG'] },
     { path: '/chat', label: 'Messages', icon: MessageSquare, roles: 'ALL' },
     { path: '/profile', label: 'Profile', icon: User, roles: ['ALL'] },
@@ -130,13 +131,17 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   ];
 
 const filteredMenu = menuItems.filter(item => {
-  // 1. فحص الصلاحية (Role)
-  const hasRole = item.roles.includes('ALL') || item.roles.includes(user?.role);
-  
-  // 2. فحص القسم (Department) - لو العنصر ملوش قسم مخصص، هيعدي، ولو ليه قسم هيتأكد إنه مطابق لقسم المستخدم
-  const hasDepartment = !item.department || item.department === user?.department;
+  // 1. فحص الدور (Role)
+  const hasRole = item.roles?.includes('ALL') || item.roles?.includes(user?.role);
 
-  // يرجع true لو الشرطين متحققين
+  // 2. فحص القسم (Department) — يدعم string واحد أو مصفوفة
+  let hasDepartment = true;
+  if (item.department) {
+    hasDepartment = item.department === user?.department;
+  } else if (item.departments) {
+    hasDepartment = item.departments.includes(user?.department);
+  }
+
   return hasRole && hasDepartment;
 });
   return (
@@ -196,66 +201,68 @@ const filteredMenu = menuItems.filter(item => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Navbar — full navy background */}
 <header className="shadow-sm h-16 flex items-center gap-2 sm:gap-4 px-3 sm:px-6 bg-[#0b1f3c]">
-  {/* ✅ زرار القائمة للموبايل فقط */}
+  {/* ✅ زرار القائمة للموبايل فقط — في أقصى الشمال */}
   <button
     className="lg:hidden p-2 rounded-lg text-white hover:bg-[#16305a] transition shrink-0"
     onClick={() => setSidebarOpen(true)}
     aria-label="Open menu"
   >
     <Menu size={22} />
-  </button>          {/* Search container and dropdown */}
-<div className="relative flex-1 min-w-0 max-w-2xl" ref={searchRef}>
-  
-              <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Global search (projects, tasks, clients...)"
-              className="w-full pr-10 pl-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-gray-50 text-gray-900 placeholder-gray-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClick={() => searchQuery.trim() && setShowDropdown(true)}
-            />
+  </button>
 
-            {/* Results dropdown */}
-            {showDropdown && (
-              <div className="absolute top-full mt-2 w-full bg-white border border-gray-100 shadow-xl rounded-lg overflow-hidden z-50 max-h-96 overflow-y-auto" dir="ltr">
-                {isSearching ? (
-                  <div className="p-4 flex items-center justify-center text-gray-500 gap-2">
-                    <Loader2 size={18} className="animate-spin text-blue-600" />
-                    <span className="text-sm">Searching...</span>
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  <ul className="divide-y divide-gray-50">
-                    {searchResults.map((result, idx) => (
-                      <li
-                        key={idx}
-                        className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
-                        onClick={() => {
-                          navigate(`/${result.type || 'projects'}/${result.id}`);
-                          setShowDropdown(false);
-                          setSearchQuery('');
-                        }}
-                      >
-                        <Search size={16} className="text-gray-400" />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800">{result.title || result.name}</p>
-                          {result.subtitle && <p className="text-xs text-gray-500">{result.subtitle}</p>}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="p-4 text-center text-sm text-gray-500">
-                    No results matching "{searchQuery}"
-                  </div>
-                )}
-              </div>
-            )}
+  {/* ✅ المساحة الفارغة — تدفع باقي العناصر لليمين */}
+  <div className="flex-1" />
+
+  {/* ✅ شريط البحث */}
+  <div className="relative w-48 sm:w-64 lg:w-96 shrink-0" ref={searchRef}>
+    <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
+    <input
+      type="text"
+      placeholder="Global search (projects, tasks, clients...)"
+      className="w-full pr-10 pl-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-gray-50 text-gray-900 placeholder-gray-500"
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      onClick={() => searchQuery.trim() && setShowDropdown(true)}
+    />
+    {/* Results dropdown */}
+    {showDropdown && (
+      <div className="absolute top-full mt-2 w-full bg-white border border-gray-100 shadow-xl rounded-lg overflow-hidden z-50 max-h-96 overflow-y-auto" dir="ltr">
+        {isSearching ? (
+          <div className="p-4 flex items-center justify-center text-gray-500 gap-2">
+            <Loader2 size={18} className="animate-spin text-blue-600" />
+            <span className="text-sm">Searching...</span>
           </div>
+        ) : searchResults.length > 0 ? (
+          <ul className="divide-y divide-gray-50">
+            {searchResults.map((result, idx) => (
+              <li
+                key={idx}
+                className="p-3 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
+                onClick={() => {
+                  navigate(`/${result.type || 'projects'}/${result.id}`);
+                  setShowDropdown(false);
+                  setSearchQuery('');
+                }}
+              >
+                <Search size={16} className="text-gray-400" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{result.title || result.name}</p>
+                  {result.subtitle && <p className="text-xs text-gray-500">{result.subtitle}</p>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="p-4 text-center text-sm text-gray-500">
+            No results matching "{searchQuery}"
+          </div>
+        )}
+      </div>
+    )}
+  </div>
 
-<div className="flex items-center gap-2 sm:gap-4 shrink-0">
-  <NotificationBell />
-  <div className="text-right border-r pr-2 sm:pr-4 border-[#1d3a66] min-w-0">
+  {/* ✅ اسم المستخدم */}
+  <div className="text-right border-r pr-2 sm:pr-4 border-[#1d3a66] min-w-0 shrink-0">
     <p className="text-sm font-semibold text-white truncate max-w-[110px] sm:max-w-none">
       {user?.first_name} {user?.last_name}
     </p>
@@ -263,8 +270,10 @@ const filteredMenu = menuItems.filter(item => {
       {user?.role_display || user?.role}
     </p>
   </div>
-</div>
-        </header>
+
+  {/* ✅ الجرس في أقصى اليمين (المقدمة) */}
+  <NotificationBell />
+</header>
 
         {/* Page Content */}
 <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 bg-gray-50">
