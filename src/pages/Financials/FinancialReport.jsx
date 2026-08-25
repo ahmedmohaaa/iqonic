@@ -60,21 +60,21 @@ const FinancialReport = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard 
           title="Total Billed" 
-          value={`$${financial_analytics?.total_billed?.toLocaleString() || 0}`} 
+          value={`QR${financial_analytics?.total_billed?.toLocaleString() || 0}`} 
           icon={<DollarSign />} 
           color="blue" 
           trend="+12%" 
         />
         <SummaryCard 
           title="Total Collected" 
-          value={`$${financial_analytics?.total_collected?.toLocaleString() || 0}`} 
+          value={`QR${financial_analytics?.total_collected?.toLocaleString() || 0}`} 
           icon={<CheckCircle />} 
           color="green" 
           trend="+8%" 
         />
         <SummaryCard 
           title="Total Outstanding" 
-          value={`$${financial_analytics?.total_receivables?.toLocaleString() || 0}`} 
+          value={`QR${financial_analytics?.total_receivables?.toLocaleString() || 0}`} 
           icon={<Clock />} 
           color="yellow" 
           trend="-5%" 
@@ -82,7 +82,7 @@ const FinancialReport = () => {
         />
         <SummaryCard 
           title="Overdue Amount" 
-          value={`$${alerts?.overdue_amount_estimation?.toLocaleString() || 0}`} 
+          value={`QR${alerts?.overdue_amount_estimation?.toLocaleString() || 0}`} 
           icon={<AlertTriangle />} 
           color="red" 
           trend="+2%" 
