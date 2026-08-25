@@ -200,17 +200,17 @@ const [taskStatusFilter, setTaskStatusFilter] = useState('ALL');
         <div className="rpt-kpi">
           <span className="rpt-kpi-lbl">Total Billed</span>
           <span className="rpt-kpi-num rpt-kpi-num--sky"><HeroNum v={fa.total_billed} /></span>
-          <span className="rpt-kpi-foot">USD</span>
+          <span className="rpt-kpi-foot">QR</span>
         </div>
         <div className="rpt-kpi">
           <span className="rpt-kpi-lbl">Total Collected</span>
           <span className="rpt-kpi-num rpt-kpi-num--g"><HeroNum v={fa.total_collected} /></span>
-          <span className="rpt-kpi-foot">USD</span>
+          <span className="rpt-kpi-foot">QR</span>
         </div>
         <div className="rpt-kpi">
           <span className="rpt-kpi-lbl">Total Receivables</span>
           <span className="rpt-kpi-num rpt-kpi-num--r"><HeroNum v={fa.total_receivables} /></span>
-          <span className="rpt-kpi-foot">USD</span>
+          <span className="rpt-kpi-foot">QR</span>
         </div>
       </section>
 
@@ -388,8 +388,8 @@ function FinancialTab({ data }) {
   const collected = Number(data?.total_collected || 0);
   const outstanding = invoiced - collected; // تعويض bug الباك إند (total_outstanding=0)
   const donut = [
-    { value: collected, color: '#3fae84', label: 'محصّل' },
-    { value: Math.max(outstanding, 0), color: '#d9606a', label: 'مستحق' },
+    { value: collected, color: '#3fae84', label: 'Collected' },
+    { value: Math.max(outstanding, 0), color: '#d9606a', label: 'Outstanding' },
   ];
   const invoices = data?.invoices || [];
   return (
