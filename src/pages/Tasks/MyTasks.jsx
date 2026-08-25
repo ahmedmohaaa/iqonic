@@ -257,10 +257,10 @@ const TaskCard = ({
 {/* ✅ Change Order يظهر حتى لو المهمة APPROVED */}
 {showChangeOrderInMyTasks(currentUser, task) && (
   <Link
-    to={`/projects/${task.project}/change-order`}
+                          to={`/tasks/${task.id}/edit`}
     className="flex-1 inline-flex items-center justify-center gap-1 bg-violet-50 text-violet-700 hover:bg-violet-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
   >
-    <GitBranch size={14} /> Change Order
+    <GitBranch size={14} /> update
   </Link>
 )}
         </div>
