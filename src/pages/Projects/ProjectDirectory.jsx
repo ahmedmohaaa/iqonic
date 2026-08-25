@@ -64,13 +64,13 @@ const ProjectDirectory = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-black">قائمة المشاريع</h1>
+        <h1 className="text-2xl font-bold text-black">List of Projects</h1>
         {isSecretary && (
           <Link
             to="/projects/create"
             className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center hover:bg-blue-900 transition"
           >
-            <Plus size={18} className="mr-1" /> مشروع جديد
+            <Plus size={18} className="mr-1" /> New project
           </Link>
         )}
       </div>
