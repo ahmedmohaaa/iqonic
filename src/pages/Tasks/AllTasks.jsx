@@ -248,10 +248,11 @@ const AllTasks = () => {
         )}
       </div>
 
-      {/* Priority Drag & Drop (للمديرين فقط) */}
-      {canManage && filters.priority === '' && filters.status === '' && (
-        <PriorityDragDrop tasks={tasks} onUpdate={fetchTasks} />
-      )}
+{/* ✅ Priority Drag & Drop — مخفي حاليًا (احذف سطري التعليق لإعادة تفعيله)
+{canManage && filters.priority === '' && filters.status === '' && (
+<PriorityDragDrop tasks={tasks} onUpdate={fetchTasks} />
+)}
+*/}
 
       {/* Tasks Table */}
       {loading ? (
@@ -378,7 +379,7 @@ const AllTasks = () => {
                           className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold transition shadow-sm"
                         >
                           <GitBranch size={12} />
-                          Change Order
+                          update
                         </Link>)}
                       </div>
                     </td>
