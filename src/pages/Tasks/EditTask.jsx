@@ -21,7 +21,19 @@ const SUBMIT_TONE = {
   CHANGE_ORDER: 'from-violet-500 to-fuchsia-600',
   INTERNAL_REVIEW: 'from-emerald-500 to-teal-600',
 };
-
+// ✅ تطبيع أي قيمة قديمة مخزنة بالليبل قبل عرضها في الفورم
+const LEGACY_WORK_TYPE = {
+  'Design': 'DESIGN',
+  'Design Review': 'DESIGN_REVIEW',
+  'drafting': 'DRAFTING',
+  'Drafting': 'DRAFTING',
+  'calculation': 'CALCULATION',
+  'Report': 'REPORT',
+  '3D rendering': 'RENDERING_3D',
+  '3D Rendering': 'RENDERING_3D',
+  'presentation': 'PRESENTATION',
+  'printing': 'PRINTING',
+};
 const EditTask = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -59,13 +71,14 @@ const EditTask = () => {
         setChangeOrders(Array.isArray(coData) ? coData : []);
         setEngineers(Array.isArray(usersData) ? usersData : []);
 
-        reset({
-          ...taskData,
-          project: taskData.project_id || taskData.project,
-          assigned_to: taskData.assigned_to_id || taskData.assigned_to,
-          discipline: taskData.discipline_id || taskData.discipline,
-          internal_review_stage: taskData.internal_review_stage_id || taskData.internal_review_stage,
-        });
+reset({
+  ...taskData,
+  work_type: LEGACY_WORK_TYPE[taskData.work_type] || taskData.work_type,   // ✅
+  project: taskData.project_id || taskData.project,
+  assigned_to: taskData.assigned_to_id || taskData.assigned_to,
+  discipline: taskData.discipline_id || taskData.discipline,
+  internal_review_stage: taskData.internal_review_stage_id || taskData.internal_review_stage,
+});
       })
       .catch((err) => { setError('Failed to load task data'); console.error(err); })
       .finally(() => setLoading(false));
@@ -231,18 +244,18 @@ const EditTask = () => {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Work Type *</label>
-            <select {...register('work_type', { required: true })}
-              className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
-              <option value="">— Select Work Type —</option>
-              <option value="Design">Design</option>
-              <option value="Design Review">Design Review</option>
-              <option value="drafting">drafting</option>
-              <option value="calculation">calculation</option>
-              <option value="Report">Report</option>
-              <option value="3D rendering">3D rendering</option>
-              <option value="presentation">presentation</option>
-              <option value="printing">printing</option>
-            </select>
+<select {...register('work_type', { required: true })}
+  className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
+  <option value="">— Select Work Type —</option>
+  <option value="DESIGN">Design</option>
+  <option value="DESIGN_REVIEW">Design Review</option>
+  <option value="DRAFTING">Drafting</option>
+  <option value="CALCULATION">Calculation</option>
+  <option value="REPORT">Report</option>
+  <option value="RENDERING_3D">3D Rendering</option>
+  <option value="PRESENTATION">Presentation</option>
+  <option value="PRINTING">Printing</option>
+</select>
             {errors.work_type && <span className="text-rose-500 text-xs">Required</span>}
           </div>
 
@@ -328,3 +341,12 @@ const EditTask = () => {
 };
 
 export default EditTask;
+
+reset({
+  ...taskData,
+  work_type: LEGACY_WORK_TYPE[taskData.work_type] || taskData.work_type,   // ✅
+  project: taskData.project_id || taskData.project,
+  assigned_to: taskData.assigned_to_id || taskData.assigned_to,
+  discipline: taskData.discipline_id || taskData.discipline,
+  internal_review_stage: taskData.internal_review_stage_id || taskData.internal_review_stage,
+});
