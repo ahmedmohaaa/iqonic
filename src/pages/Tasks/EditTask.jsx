@@ -342,11 +342,4 @@ reset({
 
 export default EditTask;
 
-reset({
-  ...taskData,
-  work_type: LEGACY_WORK_TYPE[taskData.work_type] || taskData.work_type,   // ✅
-  project: taskData.project_id || taskData.project,
-  assigned_to: taskData.assigned_to_id || taskData.assigned_to,
-  discipline: taskData.discipline_id || taskData.discipline,
-  internal_review_stage: taskData.internal_review_stage_id || taskData.internal_review_stage,
-});
+
