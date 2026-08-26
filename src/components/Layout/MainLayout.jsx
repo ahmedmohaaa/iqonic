@@ -11,6 +11,20 @@ import { useState, useEffect, useRef } from 'react';
 import { getGlobalSearch } from '../../api/services/dashboard';
 import NotificationBell from './NotificationBell';
 import logo from '../../assets/logo.jfif';
+
+// ✅ قائمة أسماء مهندسي الإشراف (من ملف الباك إند)
+const SUPERVISION_ENGINEER_USERNAMES = [
+  'ahmed.zabady',
+  'nader.bekhit', 'syed.mahmoud', 'muhammed.faisal', 'eslam.mahdy',
+  'ahmed.yosef', 'saheer.parayil', 'mahmoud.hamed', 'waled.mohamed',
+  'ahmed.zaki', 'mohamed.salah', 'loai.hamouda', 'mohamed.elshenawy',
+  'ahmed.ghazy', 'muammer.muhammed', 'abdulrahim.ahmed', 'ali.odeh',
+  'noufal.thodi', 'mohammed.shemseer', 'mohammed.rashid',
+  'mohamed.hisham', 'mohamed.salem',
+  'mani.kumar',
+  'jocelyn.mallilin', 'allen.guanzon', 'jason.cuison', 'mostafa.zabady',
+  'isuru.palliyaguruge', 'faseela.foroth',
+];
 const MainLayout = () => {
   const { user, logout, isManagement, isDesignManager, isSupervisionManager, isAccountant, isSecretary } = useAuth();
   const navigate = useNavigate();
@@ -114,8 +128,8 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   path: '/my-supervision-projects',
   label: 'My Supervision Projects',
   icon: HardHat,
-  roles: ['ENGINEER', 'SENIOR_ENG', 'SUP_MGR', 'PM'],
-  departments: ['Supervision'],  // ✅ يظهر فقط لقسم الإشراف
+  roles: ['ALL'],
+  supervisionUsernames: SUPERVISION_ENGINEER_USERNAMES,  // ✅ يظهر فقط لمهندسي الإشراف
 },
     { path: '/review-directory', label: 'Internal Design Review', icon: ShellIcon, roles: ['GM', 'AGM', 'SUP_MGR', 'PM', 'DESIGN_MGR', 'ENGINEER', 'SENIOR_ENG'] },
     { path: '/chat', label: 'Messages', icon: MessageSquare, roles: 'ALL' },
@@ -142,7 +156,13 @@ const filteredMenu = menuItems.filter(item => {
     hasDepartment = item.departments.includes(user?.department);
   }
 
-  return hasRole && hasDepartment;
+  // 3. فحص أسماء مهندسي الإشراف (إذا تم تحديد القائمة)
+  let hasSupervisionUsername = true;
+  if (item.supervisionUsernames) {
+    hasSupervisionUsername = item.supervisionUsernames.includes(user?.username);
+  }
+
+  return hasRole && hasDepartment && hasSupervisionUsername;
 });
   return (
 <div className="flex h-screen bg-gray-100" dir="ltr">
