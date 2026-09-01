@@ -19,8 +19,11 @@ const Dashboard = () => {
       
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* ✅ بيعد حسب القسم: تصميم للمصمم، إشراف للمشرف، والكل للمدراء */}
         <MetricCard icon={Folder} title="Active Projects" value={data.metrics.active_projects} color="blue" />
-        <MetricCard icon={CheckCircle} title="My Completed Tasks" value={data.metrics.my_total_tasks - data.metrics.my_pending_tasks} color="green" />
+        {/* ✅ بدل Completed → Approved */}
+        <MetricCard icon={CheckCircle} title="My Approved Tasks" value={data.metrics.my_approved_tasks} color="green" />
+        {/* ✅ كل المهام ما عدا المعتمدة */}
         <MetricCard icon={Clock} title="Pending Tasks" value={data.metrics.my_pending_tasks} color="yellow" />
         <MetricCard icon={AlertTriangle} title="Unread Notifications" value={data.metrics.unread_notifications} color="red" />
       </div>
