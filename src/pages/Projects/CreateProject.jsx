@@ -8,7 +8,7 @@ import {
 } from '../../api/services/contractors';
 import {
   Building2, HardHat, Lock, Plus, UserPlus, Check,
-  AlertTriangle, Calendar, Ruler, FileSignature,
+  AlertTriangle, Calendar, Ruler, FileSignature, Search
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
@@ -22,7 +22,9 @@ const FREE_ROLES = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'MANAGER'];
 export default function CreateProject() {
   const navigate = useNavigate();
   const { user } = useAuth();
-
+  const isDeptSecretary =
+    user?.role === 'SECRETARY' && ['Design', 'Supervision'].includes(user?.department);
+  
   // تنظيف بيانات المستخدم لتجنب أخطاء حالة الأحرف (Case Sensitivity)
   const roleString = String(user?.role || user?.groups?.[0] || '').toUpperCase();
   const deptString = String(user?.department || '').toUpperCase();
@@ -50,6 +52,9 @@ export default function CreateProject() {
   const [loading, setLoad] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  
+  // ✅ حالة البحث في المقاولين
+  const [contractorSearch, setContractorSearch] = useState('');
 
   // وضع المقاول: existing | new
   const [contractorMode, setContractorMode] = useState('existing');
@@ -60,13 +65,13 @@ export default function CreateProject() {
     building_type: 'Residential', floors: '', plot_area: '', bua: '',
     apartments: '', shops: '', parking: '', description: '', application_no: '', pin_no: '',
     // ══ الحقول الناقصة ══
-    owner: '', supervision_consultant: '', permit_no: '', permit_date: '', permit_deadline: '', permit_status: 'NOT_ISSUED',
+    owner: '', supervision_consultant: '', permit_no: '', permit_date: '', permit_deadline: '',application_type: '', permit_status: 'NOT_ISSUED',
     // ═════════════════════
     // تصميم
     offer_status: 'NOT_SUBMITTED', contract_status: 'NOT_SUBMITTED',
     internal_design_review_required: false,
     // إشراف
-    contractor: '', design_company: '', commencement_status: 'PENDING_AUTHORITY',
+    contractors: [], design_company: '', commencement_status: 'PENDING_AUTHORITY',
     newContractor: { name: '', contact_person: '', phone: '', email: '' },
   });
 
@@ -76,6 +81,15 @@ export default function CreateProject() {
   };
   const setNC = (k) => (e) =>
     setF((p) => ({ ...p, newContractor: { ...p.newContractor, [k]: e.target.value } }));
+
+  // ✅ ترتيب المقاولين: المتطابقون مع البحث يظهر أولاً (Smart Sort)
+  const sortedContractors = useMemo(() => {
+    if (!contractorSearch) return contractors;
+    const lowerSearch = contractorSearch.toLowerCase();
+    const matched = contractors.filter(c => c.name.toLowerCase().includes(lowerSearch));
+    const unmatched = contractors.filter(c => !c.name.toLowerCase().includes(lowerSearch));
+    return [...matched, ...unmatched];
+  }, [contractors, contractorSearch]);
 
   useEffect(() => {
     Promise.all([getClients(), getContractors()])
@@ -94,13 +108,12 @@ export default function CreateProject() {
     e.preventDefault();
     setError(''); setBusy(true);
     try {
-      let contractorId = f.contractor || null;
-
-      // وضع «مقاول جديد»: ننشئه أولاً ثم نربطه
-      if (contractorMode === 'new') {
+      // ✅ المقاولون لمشاريع الإشراف فقط (اختيار متعدد)
+      let contractorIds = [...f.contractors];
+      if (showSup && contractorMode === 'new') {
         if (!f.newContractor.name.trim()) throw new Error('اسم المقاول مطلوب.');
         const co = await createContractor(f.newContractor);
-        contractorId = co.data.id;
+        contractorIds.push(String(co.data.id));
       }
 
       const payload = {
@@ -126,14 +139,15 @@ export default function CreateProject() {
         permit_date: f.permit_date || null,
         permit_deadline: f.permit_deadline || null,
         permit_status: f.permit_status,
+        application_type: f.application_type || null,
         // ═════════════════════
-  // ✅ المقاول لكل المشاريع (تصميم وإشراف ومشترك)
-  contractor: contractorId || null,
-  ...(showSup && {
-    design_company: f.design_company || null,
-    commencement_status: f.commencement_status,
-    internal_design_review_required: f.internal_design_review_required,
-  }),
+        // ✅ المقاول لمشاريع الإشراف فقط
+        ...(showSup && contractorIds.length > 0 && { contractors: contractorIds }),
+        ...(showSup && {
+          design_company: f.design_company || null,
+          commencement_status: f.commencement_status,
+          internal_design_review_required: f.internal_design_review_required,
+        }),
       };
 
       await createProject(payload);
@@ -144,6 +158,14 @@ export default function CreateProject() {
   };
 
   const activeTone = showSup && !showDesign ? 'amber' : showDesign && !showSup ? 'sky' : 'both';
+
+  // ✅ معاينة End Date = Start + Duration (الحفظ الفعلي يتم في الباك-إند)
+  const computedEndDate = (() => {
+    if (!f.start_date || !Number(f.duration_days)) return '';
+    const d = new Date(f.start_date + 'T00:00:00');
+    d.setDate(d.getDate() + Number(f.duration_days));
+    return d.toISOString().slice(0, 10);
+  })();
 
   return (
     <div className="cp-root">
@@ -205,6 +227,21 @@ export default function CreateProject() {
             <Field label="Location"><input value={f.location} onChange={set('location')} /></Field>
             <Field label="Start Date"><input type="date" value={f.start_date} onChange={set('start_date')} /></Field>
             <Field label="Duration (Days)"><input type="number" value={f.duration_days} onChange={set('duration_days')} /></Field>
+            <Field label="Application Type">
+              <select value={f.application_type} onChange={set('application_type')}>
+                <option value="">— Select —</option>
+                <option value="NEW_PERMIT">New Permit</option>
+                <option value="MODIFICATION_PERMIT">Modification Permit</option>
+                <option value="COMPLETION_CERTIFICATE">Completion Certificate</option>
+                <option value="MAINTENANCE_DEMOLITION">Maintenance and Demolition</option>
+              </select>
+            </Field>
+
+            <Field label="End Date (Auto)">
+              <input type="date" value={computedEndDate} readOnly
+                style={{ background: '#f1f5f9', color: '#334155', fontWeight: 600 }} />
+            </Field>
+
             <Field label="Priority">
               <select value={f.priority} onChange={set('priority')}>
                 <option value="URGENT">Urgent</option><option value="HIGH">High</option>
@@ -233,42 +270,73 @@ export default function CreateProject() {
                 <option value="ISSUED">Approved/Issued</option>
               </select>
             </Field>
-                        <div className="cp-contractor">
-              <div className="cp-mode">
-                <button type="button" className={contractorMode === 'existing' ? 'on' : ''}
-                  onClick={() => setContractorMode('existing')}>Registered Contractor</button>
-                <button type="button" className={contractorMode === 'new' ? 'on' : ''}
-                  onClick={() => setContractorMode('new')}><UserPlus size={14} /> New Contractor</button>
-              </div>
-
-              {contractorMode === 'existing' ? (
-                <Field label="Choose Contractor">
-                  <select value={f.contractor} onChange={set('contractor')}>
-                    <option value="">— Choose —</option>
-                    {contractors.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </Field>
-              ) : (
-                <div className="cp-new-co">
-                  <Field label="Contractor Name *"><input value={f.newContractor.name} onChange={setNC('name')} /></Field>
-                  <Field label="Contact Person"><input value={f.newContractor.contact_person} onChange={setNC('contact_person')} /></Field>
-                  <Field label="Phone"><input value={f.newContractor.phone} onChange={setNC('phone')} /></Field>
-                  <Field label="Email"><input type="email" value={f.newContractor.email} onChange={setNC('email')} /></Field>
-                </div>
-              )}
-            </div>
             {/* ═════════════════════ */}
           </div>
         </section>
 
-
-
-        {/* ── حقول الإشراف ── */}
+        {/* ── حقول الإشراف والمقاولين ── */}
         {showSup && (
           <section className="cp-block cp-block--amber cp-rv">
-            <h2 className="cp-block-h t-amber"><HardHat size={16} /><span className="cp-num">03</span> Supervision Details</h2>
+            <h2 className="cp-block-h t-amber"><HardHat size={16} /><span className="cp-num">02</span> Supervision Details & Contractors</h2>
 
             <div className="cp-grid">
+              {/* ✅ اختيار المقاولين (Checkboxes + Search) */}
+              <div className="cp-contractor" style={{ gridColumn: '1 / -1' }}>
+                <div className="cp-mode">
+                  <button type="button" className={contractorMode === 'existing' ? 'on' : ''}
+                    onClick={() => setContractorMode('existing')}>Registered Contractors</button>
+                  <button type="button" className={contractorMode === 'new' ? 'on' : ''}
+                    onClick={() => setContractorMode('new')}><UserPlus size={14} /> New Contractor</button>
+                </div>
+                
+                {contractorMode === 'existing' ? (
+                  <div className="cp-contractor-select">
+                    <div className="cp-search-wrap">
+                      <Search size={16} className="cp-search-icon" />
+                      <input 
+                        type="text" 
+                        placeholder="Search contractors..." 
+                        value={contractorSearch}
+                        onChange={(e) => setContractorSearch(e.target.value)}
+                        className="cp-search-input"
+                      />
+                    </div>
+                    <div className="cp-checkbox-list">
+                      {sortedContractors.map((c) => {
+                        const idStr = String(c.id);
+                        const isChecked = f.contractors.includes(idStr);
+                        return (
+                          <label key={c.id} className={`cp-checkbox-item ${isChecked ? 'checked' : ''}`}>
+                            <input 
+                              type="checkbox" 
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setF(p => ({ ...p, contractors: [...p.contractors, idStr] }));
+                                } else {
+                                  setF(p => ({ ...p, contractors: p.contractors.filter(cid => cid !== idStr) }));
+                                }
+                              }}
+                            />
+                            <span>{c.name}</span>
+                          </label>
+                        );
+                      })}
+                      {sortedContractors.length === 0 && (
+                        <p className="cp-no-results">No contractors found.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="cp-new-co">
+                    <Field label="Contractor Name *"><input value={f.newContractor.name} onChange={setNC('name')} /></Field>
+                    <Field label="Contact Person"><input value={f.newContractor.contact_person} onChange={setNC('contact_person')} /></Field>
+                    <Field label="Phone"><input value={f.newContractor.phone} onChange={setNC('phone')} /></Field>
+                    <Field label="Email"><input type="email" value={f.newContractor.email} onChange={setNC('email')} /></Field>
+                  </div>
+                )}
+              </div>
+
               <Field label="Design Company">
                 <input value={f.design_company} onChange={set('design_company')}
                   placeholder="Name of the company that designed the project" />
@@ -285,8 +353,6 @@ export default function CreateProject() {
                 <span>Internal Design Review Required</span>
               </label>
             </div>
-
-
           </section>
         )}
 
@@ -300,6 +366,7 @@ export default function CreateProject() {
     </div>
   );
 }
+
 export function Field({ label, children }) {
   return <label className="cp-field"><span>{label}</span>{children}</label>;
 }
@@ -404,23 +471,105 @@ export const CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+
 .cp-contractor{ 
   margin-top:16px; 
   padding-top:18px; 
-  grid-column: 1 / -1; /* هذا السطر يمنع خروج الفورم ويجعله يأخذ العرض كاملاً */
+  grid-column: 1 / -1; 
 }
 .cp-new-co{ 
   display:grid; 
-  /* تم تعديل هذا السطر ليكون متجاوباً مع الشاشات الصغيرة */
   grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); 
   gap:14px; 
   background:#fafafa; 
   padding:16px; 
   border-radius:12px; 
   border:1px solid #e2e8f0; 
-}.cp-mode{ display:inline-flex; gap:5px; background:#f1f5f9; border:1px solid var(--line); padding:4px; border-radius:10px; margin-bottom:16px; }
+}
+.cp-mode{ display:inline-flex; gap:5px; background:#f1f5f9; border:1px solid var(--line); padding:4px; border-radius:10px; margin-bottom:16px; }
 .cp-mode button{ display:inline-flex; align-items:center; gap:6px; border:none; background:transparent; color:var(--mut);
   font-family:inherit; font-weight:600; font-size:12.5px; padding:7px 14px; border-radius:8px; cursor:pointer; transition:.2s; }
 .cp-mode button:hover{ color:var(--paper); }
 .cp-mode button.on{ background:#ffffff; color:var(--amber); box-shadow:0 1px 3px rgba(0,0,0,.05); }
-.cp-new-co{ display:grid; grid-template-columns:1fr 1fr; gap:14px; background:#fafafa; padding:16px; border-radius:12px; border:1px solid #e2e8f0; }
+
+/* ✅ Search & Checkbox List Styles */
+.cp-contractor-select {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fafafa;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.cp-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.cp-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+.cp-search-input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cp-search-input:focus {
+  border-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+}
+.cp-checkbox-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.cp-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+}
+.cp-checkbox-item:hover {
+  border-color: #d97706;
+  background: #fffbeb;
+}
+.cp-checkbox-item.checked {
+  border-color: #d97706;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+.cp-checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #d97706;
+  cursor: pointer;
+  margin: 0;
+}
+.cp-no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 20px 0;
+}
 
 .cp-foot{ display:flex; justify-content:flex-end; gap:12px; }
 .cp-ghost{ border:1px solid #cbd5e1; background:#ffffff; color:#334155; border-radius:11px;
@@ -431,4 +580,3 @@ export const CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+
 .cp-save:hover{ filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 4px 6px rgba(5,150,105,.3); }
 .cp-save:disabled{ opacity:.6; cursor:not-allowed; transform:none; filter:grayscale(0.5); box-shadow:none; }
 `;
-
