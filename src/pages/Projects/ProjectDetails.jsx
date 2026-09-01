@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { getProjectDetails } from '../../api/services/projectDetails';
 import apiClient from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
-import ChangeOrdersPanel from './components/ChangeOrdersPanel';
 import InvoiceConsole from '../../pages/Financials/InvoiceConsole';
 import InternalDesignReviewPanel from './components/InternalDesignReviewPanel';
 import SupervisionFinancialBlock from './components/SupervisionFinancialBlock';
@@ -14,6 +13,13 @@ import {
   Workflow, Sparkles, Link2, Zap, User,ExternalLink
 } from 'lucide-react';
 import { activateInternalReview } from '../../api/services/internalReview';
+
+const APP_TYPE_LABELS = {
+  NEW_PERMIT: 'New Permit',
+  MODIFICATION_PERMIT: 'Modification Permit',
+  COMPLETION_CERTIFICATE: 'Completion Certificate',
+  MAINTENANCE_DEMOLITION: 'Maintenance and Demolition',
+};
 
 /* ═══════════════════════════════════════════════════════════════
 Status map → color/label (single source of truth for the whole UI)
@@ -56,7 +62,7 @@ function usePerms(user, project) {
     canEditPriority: designMgrs,
     canSeeContract: isMgmt || isAcc || isManagementSecretary,
     canManageOffer: isManagementSecretary,
-canUploadContract: isManagementSecretary,
+    canUploadContract: isManagementSecretary,
     canSeeNumbers: isMgmt || isAcc || isDMgr || isSupMgr,
     canAddInvoice: isMgmt || isAcc,
     canEditIFC: u === 'shaaban.karam' || isMgmt || isDMgr,
@@ -126,6 +132,7 @@ function CompletedTasksSection({ tasks, user, onReload }) {
     APPROVED:    { label: 'Approved',    dot: 'bg-emerald-600' },
     ON_HOLD:     { label: 'On Hold',     dot: 'bg-rose-500' },
   };
+
   const openUpdate = (task) => {
     setSelectedTask(task);
     setShowModal(true);
@@ -172,11 +179,11 @@ function CompletedTasksSection({ tasks, user, onReload }) {
                                 {task.title || task.discipline_name}
                               </p>
                               {/* ✅ اسم الـ Discipline لكل مهمة (بلون قسمها) */}
-{task.discipline_name && task.title && (
-  <p className={`mt-0.5 text-xs font-semibold`}>
-    {task.discipline_name}
-  </p>
-)}
+                              {task.discipline_name && task.title && (
+                                <p className={`mt-0.5 text-xs font-semibold`}>
+                                  {task.discipline_name}
+                                </p>
+                              )}
                               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-600">
                                 <span className="inline-flex items-center gap-1">
                                   <span className={`w-2 h-2 rounded-full ${sm.dot}`} />
@@ -244,6 +251,8 @@ export default function ProjectDetails() {
   const [prioForm, setPrioForm] = useState({ priority: 'MEDIUM', reason: '' });
   const [note, setNote] = useState('');
   const [contractFile, setContractFile] = useState(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+
   const P = usePerms(user, p);
   // Internal Review action button: Ahmed Zabady (Supervision Mgr) or Supervision Secretary ONLY
   const canReviewAction =
@@ -274,19 +283,19 @@ export default function ProjectDetails() {
   const stages = [...(p.lifecycle_stages || [])].sort((a, b) => a.sequence_order - b.sequence_order);
   const done = stages.filter((s) => s.status === 'ACHIEVED' || s.status === 'APPROVED').length;
   const pct = stages.length ? Math.round((done / stages.length) * 100) : 0;
-const isDesign = p.scope !== 'SUPERVISION';
+  const isDesign = p.scope !== 'SUPERVISION';
 
   /* ── Actions ──────────────────────────────────────────── */
- // ✅ حالات الـ Structural (قائمة اختيار — مصدر واحد)
-const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
+  // ✅ حالات الـ Structural (قائمة اختيار — مصدر واحد)
+  const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
 
-const setStructStatus = (status) => {
-  apiClient.patch(`projects/${id}/structural-status/`, { status }).then(load);
-};
-// ✅ مراحل العرض/العقد (مصدر واحد) + دالة حفظ واحدة
-const OFFER_STAGES = ['NOT_SUBMITTED', 'SUBMITTED', 'APPROVED'];
-const patchOfferContract = (payload) =>
-  apiClient.patch(`projects/${id}/offer-status/`, payload).then(load);
+  const setStructStatus = (status) => {
+    apiClient.patch(`projects/${id}/structural-status/`, { status }).then(load);
+  };
+  // ✅ مراحل العرض/العقد (مصدر واحد) + دالة حفظ واحدة
+  const OFFER_STAGES = ['NOT_SUBMITTED', 'SUBMITTED', 'APPROVED'];
+  const patchOfferContract = (payload) =>
+    apiClient.patch(`projects/${id}/offer-status/`, payload).then(load);
 
   const holdStruct = () => {
     if (!holdReason.trim()) return;
@@ -315,9 +324,9 @@ const patchOfferContract = (payload) =>
       .then(() => setContractFile(null)).then(load);
   };
   const canViewFinancials = () =>
-  p?.scope === 'SUPERVISION'
-    ? (user?.username === 'ahmed.zabady' || user?.role === 'ACCOUNTANT')
-    : ['GM', 'AGM', 'ACCOUNTANT'].includes(user?.role);
+    p?.scope === 'SUPERVISION'
+      ? (user?.username === 'ahmed.zabady' || user?.role === 'ACCOUNTANT')
+      : ['GM', 'AGM', 'ACCOUNTANT'].includes(user?.role);
 
   return (
     <div ref={wrap} className="pd-root" dir="ltr">
@@ -327,6 +336,12 @@ const patchOfferContract = (payload) =>
         {/* ── Header ────────────────────────────────── */}
         <header className="rv pd-head">
           <Link to="/projects" className="pd-back"><ArrowLeft size={18} /></Link>
+          <button
+            onClick={() => setInfoOpen(true)}
+            className="ms-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0b1f3c] text-white text-sm font-bold hover:bg-[#16305a] transition shadow-sm"
+          >
+            <FileText size={16} /> Project Details
+          </button>
           <div className="pd-head-main">
             <div className="pd-pno"><Hash size={13} /> {p.project_no} <i className="pd-dotsep" /> {p.scope}</div>
             <h1 className="pd-title">{p.name}</h1>
@@ -366,24 +381,24 @@ const patchOfferContract = (payload) =>
               action={P.canEditLifecycle ? <span className="pd-editable">Editable</span> : <span className="pd-readonly">Read-only</span>}>
               <LifecycleRibbon
                 stages={stages}
-  canEdit={user?.username === 'mohammad.fahmy' || user?.role === 'DESIGN_MGR' || (p.scope === 'DESIGN' && user?.role === 'SECRETARY' && user?.department === 'Design')}
+                canEdit={user?.username === 'mohammad.fahmy' || user?.role === 'DESIGN_MGR' || (p.scope === 'DESIGN' && user?.role === 'SECRETARY' && user?.department === 'Design')}
                 onReload={load}
                 projectId={id}
               />
             </Block>
 
             {/* The four flags */}
-{isDesign && (
-  <Block rv tag="FLAGS" title="Status & Discipline Flags">
+            {isDesign && (
+              <Block rv tag="FLAGS" title="Status & Discipline Flags">
                 <div className="pd-flags">
                   <FlagCard label="DC1" accent="sky" state={dc1State} pct={dc1Pct}
                     sub={`${dc1.total || 0}/${dc1.completed || 0} tasks`} />
                   <FlagCard label="DC2" accent="violet" state={dc2State} pct={dc2Pct}
                     sub={`${dc2.total || 0}/${dc2.completed || 0} tasks`} />
-<FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
-  interactive={P.canEditStruct} options={STRUCT_OPTIONS} onSelect={setStructStatus}
-  hold={structState === 'ON_HOLD'} holdInfo={struct}
-  onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
+                  <FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
+                    interactive={P.canEditStruct} options={STRUCT_OPTIONS} onSelect={setStructStatus}
+                    hold={structState === 'ON_HOLD'} holdInfo={struct}
+                    onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
                   <FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
                     interactive={P.canEditIFC} onCycle={cycleIFC} />
                 </div>
@@ -398,20 +413,6 @@ const patchOfferContract = (payload) =>
               <CompletedTasksSection
                 tasks={p.tasks || []}
                 user={user}
-                onReload={load}
-              />
-            </Block>
-
-            {/* ── Change Orders / Revisions ── */}
-            <Block rv tag="CHANGE ORDERS" title="Change Orders / Revisions"
-              action={P.canManageChangeOrder
-                ? <span className="pd-editable">Management enabled</span>
-                : <span className="pd-readonly">Read-only</span>}>
-              <ChangeOrdersPanel
-                parentId={id}
-                parent={p}
-                canManage={P.canManageChangeOrder}
-                canConfirm={P.canConfirmChangeOrder}
                 onReload={load}
               />
             </Block>
@@ -448,15 +449,15 @@ const patchOfferContract = (payload) =>
               action={P.canSeeNumbers ? <span className="pd-editable">Full figures</span> : <span className="pd-readonly">Names & percentages only</span>}>
               <FinanceStrip invoices={p.invoices} seeNumbers={P.canSeeNumbers} />
             </Block>
- {p.scope !== 'SUPERVISION' && canViewFinancials() && <InvoiceConsole projectId={id} />}
+            
+            {p.scope !== 'SUPERVISION' && canViewFinancials() && <InvoiceConsole projectId={id} />}
 
-{canViewSupervisionFinance?.() && p.scope === 'SUPERVISION' && (
-  <Block rv tag="SUPERVISION FINANCE" title="Supervision Financials"
-    action={<span className="pd-readonly">Restricted</span>}>
-    <SupervisionFinancialBlock projectId={id} />
-  </Block>
-)}
-
+            {canViewSupervisionFinance?.() && p.scope === 'SUPERVISION' && (
+              <Block rv tag="SUPERVISION FINANCE" title="Supervision Financials"
+                action={<span className="pd-readonly">Restricted</span>}>
+                <SupervisionFinancialBlock projectId={id} />
+              </Block>
+            )}
 
             {/* Offer + Contract */}
             <Block rv tag="OFFER / CONTRACT" title="Offer & Contract Status">
@@ -465,36 +466,36 @@ const patchOfferContract = (payload) =>
                   <span>Offer Status</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className={`pd-badge t-${meta(p.offer_status).c}`}>{meta(p.offer_status).t}</span>
-    {P.canManageOffer && (
-      <select
-        className="pd-select"
-        value={p.offer_status}
-        onChange={(e) => patchOfferContract({ offer_status: e.target.value })}
-        title="Offer status"
-      >
-        {OFFER_STAGES.map((s) => (
-          <option key={s} value={s}>{meta(s).t}</option>
-        ))}
-      </select>
-    )}
+                    {P.canManageOffer && (
+                      <select
+                        className="pd-select"
+                        value={p.offer_status}
+                        onChange={(e) => patchOfferContract({ offer_status: e.target.value })}
+                        title="Offer status"
+                      >
+                        {OFFER_STAGES.map((s) => (
+                          <option key={s} value={s}>{meta(s).t}</option>
+                        ))}
+                      </select>
+                    )}
                   </span>
                 </div>
                 <div className="pd-srow">
                   <span>Contract Status</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className={`pd-badge t-${meta(p.contract_status).c}`}>{meta(p.contract_status).t}</span>
-    {P.canManageOffer && (
-      <select
-        className="pd-select"
-        value={p.contract_status}
-        onChange={(e) => patchOfferContract({ contract_status: e.target.value })}
-        title="Contract status"
-      >
-        {OFFER_STAGES.map((s) => (
-          <option key={s} value={s}>{meta(s).t}</option>
-        ))}
-      </select>
-    )}
+                    {P.canManageOffer && (
+                      <select
+                        className="pd-select"
+                        value={p.contract_status}
+                        onChange={(e) => patchOfferContract({ contract_status: e.target.value })}
+                        title="Contract status"
+                      >
+                        {OFFER_STAGES.map((s) => (
+                          <option key={s} value={s}>{meta(s).t}</option>
+                        ))}
+                      </select>
+                    )}
                   </span>
                 </div>
               </div>
@@ -513,22 +514,19 @@ const patchOfferContract = (payload) =>
               <NotesBlock notes={p.notes} note={note} setNote={setNote} onAdd={submitNote} />
             </Block>
 
-
-
-{/* ✅ External Logs — سجلات هذا المشروع فقط */}
-<Block rv tag="EXTERNAL LOGS" title="External Logs">
-  <ExternalLogsBlock logs={p.external_logs} />
-</Block>
+            {/* ✅ External Logs — سجلات هذا المشروع فقط */}
+            <Block rv tag="EXTERNAL LOGS" title="External Logs">
+              <ExternalLogsBlock logs={p.external_logs} />
+            </Block>
           </div>
 
-          {/* ── Floating side buttons (DC1 / DC2) ── */}
-{/* ── Floating side buttons (DC1 / DC2) — design projects only ── */}
-{isDesign && (
-  <aside className="pd-float">
-    <FloatBtn label="DC1" accent="sky" state={dc1State} pct={dc1Pct} />
-    <FloatBtn label="DC2" accent="violet" state={dc2State} pct={dc2Pct} />
-  </aside>
-)}
+          {/* ── Floating side buttons (DC1 / DC2) — design projects only ── */}
+          {isDesign && (
+            <aside className="pd-float">
+              <FloatBtn label="DC1" accent="sky" state={dc1State} pct={dc1Pct} />
+              <FloatBtn label="DC2" accent="violet" state={dc2State} pct={dc2Pct} />
+            </aside>
+          )}
         </div>
       </div>
 
@@ -564,6 +562,64 @@ const patchOfferContract = (payload) =>
             <button className="pd-solid" onClick={submitPrio} disabled={!prioForm.reason.trim()}>Save</button>
           </div>
         </Modal>
+      )}
+
+      {infoOpen && p && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setInfoOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-6 py-4 bg-[#0b1f3c]">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <FileText size={18} /> Project Details
+              </h3>
+              <button onClick={() => setInfoOpen(false)} className="text-gray-300 hover:text-white transition">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-6">
+              <table className="w-full text-sm">
+                <tbody>
+                  {[
+                    ['Description', p.description],
+                    ['Project Name', p.name],
+                    ['Project Number', p.project_no],
+                    ['Client', p.client_name],
+                    ['Location', p.location],
+                    ['Start Date', p.start_date],
+                    ['Duration (Days)', p.duration_days],
+                    ['Application Type', APP_TYPE_LABELS[p.application_type] || p.application_type],
+                    ['End Date (Auto)', p.end_date],
+                    ['Priority', p.priority],
+                    ['Building Type', p.building_type],
+                    ['Floors', p.floors],
+                    ['Plot Area', p.plot_area],
+                    ['BUA (M²)', p.bua],
+                    ['Apartments', p.apartments],
+                    ['Shops', p.shops],
+                    ['Parking', p.parking],
+                    ['Application No.', p.application_no],
+                    ['PIN No.', p.pin_no],
+                    ['Owner', p.owner],
+                    ['Supervision Consultant', p.supervision_consultant],
+                    ['Permit No.', p.permit_no],
+                    ['Permit Date', p.permit_date],
+                    ['Permit Deadline', p.permit_deadline],
+                    ['Permit Status', p.permit_status],
+                    ['Contractor', p.contractor_details?.name],
+                  ].map(([label, value]) => (
+                    <tr key={label} className="border-b border-gray-100 last:border-0">
+                      <td className="py-2.5 pe-4 font-semibold text-gray-500 w-44 whitespace-nowrap">{label}</td>
+                      <td className="py-2.5 font-semibold text-gray-900">{value || value === 0 ? value : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -663,7 +719,6 @@ function LifecycleRibbon({ stages, canEdit, onReload, projectId }) {
       {canEdit && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
           <span className="pd-editable">Editable</span>
-
         </div>
       )}
       <ol className="pd-lc">
@@ -751,6 +806,7 @@ function FlagCard({ label, accent, state, pct, sub, icon, interactive, onCycle, 
     </div>
   );
 }
+
 function PriorityView({ priority, history }) {
   const m = meta(priority);
   return (
@@ -911,6 +967,7 @@ function NotesBlock({ notes, note, setNote, onAdd }) {
     </div>
   );
 }
+
 function ExternalLogsBlock({ logs }) {
   const list = logs || [];
   if (!list.length) return <p className="pd-empty-mini">No external logs yet.</p>;
@@ -940,6 +997,7 @@ function ExternalLogsBlock({ logs }) {
     </ul>
   );
 }
+
 function FloatBtn({ label, accent, state, pct }) {
   const m = meta(state);
   return (
@@ -1165,7 +1223,7 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-contract-up{ display:flex; gap:8px; align-items:center; margin-top:10px; }
 .pd-contract-up input{ font-size:12px; color:var(--paper); }
 /* Notes */
-.pd-notes{ list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:9px; max-height:280px; overflow-y-auto; }
+.pd-notes{ list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:9px; max-height:280px; overflow-y:auto; }
 .pd-notes li{ border-inline-start:3px solid var(--line); padding:8px 12px; background:var(--surf2); border-radius:0 10px 10px 0; }
 .pd-notes li.pinned{ border-inline-start-color:var(--amber); background:rgba(245,158,11,.05); }
 .pd-note-h{ display:flex; justify-content:space-between; margin-bottom:4px; }
