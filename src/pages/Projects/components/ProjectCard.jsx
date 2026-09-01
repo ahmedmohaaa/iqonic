@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Calendar, AlertCircle, Flag, TrendingUp } from 'lucide-react';
+import { Calendar, AlertCircle, Flag, TrendingUp, FileText } from 'lucide-react';// ✅ مفاتيح أنواع الطلبات → الليبلات
 
 const ProjectCard = ({ project }) => {
   const {
@@ -14,6 +14,8 @@ const ProjectCard = ({ project }) => {
     revision_number,
     parent_project_name,
     lifecycle_stages = [],
+      application_type,  // ✅ جديد
+
     progress_percentage = 0,
   } = project;
 
@@ -85,6 +87,12 @@ const ProjectCard = ({ project }) => {
           <p>
             <span className="font-semibold">Client:</span> {client_name}
           </p>
+{application_type && (
+  <div className="flex items-center gap-1.5 text-xs text-gray-600">
+    <FileText size={12} className="text-violet-500" />
+    <span className="font-semibold">{project.application_type_display}</span>
+  </div>
+)}
           {start_date && (
             <p className="flex items-center">
               <Calendar size={14} className="mr-2 text-gray-400" />
