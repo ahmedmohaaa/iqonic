@@ -2,10 +2,20 @@ import { useState, useEffect } from 'react';
 import { getSupervisionProjects } from '../../api/services/supervision';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Building2, Search, Filter, Loader, FolderOpen, Archive, Clock } from 'lucide-react';
+import { Building2, Search, Filter, Loader, FolderOpen, Plus, Archive, Clock, FileText } from 'lucide-react';
 
+// ✅ مفاتيح أنواع الطلبات → الليبلات
+const APP_TYPE_LABELS = {
+  NEW_PERMIT: 'New Permit',
+  MODIFICATION_PERMIT: 'Modification Permit',
+  COMPLETION_CERTIFICATE: 'Completion Certificate',
+  MAINTENANCE_DEMOLITION: 'Maintenance and Demolition',
+};
 const SupervisionDirectory = () => {
   const { user } = useAuth();
+  // ✅ سكرتيرة الإشراف فقط — نفس شرط permissions.py في المشروع
+const isSupervisionSecretary =
+  user?.role === 'SECRETARY' && user?.department === 'Supervision';
   const [activeTab, setActiveTab] = useState('active');
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +71,14 @@ const SupervisionDirectory = () => {
             <Building2 className="mr-2 text-primary" size={28} />
             Supervision Projects Directory
           </h1>
+            {isSupervisionSecretary && (
+    <Link
+      to="/projects/create"
+      className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center hover:bg-blue-900 transition"
+    >
+      <Plus size={18} className="mr-1" /> New project
+    </Link>
+  )}
           <p className="text-sm text-gray-500">Manage and track all supervision projects</p>
         </div>
       </div>
@@ -140,6 +158,14 @@ const SupervisionDirectory = () => {
                 </div>
                 <div className="space-y-2 text-sm text-gray-600">
                   <p><span className="font-semibold">Client:</span> {project.client_name}</p>
+                  {project.application_type && (
+                    <p className="flex items-center gap-1.5 text-xs text-gray-600">
+                      <FileText size={12} className="text-violet-500" />
+                      <span className="font-semibold">
+                        {APP_TYPE_LABELS[project.application_type] || project.application_type}
+                      </span>
+                    </p>
+                  )}
                   <p><span className="font-semibold">Location:</span> {project.location || 'N/A'}</p>
                   {project.permit_status && (
                     <p>
