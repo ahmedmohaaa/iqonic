@@ -441,7 +441,7 @@ const setIfcStatus = (status) => {
             </Block>
 
             {p.scope === 'SUPERVISION' && (
-              <Block rv tag="INTERNAL REVIEW" title="Internal Design Review"
+              <Block rv tag="Design REVIEW" title=" Design Review"
                 action={p.internal_design_review_required
                   ? <span className="pd-editable">Active</span>
                   : <span className="pd-readonly">Not activated</span>}>
@@ -1077,8 +1077,8 @@ function ActivateReviewCard({ projectId, canActivate, onDone }) {
       <div className="arc-ambient" aria-hidden />
       <div className="arc-orb"><Workflow size={22} /></div>
       <div className="arc-body">
-        <span className="arc-kicker">INTERNAL DESIGN REVIEW · SUPERVISION ↔ DESIGN BRIDGE</span>
-        <h3 className="arc-title">Internal Design Review is not activated</h3>
+        <span className="arc-kicker"> DESIGN REVIEW · SUPERVISION ↔ DESIGN BRIDGE</span>
+        <h3 className="arc-title"> Design Review is not activated</h3>
         <p className="arc-sub">
           This project has no review bridge yet. Once activated, it appears to the assigned
           design engineers so they can evaluate the drawings through five stages
