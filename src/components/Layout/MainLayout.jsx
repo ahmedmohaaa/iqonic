@@ -154,10 +154,11 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   path: '/my-supervision-projects',
   label: 'My Supervision Projects',
   icon: HardHat,
-  roles: ['ALL'],
-  supervisionUsernames: SUPERVISION_ENGINEER_USERNAMES,  // ✅ يظهر فقط لمهندسي الإشراف
+  departments: ['Supervision'], // ✅ الحل: إضافة قيد القسم لمنع ظهورها لمهندسي التصميم
+  fullAccessRoles: ['PM'], 
+  allowedUsernames: SUPERVISION_ENGINEER_USERNAMES, 
 },
-    { path: '/review-directory', label: 'Internal Design Review', icon: ShellIcon, roles: ['GM', 'AGM', 'SUP_MGR', 'PM', 'DESIGN_MGR', 'ENGINEER', 'SENIOR_ENG'] },
+    { path: '/review-directory', label: 'Internal Design Review', icon: ShellIcon, roles: [ 'SUP_MGR', 'PM', 'DESIGN_MGR', 'ENGINEER', 'SENIOR_ENG'],  allowedUsernames: SUPERVISION_ENGINEER_USERNAMES,  departments: ['Supervision']},
     { path: '/chat', label: 'Messages', icon: MessageSquare, roles: 'ALL' },
     { path: '/profile', label: 'Profile', icon: User, roles: ['ALL'] },
     { path: '/tasks', label: 'My Tasks', icon: CheckSquare, roles: ['ALL'] },
