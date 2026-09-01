@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { createTask, getTaskFormOptions } from '../../api/services/tasks';
-import { getProjects } from '../../api/services/projects';
+import { getProjects, getGlobalFilterProjects } from '../../api/services/projects';
 import { getUsersList } from '../../api/services/audit';
 import { getDisciplineItems } from '../../api/services/disciplines';
 import { getActiveChangeOrders } from '../../api/services/changeOrders';
@@ -18,6 +18,7 @@ import {
   Sparkles,
   ShieldCheck,
   PauseCircle,
+  Search,
 } from 'lucide-react';
 
 const TYPE_META = {
@@ -37,7 +38,7 @@ const TYPE_META = {
     tx: 'text-emerald-700',
     dot: 'bg-emerald-500',
   },
-  CHANGE_ORDER: {
+ /* CHANGE_ORDER: {
     label: 'Change Order',
     Icon: GitBranch,
     ring: 'ring-violet-500',
@@ -52,7 +53,7 @@ const TYPE_META = {
     bg: 'bg-teal-50',
     tx: 'text-teal-700',
     dot: 'bg-teal-500',
-  },
+  },*/
 };
 const SUBMIT_TONE = {
   MAIN_DESIGN: 'from-sky-500 to-sky-600',
@@ -61,6 +62,8 @@ const SUBMIT_TONE = {
   INTERNAL_REVIEW: 'from-teal-500 to-emerald-600',
 };
 const INTERNAL_REVIEW_STAGES = [
+    { value: 'DC1', label: 'DC1' },
+  { value: 'DC2', label: 'DC2' },
   { value: 'DESIGN_CRITERIA', label: 'Design Criteria' },
   { value: 'CONCEPT_DESIGN', label: 'Concept Design' },
   { value: 'SCHEMATIC_DESIGN', label: 'Schematic Design' },
@@ -70,7 +73,7 @@ const INTERNAL_REVIEW_STAGES = [
 ];
 
 const EXTRA_ASSIGN = {
-  'mohammad.mostafa': ['jr.vicky', 'mohammad.alqadi', 'ahmad.alqadi', 'mohammad.mostafa'],
+  'mohammad.mostafa': ['vicky.jr', 'mohammad.alqadi', 'ahmad.alqadi', 'mohammad.mostafa'],
 };
 const CreateTask = () => {
   const navigate = useNavigate();
@@ -95,6 +98,7 @@ const {
       is_on_hold: false,
       hold_reason: '',
       hold_date: '',
+      end_date: '',
     },
   });
 
@@ -113,12 +117,36 @@ const {
 const [allowedTaskTypes, setAllowedTaskTypes] = useState(
   ['MAIN_DESIGN', 'SUPERVISION', 'CHANGE_ORDER', 'INTERNAL_REVIEW']
 );
+
+const [supervisionReviewProjects, setSupervisionReviewProjects] = useState([]);
+
+// ✅ حالات البحث لقوائم المشاريع
+const [supervisionProjectSearch, setSupervisionProjectSearch] = useState('');
+const [mainProjectSearch, setMainProjectSearch] = useState('');
+const [optionBProjectSearch, setOptionBProjectSearch] = useState('');
+
+useEffect(() => {
+  getGlobalFilterProjects({ scope: 'SUPERVISION', internal_review: 'true', is_active: 'true' })
+    .then((res) => setSupervisionReviewProjects(res?.data?.results || res?.data || []))
+    .catch(() => setSupervisionReviewProjects([]));
+}, []);
+
   const taskType = watch('task_type');
   const selectedStage = watch('stage');
   const selectedReviewStage = watch('internal_review_stage');
   const selectedProject = watch('project');
   const isOnHold = watch('is_on_hold');
   const holdDateValue = watch('hold_date');
+  const startDateValue = watch('start_date');
+  const durationDaysValue = watch('duration_days');
+
+  // ✅ حساب تاريخ الانتهاء تلقائيًا (Start Date + Duration)
+  const computedEndDate = useMemo(() => {
+    if (!startDateValue || !durationDaysValue || Number(durationDaysValue) <= 0) return '';
+    const start = new Date(startDateValue + 'T00:00:00');
+    start.setDate(start.getDate() + Number(durationDaysValue));
+    return start.toISOString().slice(0, 10);
+  }, [startDateValue, durationDaysValue]);
 
   const isMain = taskType === 'MAIN_DESIGN';
   const isSupervision = taskType === 'SUPERVISION';
@@ -129,6 +157,23 @@ const [allowedTaskTypes, setAllowedTaskTypes] = useState(
     user?.role === 'ENGINEER' || user?.role === 'DRAFTSMAN';
 
 const projectOptions = isCO ? changeOrders : typedProjects;
+
+// ✅ فلترة قوائم المشاريع بناءً على البحث
+const filteredSupervisionProjects = projectOptions.filter(p => 
+  p.name?.toLowerCase().includes(supervisionProjectSearch.toLowerCase()) || 
+  p.project_no?.toLowerCase().includes(supervisionProjectSearch.toLowerCase())
+);
+
+const filteredMainProjects = projectOptions.filter(p => 
+  p.name?.toLowerCase().includes(mainProjectSearch.toLowerCase()) || 
+  p.project_no?.toLowerCase().includes(mainProjectSearch.toLowerCase()) ||
+  (p.parent_project_no && p.parent_project_no.toLowerCase().includes(mainProjectSearch.toLowerCase()))
+);
+
+const filteredOptionBProjects = supervisionReviewProjects.filter(p => 
+  p.name?.toLowerCase().includes(optionBProjectSearch.toLowerCase()) || 
+  p.project_no?.toLowerCase().includes(optionBProjectSearch.toLowerCase())
+);
 
 // ✅ صلاحية التعيين الإضافية لمحمد مصطفى (تصميم فقط — مطابقة للباك-إند)
 const extraAssignees = isMain
@@ -193,7 +238,12 @@ useEffect(() => {
   setValue('is_on_hold', false);
   setValue('hold_reason', '');
   setValue('hold_date', '');
+  setValue('end_date', '');
   setDisciplines([]);
+  // ✅ تصفير حقول البحث عند تغيير نوع المهمة
+  setSupervisionProjectSearch('');
+  setMainProjectSearch('');
+  setOptionBProjectSearch('');
 }, [taskType, setValue]);
 
 useEffect(() => {
@@ -239,6 +289,7 @@ useEffect(() => {
     })
     .finally(() => setOptionsLoading(false));
 }, [taskType, selectedProject, isMain, isSupervision, isInternal, setValue]);
+
   useEffect(() => {
     if (shouldSelfAssign && user?.id) {
       setValue('assigned_to', user.id);
@@ -281,9 +332,25 @@ useEffect(() => {
 
   const onSubmit = async (data) => {
     setError('');
+
+    const hasA = !!(data.project || data.stage);
+    const hasB = !!(data.supervision_project || data.review_stage);
+    
+    if (isMain) {
+      if (data.project && !data.stage) return setError('Stage is required when Project Number is selected.');
+      if (data.stage && !data.project) return setError('Project Number is required when Stage is selected.');
+      if (data.supervision_project && !data.review_stage) return setError('Review Stage is required when Supervision Project is selected.');
+      if (data.review_stage && !data.supervision_project) return setError('Supervision Project is required when Review Stage is selected.');
+      if (hasA && hasB) return setError('Please use either Project Number + Stage OR Supervision Project + Review Stage, not both.');
+      if (!hasA && !hasB) return setError('Please provide either Project Number + Stage OR Supervision Project + Review Stage.');
+    }
 // ✅ الإدارة العليا (ناصر/نسرين) لا ترى قسم الإشراف
 const isTopManagement = ['GM', 'AGM'].includes(user?.role);
 const payload = { ...data };
+
+if (computedEndDate) {
+  payload.end_date = computedEndDate;
+}
 
 if (isSupervision) {
   delete payload.stage;
@@ -313,16 +380,23 @@ if (isInternal) {
 }
 
 if (isMain && payload.stage === 'OTHER') {
-  delete payload.stage;
-  delete payload.discipline;
+delete payload.stage;
+delete payload.discipline;
 }
+// ✅ لا ترسل null/فارغ أبدًا — الغياب الكامل هو الـ "اختياري" الصحيح
+if (!payload.project) delete payload.project;
+if (!payload.stage) delete payload.stage;
+if (!payload.supervision_project) delete payload.supervision_project;
+if (!payload.review_stage) delete payload.review_stage;
+if (!payload.end_date) delete payload.end_date;
+
 if (!showAssignSelect && user?.id) {
   payload.assigned_to = user.id;
 }
     try {
       const response = await createTask(payload);
       navigate(`/tasks/${response?.data?.id || response?.id}`);
-    } catch (err) {
+    } catch (err)  {
       const backendError =
         err.response?.data?.detail ||
         err.response?.data?.assigned_to?.[0] ||
@@ -480,19 +554,30 @@ if (!showAssignSelect && user?.id) {
                     Supervision Project *
                   </label>
 
+                  <div className="relative mb-1.5">
+                    <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Search projects..."
+                      value={supervisionProjectSearch}
+                      onChange={(e) => setSupervisionProjectSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300 outline-none transition"
+                    />
+                  </div>
+
                   <select
-                    {...register('project', { required: true })}
+                    {...register('project', { required: !isMain })}
                     disabled={optionsLoading}
                     className="w-full border border-emerald-300 bg-emerald-50/30 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 outline-none transition"
                   >
                     <option value="">— Select Supervision Project —</option>
 
-                    {projectOptions.length === 0 ? (
+                    {filteredSupervisionProjects.length === 0 ? (
                       <option value="" disabled>
-                        No supervision projects available
+                        No projects found
                       </option>
                     ) : (
-                      projectOptions.map((project) => (
+                      filteredSupervisionProjects.map((project) => (
                         <option key={project.id} value={project.id}>
                           {project.project_no} — {project.name}
                         </option>
@@ -684,8 +769,19 @@ if (!showAssignSelect && user?.id) {
                         : 'Project Number *'}
                   </label>
 
+                  <div className="relative mb-1.5">
+                    <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Search projects..."
+                      value={mainProjectSearch}
+                      onChange={(e) => setMainProjectSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-violet-200 focus:border-violet-300 outline-none transition"
+                    />
+                  </div>
+
                   <select
-                    {...register('project', { required: true })}
+                    {...register('project', { required: !isMain })}
                     disabled={optionsLoading && (isMain || isSupervision || isInternal)}
                     className={`w-full border rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none transition ${
                       isCO ? 'border-violet-300 bg-violet-50/40' : 'border-gray-300'
@@ -695,20 +791,23 @@ if (!showAssignSelect && user?.id) {
                       {isCO ? '— Select Revision —' : '— Select Project Number —'}
                     </option>
 
-{projectOptions.map((project) => (
-  <option key={project.id} value={project.id}>
-    {isCO
-      ? `${project.project_no} ${
-          project.revision_number ? `(${project.revision_number})` : ''
-        } ← parent: ${project.parent_project_no}`
-      : isInternal
-        ? `${project.project_no} — ${project.name}`
-        : `${project.project_no}${
-            project.application_no ? ` · App:${project.application_no}` : ''
-          }${project.pin_no ? ` · PIN:${project.pin_no}` : ''}`}
-  </option>
-
-                    ))}
+                    {filteredMainProjects.length === 0 ? (
+                      <option value="" disabled>No projects found</option>
+                    ) : (
+                      filteredMainProjects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {isCO
+                            ? `${project.project_no} ${
+                                project.revision_number ? `(${project.revision_number})` : ''
+                              } ← parent: ${project.parent_project_no || 'N/A'}`
+                            : isInternal
+                              ? `${project.project_no} — ${project.name}`
+                              : `${project.project_no}${
+                                  project.application_no ? ` · App:${project.application_no}` : ''
+                                }${project.pin_no ? ` · PIN:${project.pin_no}` : ''}`}
+                        </option>
+                      ))
+                    )}
                   </select>
 
                   {errors.project && (
@@ -744,7 +843,7 @@ if (!showAssignSelect && user?.id) {
 </select>
                   ) : (
 <select
-  {...register('stage', { required: !isInternal })}
+  {...register('stage', { required: !isMain })}
   className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none transition"
 >
   <option value="">— Select Stage —</option>
@@ -765,6 +864,47 @@ if (!showAssignSelect && user?.id) {
                   )}
                 </div>
               </div>
+
+{isMain && (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Supervision Project</label>
+      
+      <div className="relative mb-1.5">
+        <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
+        <input
+          type="text"
+          placeholder="Search projects..."
+          value={optionBProjectSearch}
+          onChange={(e) => setOptionBProjectSearch(e.target.value)}
+          className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-300 outline-none transition"
+        />
+      </div>
+
+      <select {...register('supervision_project')}
+        className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
+        <option value="">— Select Supervision Project —</option>
+        {filteredOptionBProjects.length === 0 ? (
+          <option value="" disabled>No projects found</option>
+        ) : (
+          filteredOptionBProjects.map((p) => (
+            <option key={p.id} value={p.id}>{p.project_no} · {p.name}</option>
+          ))
+        )}
+      </select>
+    </div>
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Review Stage</label>
+      <select {...register('review_stage')}
+        className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
+        <option value="">— Select Review Stage —</option>
+        {INTERNAL_REVIEW_STAGES.map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+    </div>
+  </div>
+)}
 
               {/* Title + Work Type */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -889,7 +1029,7 @@ if (!showAssignSelect && user?.id) {
               </div>
 
               {/* Priority + Dates */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Priority *
@@ -927,6 +1067,18 @@ if (!showAssignSelect && user?.id) {
                     type="number"
                     {...register('duration_days')}
                     className="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-sky-300 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    End Date (Auto)
+                  </label>
+                  <input
+                    type="date"
+                    value={computedEndDate || ''}
+                    readOnly
+                    className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-gray-100 text-gray-600 font-semibold focus:outline-none cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -980,4 +1132,3 @@ if (!showAssignSelect && user?.id) {
 
 export default CreateTask;
 
-              {/* Discipline + Assignee */}
