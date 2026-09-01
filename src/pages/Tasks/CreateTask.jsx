@@ -140,6 +140,10 @@ useEffect(() => {
   const startDateValue = watch('start_date');
   const durationDaysValue = watch('duration_days');
 
+  // ✅ حقول المراقبة للإغلاق المتبادل (Option B)
+  const selectedSupervisionProject = watch('supervision_project');
+  const selectedOptionBReviewStage = watch('review_stage');
+
   // ✅ حساب تاريخ الانتهاء تلقائيًا (Start Date + Duration)
   const computedEndDate = useMemo(() => {
     if (!startDateValue || !durationDaysValue || Number(durationDaysValue) <= 0) return '';
@@ -158,10 +162,12 @@ useEffect(() => {
 
 const projectOptions = isCO ? changeOrders : typedProjects;
 
-// ✅ فلترة قوائم المشاريع بناءً على البحث
+// ✅ فلترة قوائم المشاريع بناءً على البحث + شرط الـ Internal Design Review
 const filteredSupervisionProjects = projectOptions.filter(p => 
-  p.name?.toLowerCase().includes(supervisionProjectSearch.toLowerCase()) || 
-  p.project_no?.toLowerCase().includes(supervisionProjectSearch.toLowerCase())
+  p.internal_design_review_required && (
+    p.name?.toLowerCase().includes(supervisionProjectSearch.toLowerCase()) || 
+    p.project_no?.toLowerCase().includes(supervisionProjectSearch.toLowerCase())
+  )
 );
 
 const filteredMainProjects = projectOptions.filter(p => 
@@ -239,12 +245,33 @@ useEffect(() => {
   setValue('hold_reason', '');
   setValue('hold_date', '');
   setValue('end_date', '');
+  setValue('supervision_project', '');
+  setValue('review_stage', '');
   setDisciplines([]);
   // ✅ تصفير حقول البحث عند تغيير نوع المهمة
   setSupervisionProjectSearch('');
   setMainProjectSearch('');
   setOptionBProjectSearch('');
 }, [taskType, setValue]);
+
+// ✅ دالة الإغلاق المتبادل (Mutual Exclusion) بين Option A و Option B
+useEffect(() => {
+  if (!isMain) return;
+  // إذا تم اختيار Project Number أو Stage (Option A) → نفرغ حقول Option B
+  if (selectedProject || selectedStage) {
+    if (selectedSupervisionProject) setValue('supervision_project', '');
+    if (selectedOptionBReviewStage) setValue('review_stage', '');
+  }
+}, [selectedProject, selectedStage, isMain, selectedSupervisionProject, selectedOptionBReviewStage, setValue]);
+
+useEffect(() => {
+  if (!isMain) return;
+  // إذا تم اختيار Supervision Project أو Review Stage (Option B) → نفرغ حقول Option A
+  if (selectedSupervisionProject || selectedOptionBReviewStage) {
+    if (selectedProject) setValue('project', '');
+    if (selectedStage) setValue('stage', '');
+  }
+}, [selectedSupervisionProject, selectedOptionBReviewStage, isMain, selectedProject, selectedStage, setValue]);
 
 useEffect(() => {
   if (!showDiscipline) {
@@ -478,10 +505,6 @@ if (!showAssignSelect && user?.id) {
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
               Create New Task
             </h1>
-
-            <p className="text-sm text-gray-500">
-              Create main design, supervision, change order, or internal review tasks.
-            </p>
           </div>
         </div>
 
@@ -499,9 +522,7 @@ if (!showAssignSelect && user?.id) {
           {/* Task Type */}
        {/* Task Type — يعرض فقط الأنواع المسموحة للمستخدم */}
 <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-2.5">
-    Task Type *
-  </label>
+
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
     {Object.entries(TYPE_META)
       .filter(([value]) => allowedTaskTypes.includes(value))
@@ -551,7 +572,7 @@ if (!showAssignSelect && user?.id) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Supervision Project *
+                    Design review projects *
                   </label>
 
                   <div className="relative mb-1.5">
@@ -570,7 +591,7 @@ if (!showAssignSelect && user?.id) {
                     disabled={optionsLoading}
                     className="w-full border border-emerald-300 bg-emerald-50/30 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 outline-none transition"
                   >
-                    <option value="">— Select Supervision Project —</option>
+                    <option value="">— Select Design Review Project —</option>
 
                     {filteredSupervisionProjects.length === 0 ? (
                       <option value="" disabled>
@@ -868,7 +889,7 @@ if (!showAssignSelect && user?.id) {
 {isMain && (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Supervision Project</label>
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Design Review Project</label>
       
       <div className="relative mb-1.5">
         <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
