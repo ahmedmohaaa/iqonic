@@ -8,7 +8,7 @@ import {
   Clock, Edit, Eye 
 } from 'lucide-react';
 import GlobalFilterBar from '../../components/GlobalFilterBar';
-
+import { getScopeRestriction } from '../../utils/projectScope';
 const ActiveProjects = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState([]);
@@ -58,16 +58,19 @@ const canEditProject = !['GM', 'AGM'].includes(user?.role);
     fetchProjects();
   }, [filters, currentPage]);
 
-  const fetchProjects = async () => {
-    setLoading(true);
-    try {
-      const params = { 
-        ...filters, 
-        is_active: 'true',
-        page: currentPage,
-      };
+const fetchProjects = async () => {
+  setLoading(true);
+  try {
+    const params = {
+      ...filters,
+      is_active: 'true',
+      page: currentPage,
+    };
+    const restriction = getScopeRestriction(user);
+    if (restriction) params.scope = restriction;
+
+        const res = await getGlobalFilterProjects(params);
       
-      const res = await getGlobalFilterProjects(params);
       setProjects(res.data.results || res.data);
       setPagination({
         count: res.data.count || 0,
@@ -251,3 +254,4 @@ const canEditProject = !['GM', 'AGM'].includes(user?.role);
 export default ActiveProjects;
 
 
+ 
