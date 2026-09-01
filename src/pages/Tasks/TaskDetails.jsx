@@ -13,7 +13,8 @@ import {
   PauseCircle,
   Edit,
   History,
-  GitBranch
+  GitBranch,
+  Layers
 } from 'lucide-react';
 import TaskStatusModal from './components/TaskStatusModal';
 
@@ -86,7 +87,7 @@ const TaskDetails = () => {
 
   const canEdit = statusPermission !== 'none';
 
-  // ✅ دالة لحساب التاريخ المتوقع للانتهاء بناءً على تاريخ البدء ومدة المهمة
+  // ✅ دالة لحساب التاريخ المتوقع للانتهاء بناءً على تاريخ البدء (الذي أدخله المستخدم) ومدة المهمة
   const getExpectedEndDate = () => {
     if (task?.start_date && task?.duration_days) {
       const start = new Date(task.start_date);
@@ -189,13 +190,13 @@ const TaskDetails = () => {
       </div>
 
       {/* Task Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* Project */}
         <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
           <p className="text-xs text-gray-500 uppercase">Project</p>
 
           <Link
-            to={`/projects/${task.project_id}`}
+            to={`/projects/${task.project_id || task.project}`}
             className="font-semibold text-gray-800 text-primary"
           >
             {task.project_name}
@@ -222,6 +223,22 @@ const TaskDetails = () => {
                 {task.assigned_to_department || ''}
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Stage & Discipline */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-500">
+          <p className="text-xs text-gray-500 uppercase">Stage & Discipline</p>
+          <div className="mt-1 space-y-1">
+            <p className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+              <GitBranch size={14} className="text-indigo-500" />
+              {task.stage || 'No Stage'}
+            </p>
+            <p className="text-sm text-gray-600 flex items-center gap-2">
+              <Layers size={14} className="text-gray-400" />
+              {task.discipline_name || 'No Discipline'}
+              {task.discipline_department && <span className="text-xs text-gray-400">({task.discipline_department})</span>}
+            </p>
           </div>
         </div>
 
@@ -289,12 +306,21 @@ const TaskDetails = () => {
             </div>
 
             {/* Timeline Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 pt-4 border-t">
+              <div>
+                <p className="text-xs text-gray-500">Creation Date</p>
+
+                <p className="text-sm font-semibold text-gray-800 flex items-center">
+                  <Calendar size={14} className="mr-1 text-gray-400" />
+                  {task.created_at ? task.created_at.split('T')[0] : 'Not set'}
+                </p>
+              </div>
+
               <div>
                 <p className="text-xs text-gray-500">Start Date</p>
 
                 <p className="text-sm font-semibold text-gray-800 flex items-center">
-                  <Calendar size={14} className="mr-1" />
+                  <Calendar size={14} className="mr-1 text-blue-500" />
                   {task.start_date || 'Not set'}
                 </p>
               </div>
@@ -371,7 +397,7 @@ const TaskDetails = () => {
             <Clock className="mr-2" size={20} /> Duration & Hold History
           </h2>
           <p className="text-xs text-gray-500 mb-3">
-            Start (Creation): {task.start_date || '—'} · End (Approval): {task.approval_date || task.end_date || '—'}
+            Creation: {task.created_at ? task.created_at.split('T')[0] : '—'} · Start (User): {task.start_date || '—'} · End (Approval): {task.approval_date || task.end_date || '—'}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
