@@ -90,7 +90,7 @@ const Login = () => {
                     type="text"
                     {...register('username', { required: 'Username is required' })}
                     className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#0b1f3c] border border-[#1d3a66] text-white placeholder-gray-500 outline-none focus:border-[#e5e32a] focus:ring-2 focus:ring-[#e5e32a]/20 transition"
-                    placeholder="e.g. nasser.tatouni"
+                    placeholder="e.g. nasser.tabouni"
                   />
                 </div>
                 {errors.username && (
