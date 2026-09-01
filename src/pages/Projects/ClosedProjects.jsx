@@ -62,19 +62,7 @@ const ClosedProjects = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex items-center space-x-2">
-          <Filter size={18} className="text-gray-500" />
-          <select
-            value={filterScope}
-            onChange={(e) => setFilterScope(e.target.value)}
-            className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-          >
-            <option value="">All Scopes</option>
-            <option value="DESIGN">Design</option>
-            <option value="SUPERVISION">Supervision</option>
-            <option value="BOTH">Both</option>
-          </select>
-        </div>
+
       </div>
 
       {/* Projects Grid */}
