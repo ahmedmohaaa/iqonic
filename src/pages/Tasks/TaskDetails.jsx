@@ -68,7 +68,7 @@ const TaskDetails = () => {
     String(assignedToId) === String(user.id)
   );
 
-const isDesignHoldManager = ['GM', 'AGM', 'DESIGN_MGR'].includes(user?.role);
+  const isDesignHoldManager = ['GM', 'AGM', 'DESIGN_MGR'].includes(user?.role);
   const isZabady = user?.username === 'ahmed.zabady';
   const taskScope = task?.scope;
 
@@ -85,6 +85,16 @@ const isDesignHoldManager = ['GM', 'AGM', 'DESIGN_MGR'].includes(user?.role);
         : 'none';
 
   const canEdit = statusPermission !== 'none';
+
+  // ✅ دالة لحساب التاريخ المتوقع للانتهاء بناءً على تاريخ البدء ومدة المهمة
+  const getExpectedEndDate = () => {
+    if (task?.start_date && task?.duration_days) {
+      const start = new Date(task.start_date);
+      start.setDate(start.getDate() + Number(task.duration_days));
+      return start.toISOString().split('T')[0];
+    }
+    return null;
+  };
 
   const getStatusColor = (status) => {
     const colors = {
@@ -298,11 +308,13 @@ const isDesignHoldManager = ['GM', 'AGM', 'DESIGN_MGR'].includes(user?.role);
               </div>
 
               <div>
-                <p className="text-xs text-gray-500">End Date</p>
+                <p className="text-xs text-gray-500">
+                  {task.end_date ? 'Actual End Date' : 'Expected End Date'}
+                </p>
 
                 <p className="text-sm font-semibold text-gray-800 flex items-center">
                   <CheckCircle size={14} className="mr-1" />
-                  {task.end_date || 'Not completed'}
+                  {task.end_date || getExpectedEndDate() || 'Not set'}
                 </p>
               </div>
 
@@ -354,56 +366,58 @@ const isDesignHoldManager = ['GM', 'AGM', 'DESIGN_MGR'].includes(user?.role);
         )}
 
         {/* ── Duration & Hold History (آلي بالكامل) ── */}
-<div className="bg-white rounded-lg shadow-sm p-6">
-  <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-    <Clock className="mr-2" size={20} /> Duration & Hold History
-  </h2>
-  <p className="text-xs text-gray-500 mb-3">
-    Start (Creation): {task.start_date || '—'} · End (Approval): {task.approval_date || task.end_date || '—'}
-  </p>
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-    <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
-      <p className="text-xs text-blue-600">Total Duration</p>
-      <p className="font-bold text-blue-800">{task.total_duration_days ?? 0} days</p>
-    </div>
-    <div className="p-3 rounded-lg bg-red-50 border border-red-100">
-      <p className="text-xs text-red-600">Hold ({task.hold_count ?? 0} times)</p>
-      <p className="font-bold text-red-800">{task.total_hold_days ?? 0} days</p>
-    </div>
-    <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
-      <p className="text-xs text-emerald-600">Net Duration (KPI)</p>
-      <p className="font-bold text-emerald-800">{task.net_duration_days ?? 0} days</p>
-    </div>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
+            <Clock className="mr-2" size={20} /> Duration & Hold History
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Start (Creation): {task.start_date || '—'} · End (Approval): {task.approval_date || task.end_date || '—'}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+              <p className="text-xs text-blue-600">Total Duration</p>
+              <p className="font-bold text-blue-800">{task.total_duration_days ?? 0} days</p>
+            </div>
+            <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+              <p className="text-xs text-red-600">Hold ({task.hold_count ?? 0} times)</p>
+              <p className="font-bold text-red-800">{task.total_hold_days ?? 0} days</p>
+            </div>
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+              <p className="text-xs text-emerald-600">Net Duration (KPI)</p>
+              <p className="font-bold text-emerald-800">{task.net_duration_days ?? 0} days</p>
+            </div>
+          </div>
 
-  {(task.hold_periods || []).length > 0 && (
-    <ul className="mt-4 space-y-2">
-      {task.hold_periods.map((h, i) => (
-        <li key={i} className="flex flex-wrap items-center gap-3 text-xs text-gray-600 p-2 rounded border border-gray-100 bg-gray-50">
-          <span className="font-semibold text-gray-700">Hold #{i + 1}</span>
-          <span>Start: {new Date(h.hold_start).toLocaleString('en-GB')}</span>
-          <span>{h.release_at ? `Release: ${new Date(h.release_at).toLocaleString('en-GB')}` : 'Still on hold'}</span>
-          <span className="text-red-600 font-semibold">{h.days}d</span>
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
+          {(task.hold_periods || []).length > 0 && (
+            <ul className="mt-4 space-y-2">
+              {task.hold_periods.map((h, i) => (
+                <li key={i} className="flex flex-wrap items-center gap-3 text-xs text-gray-600 p-2 rounded border border-gray-100 bg-gray-50">
+                  <span className="font-semibold text-gray-700">Hold #{i + 1}</span>
+                  <span>Start: {new Date(h.hold_start).toLocaleString('en-GB')}</span>
+                  <span>{h.release_at ? `Release: ${new Date(h.release_at).toLocaleString('en-GB')}` : 'Still on hold'}</span>
+                  <span className="text-red-600 font-semibold">{h.days}d</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-{/* Description */}
-{task.description?.trim() && (
-  <div className="bg-white p-6 rounded-lg shadow-sm">
-    <h2 className="text-lg font-semibold text-gray-800 mb-3">
-      Description
-    </h2>
-    <p
-      dir="auto"
-      className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words"
-    >
-      {task.description}
-    </p>
-  </div>
-)}
+      
+      {/* Description */}
+      {task.description?.trim() && (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">
+            Description
+          </h2>
+          <p
+            dir="auto"
+            className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap break-words"
+          >
+            {task.description}
+          </p>
+        </div>
+      )}
+      
       {/* Assignment History */}
       {history.length > 0 && (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -460,5 +474,3 @@ const isDesignHoldManager = ['GM', 'AGM', 'DESIGN_MGR'].includes(user?.role);
 };
 
 export default TaskDetails;
-
-
