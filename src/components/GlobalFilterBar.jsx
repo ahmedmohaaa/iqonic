@@ -69,20 +69,7 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
           </div>
         </div>
 
-        {/* Scope */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Scope</label>
-          <select
-            value={filters.scope}
-            onChange={(e) => handleChange('scope', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          >
-            <option value="" className="text-gray-900 bg-white">All Scopes</option>
-            <option value="DESIGN" className="text-gray-900 bg-white">Design</option>
-            <option value="SUPERVISION" className="text-gray-900 bg-white">Supervision</option>
-            <option value="BOTH" className="text-gray-900 bg-white">Both</option>
-          </select>
-        </div>
+
 
   
 
