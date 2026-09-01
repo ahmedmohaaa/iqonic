@@ -1,582 +1,125 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { getClosedProjects } from '../../api/services/projects';
+import { Link } from 'react-router-dom';
+import { Archive, Search, Filter, Loader, FolderOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { createProject, getProjects } from '../../api/services/projects';
-import { getClients } from '../../api/services/clients';
-import {
-  getContractors, createContractor,
-} from '../../api/services/contractors';
-import {
-  Building2, HardHat, Lock, Plus, UserPlus, Check,
-  AlertTriangle, Calendar, Ruler, FileSignature, Search
-} from 'lucide-react';
-
-/* ═══════════════════════════════════════════════════════════
-   منطق القسم:
-   - المدراء يرون كل الأقسام (DESIGN, SUPERVISION, BOTH)
-   - سكرتيرة التصميم ترى (DESIGN, BOTH)
-   - سكرتيرة الإشراف ترى (SUPERVISION, BOTH)
-   ═══════════════════════════════════════════════════════════ */
-const FREE_ROLES = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'MANAGER'];
-
-export default function CreateProject() {
-  const navigate = useNavigate();
+import { getScopeRestriction } from '../../utils/projectScope';
+const ClosedProjects = () => {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterScope, setFilterScope] = useState('');
   const { user } = useAuth();
-  const isDeptSecretary =
-    user?.role === 'SECRETARY' && ['Design', 'Supervision'].includes(user?.department);
-  
-  // تنظيف بيانات المستخدم لتجنب أخطاء حالة الأحرف (Case Sensitivity)
-  const roleString = String(user?.role || user?.groups?.[0] || '').toUpperCase();
-  const deptString = String(user?.department || '').toUpperCase();
-
-  const isSecretary = roleString.includes('SECRETARY') || roleString.includes('سكرتير');
-  const isDesignDept = deptString.includes('DESIGN') || deptString.includes('تصميم');
-  const isSupDept = deptString.includes('SUP') || deptString.includes('إشراف');
-
-  // تحديد الخيارات المتاحة بناءً على المستخدم
-  const availableScopes = useMemo(() => {
-    if (isSecretary) {
-      if (isDesignDept) return ['DESIGN', 'BOTH'];
-      if (isSupDept) return ['SUPERVISION', 'BOTH'];
-    }
-    // للمدراء أو في حال عدم وجود قسم محدد
-    return ['DESIGN', 'SUPERVISION', 'BOTH'];
-  }, [isSecretary, isDesignDept, isSupDept]);
-
-  // تحديد القسم الافتراضي عند فتح الصفحة
-  const initialScope = isSecretary && isSupDept ? 'SUPERVISION' : 'DESIGN';
-  
-  const [scope, setScope] = useState(initialScope);
-  const [clients, setClients] = useState([]);
-  const [contractors, setContractors] = useState([]);
-  const [loading, setLoad] = useState(true);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  
-  // ✅ حالة البحث في المقاولين
-  const [contractorSearch, setContractorSearch] = useState('');
-
-  // وضع المقاول: existing | new
-  const [contractorMode, setContractorMode] = useState('existing');
-
-  const [f, setF] = useState({
-    name: '', project_no: '', client: '', location: '',
-    start_date: '', duration_days: '', priority: 'MEDIUM',
-    building_type: 'Residential', floors: '', plot_area: '', bua: '',
-    apartments: '', shops: '', parking: '', description: '', application_no: '', pin_no: '',
-    // ══ الحقول الناقصة ══
-    owner: '', supervision_consultant: '', permit_no: '', permit_date: '', permit_deadline: '',application_type: '', permit_status: 'NOT_ISSUED',
-    // ═════════════════════
-    // تصميم
-    offer_status: 'NOT_SUBMITTED', contract_status: 'NOT_SUBMITTED',
-    internal_design_review_required: false,
-    // إشراف
-    contractors: [], design_company: '', commencement_status: 'PENDING_AUTHORITY',
-    newContractor: { name: '', contact_person: '', phone: '', email: '' },
-  });
-
-  const set = (k) => (e) => {
-    const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setF((p) => ({ ...p, [k]: v }));
-  };
-  const setNC = (k) => (e) =>
-    setF((p) => ({ ...p, newContractor: { ...p.newContractor, [k]: e.target.value } }));
-
-  // ✅ ترتيب المقاولين: المتطابقون مع البحث يظهر أولاً (Smart Sort)
-  const sortedContractors = useMemo(() => {
-    if (!contractorSearch) return contractors;
-    const lowerSearch = contractorSearch.toLowerCase();
-    const matched = contractors.filter(c => c.name.toLowerCase().includes(lowerSearch));
-    const unmatched = contractors.filter(c => !c.name.toLowerCase().includes(lowerSearch));
-    return [...matched, ...unmatched];
-  }, [contractors, contractorSearch]);
-
   useEffect(() => {
-    Promise.all([getClients(), getContractors()])
-      .then(([c, co]) => {
-        setClients(c.data.results || c.data || []);
-        setContractors(co.data.results || co.data || []);
-      })
-      .catch(() => setError('تعذّر تحميل القوائم.'))
-      .finally(() => setLoad(false));
-  }, []);
+    fetchProjects();
+  }, [filterScope]);
 
-  const showDesign = scope === 'DESIGN' || scope === 'BOTH';
-  const showSup = scope === 'SUPERVISION' || scope === 'BOTH';
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setError(''); setBusy(true);
+  const fetchProjects = async () => {
+    setLoading(true);
     try {
-      // ✅ المقاولون لمشاريع الإشراف فقط (اختيار متعدد)
-      let contractorIds = [...f.contractors];
-      if (showSup && contractorMode === 'new') {
-        if (!f.newContractor.name.trim()) throw new Error('اسم المقاول مطلوب.');
-        const co = await createContractor(f.newContractor);
-        contractorIds.push(String(co.data.id));
-      }
-
-      const payload = {
-        name: f.name, project_no: f.project_no, scope,
-        client: Number(f.client), location: f.location,
-        description: f.description,
-        start_date: f.start_date || null,
-        duration_days: f.duration_days ? Number(f.duration_days) : 0,
-        priority: f.priority,
-        building_type: f.building_type,
-        floors: f.floors ? Number(f.floors) : null, 
-        plot_area: f.plot_area || null, 
-        bua: f.bua || null,
-        apartments: f.apartments ? Number(f.apartments) : 0,
-        shops: f.shops ? Number(f.shops) : 0,
-        parking: f.parking || null,
-        application_no: f.application_no || null,
-        pin_no: f.pin_no || null,
-        // ══ الحقول الناقصة ══
-        owner: f.owner || null,
-        supervision_consultant: f.supervision_consultant || null,
-        permit_no: f.permit_no || null,
-        permit_date: f.permit_date || null,
-        permit_deadline: f.permit_deadline || null,
-        permit_status: f.permit_status,
-        application_type: f.application_type || null,
-        // ═════════════════════
-        // ✅ المقاول لمشاريع الإشراف فقط
-        ...(showSup && contractorIds.length > 0 && { contractors: contractorIds }),
-        ...(showSup && {
-          design_company: f.design_company || null,
-          commencement_status: f.commencement_status,
-          internal_design_review_required: f.internal_design_review_required,
-        }),
-      };
-
-      await createProject(payload);
-      navigate('/projects');
+      const params = {};
+      if (filterScope) params.scope = filterScope;
+      const restriction = getScopeRestriction(user);
+      if (restriction) params.scope = restriction;
+      const res = await getClosedProjects(params);      setProjects(res.data.results || res.data);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Unable to create the project..');
-    } finally { setBusy(false); }
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const activeTone = showSup && !showDesign ? 'amber' : showDesign && !showSup ? 'sky' : 'both';
-
-  // ✅ معاينة End Date = Start + Duration (الحفظ الفعلي يتم في الباك-إند)
-  const computedEndDate = (() => {
-    if (!f.start_date || !Number(f.duration_days)) return '';
-    const d = new Date(f.start_date + 'T00:00:00');
-    d.setDate(d.getDate() + Number(f.duration_days));
-    return d.toISOString().slice(0, 10);
-  })();
+  const filteredProjects = projects.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.project_no.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="cp-root">
-      <style>{CSS}</style>
-      <div className="cp-ambient" aria-hidden />
-
-      <header className="cp-head cp-rv">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <span className="cp-kicker">NEW PROJECT · Create New Project</span>
-          <h1 className="cp-title">New Project</h1>
-          <p className="cp-sub">
-            {isSecretary
-              ? `You are registering as a ${isDesignDept ? 'Design' : 'Supervision'} secretary — you can choose your department or a shared project (Both).`
-              : 'Select the project scope to display the relevant fields.'}
-          </p>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+            <Archive className="mr-2 text-gray-600" size={28} />
+            Closed Projects
+          </h1>
+          <p className="text-sm text-gray-500">Archived and completed projects</p>
         </div>
-      </header>
+        <div className="bg-gray-100 px-4 py-2 rounded-lg">
+          <span className="text-sm text-gray-600">Total: </span>
+          <span className="font-bold text-gray-800">{projects.length}</span>
+        </div>
+      </div>
 
-      {/* مؤشّر القسم النشط */}
-      <div className="cp-scope cp-rv">
-        <div className="cp-scope-pick">
-          {availableScopes.map((s) => (
-            <button
-              key={s} type="button"
-              className={`cp-scope-btn ${scope === s ? 'on' : ''} t-${s === 'DESIGN' ? 'sky' : s === 'SUPERVISION' ? 'amber' : 'both'}`}
-              onClick={() => setScope(s)}
-            >
-              {s === 'DESIGN' ? 'Design' : s === 'SUPERVISION' ? 'Supervision' : 'Shared (Both)'}
-            </button>
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow-sm flex flex-wrap items-center gap-4">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search by name or project number..."
+            className="w-full pl-10 pr-4 py-2 border-2 border-gray-400 rounded-lg text-gray-900 font-semibold placeholder-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-500"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Filter size={18} className="text-gray-500" />
+          <select
+            value={filterScope}
+            onChange={(e) => setFilterScope(e.target.value)}
+            className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+          >
+            <option value="">All Scopes</option>
+            <option value="DESIGN">Design</option>
+            <option value="SUPERVISION">Supervision</option>
+            <option value="BOTH">Both</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Projects Grid */}
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader className="animate-spin text-primary" size={32} /></div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-lg shadow-sm">
+          <Archive className="mx-auto text-gray-300 mb-3" size={48} />
+          <p className="text-gray-500">No closed projects found.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProjects.map(project => (
+            <Link to={`/projects/${project.id}`} key={project.id} className="bg-white rounded-lg shadow-sm shadow-md transition border border-gray-100 overflow-hidden">
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-bold text-gray-800">{project.name}</h3>
+                    <p className="text-xs text-gray-500 font-mono">{project.project_no}</p>
+                  </div>
+                  <span className="px-2 py-1 bg-gray-200 text-gray-800 text-xs rounded-full font-semibold">
+                    Closed
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p><span className="font-semibold">Client:</span> {project.client_name}</p>
+                  <p><span className="font-semibold">Scope:</span> {project.scope}</p>
+                  {project.revision_number && (
+                    <p className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded inline-block">
+                      Rev: {project.revision_number}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="bg-gray-50 px-5 py-3 border-t flex justify-end">
+<span className="text-blue-800 text-sm font-bold flex items-center group-hover:underline">
+  View Details <FolderOpen size={16} className="ml-1" />
+</span>
+              </div>
+            </Link>
           ))}
         </div>
-
-        <div className={`cp-dept-cards ${activeTone}`}>
-          <DeptCard tone="sky" Icon={Building2} label="Design" active={showDesign} hint="Offer · Contract" />
-          <DeptCard tone="amber" Icon={HardHat} label="Supervision" active={showSup} hint="Contractor · Design Company · Commencement · Internal Review" />
-        </div>
-      </div>
-
-      {error && (
-        <div className="cp-err cp-rv"><AlertTriangle size={16} /> {error}</div>
       )}
-
-      <form onSubmit={submit} className="cp-form">
-        {/* ── مشترك دائماً ── */}
-        <section className="cp-block cp-rv">
-          <h2 className="cp-block-h"><span className="cp-num">01</span> Basic Information</h2>
-          <div className="cp-grid">
-            <Field label="Description">
-              <textarea value={f.description} onChange={set('description')} rows={2} placeholder="Proposed (B+G+3+PH) Residential Building" />
-            </Field>
-            <Field label="Project Name *"><input required value={f.name} onChange={set('name')} /></Field>
-            <Field label="Project Number *"><input required value={f.project_no} onChange={set('project_no')} /></Field>
-            <Field label="Client *">
-              <select required value={f.client} onChange={set('client')}>
-                <option value="">— Select —</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Location"><input value={f.location} onChange={set('location')} /></Field>
-            <Field label="Start Date"><input type="date" value={f.start_date} onChange={set('start_date')} /></Field>
-            <Field label="Duration (Days)"><input type="number" value={f.duration_days} onChange={set('duration_days')} /></Field>
-            <Field label="Application Type">
-              <select value={f.application_type} onChange={set('application_type')}>
-                <option value="">— Select —</option>
-                <option value="NEW_PERMIT">New Permit</option>
-                <option value="MODIFICATION_PERMIT">Modification Permit</option>
-                <option value="COMPLETION_CERTIFICATE">Completion Certificate</option>
-                <option value="MAINTENANCE_DEMOLITION">Maintenance and Demolition</option>
-              </select>
-            </Field>
-
-            <Field label="End Date (Auto)">
-              <input type="date" value={computedEndDate} readOnly
-                style={{ background: '#f1f5f9', color: '#334155', fontWeight: 600 }} />
-            </Field>
-
-            <Field label="Priority">
-              <select value={f.priority} onChange={set('priority')}>
-                <option value="URGENT">Urgent</option><option value="HIGH">High</option>
-                <option value="MEDIUM">Medium</option><option value="LOW">Low</option>
-              </select>
-            </Field>
-            <Field label="Building Type"><input value={f.building_type} onChange={set('building_type')} /></Field>
-            <Field label="Floors"><input type="number" value={f.floors} onChange={set('floors')} /></Field>
-            <Field label="Plot Area"><input value={f.plot_area} onChange={set('plot_area')} /></Field>
-            <Field label="BUA (M²)"><input value={f.bua} onChange={set('bua')} /></Field>
-            <Field label="Apartments"><input type="number" value={f.apartments} onChange={set('apartments')} /></Field>
-            <Field label="Shops"><input type="number" value={f.shops} onChange={set('shops')} /></Field>
-            <Field label="Parking"><input value={f.parking} onChange={set('parking')} /></Field>
-            <Field label="Application No."><input value={f.application_no} onChange={set('application_no')} placeholder="N/2026/XXXXXXX" /></Field>
-            <Field label="PIN No."><input value={f.pin_no} onChange={set('pin_no')} /></Field>
-            {/* ══ الحقول الناقصة ══ */}
-            <Field label="Owner"><input value={f.owner} onChange={set('owner')} /></Field>
-            <Field label="Supervision Consultant"><input value={f.supervision_consultant} onChange={set('supervision_consultant')} /></Field>
-            <Field label="Permit No."><input value={f.permit_no} onChange={set('permit_no')} /></Field>
-            <Field label="Permit Date"><input type="date" value={f.permit_date} onChange={set('permit_date')} /></Field>
-            <Field label="Permit Deadline"><input type="date" value={f.permit_deadline} onChange={set('permit_deadline')} /></Field>
-            <Field label="Permit Status">
-              <select value={f.permit_status} onChange={set('permit_status')}>
-                <option value="NOT_ISSUED">Not Issued</option>
-                <option value="PENDING_AUTHORITY">Pending Authority</option>
-                <option value="ISSUED">Approved/Issued</option>
-              </select>
-            </Field>
-            {/* ═════════════════════ */}
-          </div>
-        </section>
-
-        {/* ── حقول الإشراف والمقاولين ── */}
-        {showSup && (
-          <section className="cp-block cp-block--amber cp-rv">
-            <h2 className="cp-block-h t-amber"><HardHat size={16} /><span className="cp-num">02</span> Supervision Details & Contractors</h2>
-
-            <div className="cp-grid">
-              {/* ✅ اختيار المقاولين (Checkboxes + Search) */}
-              <div className="cp-contractor" style={{ gridColumn: '1 / -1' }}>
-                <div className="cp-mode">
-                  <button type="button" className={contractorMode === 'existing' ? 'on' : ''}
-                    onClick={() => setContractorMode('existing')}>Registered Contractors</button>
-                  <button type="button" className={contractorMode === 'new' ? 'on' : ''}
-                    onClick={() => setContractorMode('new')}><UserPlus size={14} /> New Contractor</button>
-                </div>
-                
-                {contractorMode === 'existing' ? (
-                  <div className="cp-contractor-select">
-                    <div className="cp-search-wrap">
-                      <Search size={16} className="cp-search-icon" />
-                      <input 
-                        type="text" 
-                        placeholder="Search contractors..." 
-                        value={contractorSearch}
-                        onChange={(e) => setContractorSearch(e.target.value)}
-                        className="cp-search-input"
-                      />
-                    </div>
-                    <div className="cp-checkbox-list">
-                      {sortedContractors.map((c) => {
-                        const idStr = String(c.id);
-                        const isChecked = f.contractors.includes(idStr);
-                        return (
-                          <label key={c.id} className={`cp-checkbox-item ${isChecked ? 'checked' : ''}`}>
-                            <input 
-                              type="checkbox" 
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setF(p => ({ ...p, contractors: [...p.contractors, idStr] }));
-                                } else {
-                                  setF(p => ({ ...p, contractors: p.contractors.filter(cid => cid !== idStr) }));
-                                }
-                              }}
-                            />
-                            <span>{c.name}</span>
-                          </label>
-                        );
-                      })}
-                      {sortedContractors.length === 0 && (
-                        <p className="cp-no-results">No contractors found.</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="cp-new-co">
-                    <Field label="Contractor Name *"><input value={f.newContractor.name} onChange={setNC('name')} /></Field>
-                    <Field label="Contact Person"><input value={f.newContractor.contact_person} onChange={setNC('contact_person')} /></Field>
-                    <Field label="Phone"><input value={f.newContractor.phone} onChange={setNC('phone')} /></Field>
-                    <Field label="Email"><input type="email" value={f.newContractor.email} onChange={setNC('email')} /></Field>
-                  </div>
-                )}
-              </div>
-
-              <Field label="Design Company">
-                <input value={f.design_company} onChange={set('design_company')}
-                  placeholder="Name of the company that designed the project" />
-              </Field>
-              <Field label="Commencement Permit">
-                <select value={f.commencement_status} onChange={set('commencement_status')}>
-                  <option value="PENDING_AUTHORITY">Pending Authority</option>
-                  <option value="ISSUED">Approved/Issued</option>
-                </select>
-              </Field>
-              <label className="cp-check">
-                <input type="checkbox" checked={f.internal_design_review_required}
-                  onChange={set('internal_design_review_required')} />
-                <span>Internal Design Review Required</span>
-              </label>
-            </div>
-          </section>
-        )}
-
-        <div className="cp-foot cp-rv">
-          <button type="button" className="cp-ghost" onClick={() => navigate(-1)}>Cancel</button>
-          <button type="submit" disabled={busy} className="cp-save">
-            {busy ? 'Creating…' : <><Check size={16} /> Create Project</>}
-          </button>
-        </div>
-      </form>
     </div>
   );
-}
+};
 
-export function Field({ label, children }) {
-  return <label className="cp-field"><span>{label}</span>{children}</label>;
-}
-
-export function DeptCard({ tone, Icon, label, active, hint }) {
-  return (
-    <div className={`cp-dept t-${tone} ${active ? 'live' : 'dim'}`}>
-      <Icon size={18} />
-      <div>
-        <b>{label}</b>
-        <span>{active ? hint : 'Not enabled for this scope'}</span>
-      </div>
-      {active && <i className="cp-pulse" />}
-    </div>
-  );
-}
-
-export const CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-
-.cp-root{
-  --ink: #ffffff; 
-  --ink2: #ffffff; 
-  --line: #e2e8f0; 
-  --paper: #0f172a; 
-  --mut: #64748b;
-  --sky: #0284c7; 
-  --amber: #d97706; 
-  --emerald: #059669; 
-  --rose: #dc2626;
-  position:relative; min-height:100vh; color:var(--paper);
-  font-family:'IBM Plex Sans Arabic','Space Grotesk',sans-serif;
-  padding:30px clamp(16px,4vw,46px) 70px;
-  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
-}
-
-.cp-ambient{ position:absolute; inset:0; pointer-events:none;
-  background:
-    radial-gradient(55% 42% at 92% -6%, rgba(217,119,6,.06), transparent 60%),
-    radial-gradient(50% 40% at -4% 104%, rgba(2,132,199,.06), transparent 60%),
-    linear-gradient(rgba(2,132,199,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(2,132,199,.03) 1px,transparent 1px);
-  background-size:auto,auto,44px 44px,44px 44px;
-  -webkit-mask-image:radial-gradient(120% 100% at 50% 0%,#000,transparent 86%);
-          mask-image:radial-gradient(120% 100% at 50% 0%,#000,transparent 86%);
-}
-.cp-root>*{ position:relative; }
-.cp-rv{ opacity:0; transform:translateY(14px); animation:cp-rise .6s cubic-bezier(.2,.7,.2,1) forwards; }
-@keyframes cp-rise{ to{ opacity:1; transform:none; } }
-
-.cp-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
-.cp-kicker{ font-family:'Space Grotesk'; font-size:11px; letter-spacing:.3em; color:var(--amber); }
-.cp-title{ font-family:'Space Grotesk','IBM Plex Sans Arabic'; font-size:clamp(30px,5vw,50px); font-weight:700; line-height:1; margin:6px 0 6px; letter-spacing:-.02em; color:#0f172a; }
-.cp-sub{ color:var(--mut); font-size:13.5px; max-width:52ch; margin:0; line-height:1.6; }
-
-.cp-scope{ margin-top:22px; }
-.cp-scope-pick{ display:inline-flex; gap:6px; background:#f1f5f9; border:1px solid var(--line); padding:5px; border-radius:12px; }
-.cp-scope-btn{ border:none; background:transparent; color:var(--mut); font-family:inherit; font-weight:600;
-  font-size:13px; padding:8px 18px; border-radius:9px; cursor:pointer; transition:.2s; }
-.cp-scope-btn:hover{ color:var(--paper); }
-.cp-scope-btn.on{ background:#ffffff; box-shadow:0 1px 3px rgba(0,0,0,.05); }
-.cp-scope-btn.on.t-sky{ color:var(--sky); }
-.cp-scope-btn.on.t-amber{ color:var(--amber); }
-.cp-scope-btn.on.t-both{ color:var(--emerald); }
-
-.cp-dept-cards{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
-.cp-dept{ position:relative; display:flex; align-items:center; gap:13px; padding:16px 18px;
-  border:1px solid var(--line); border-radius:14px; background:var(--ink2); transition:.3s; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,.02); }
-.cp-dept>svg{ flex:none; }
-.cp-dept b{ display:block; font-size:15px; color:var(--paper); }
-.cp-dept span{ font-size:11.5px; color:var(--mut); }
-.cp-dept.t-sky.live{ border-color:rgba(2,132,199,.4); background:rgba(2,132,199,.02); } .cp-dept.t-sky.live>svg{ color:var(--sky); }
-.cp-dept.t-amber.live{ border-color:rgba(217,119,6,.4); background:rgba(217,119,6,.02); } .cp-dept.t-amber.live>svg{ color:var(--amber); }
-.cp-dept.dim{ opacity:.6; filter:grayscale(1); background:#f8fafc; box-shadow:none; }
-.cp-pulse{ position:absolute; top:14px; inset-inline-end:14px; width:9px; height:9px; border-radius:50%; background:var(--emerald); }
-.cp-pulse::after{ content:""; position:absolute; inset:-4px; border-radius:50%; background:var(--emerald); opacity:.4; animation:cp-ping 1.8s infinite; }
-@keyframes cp-ping{ 70%,100%{ transform:scale(2.4); opacity:0; } }
-
-.cp-err{ display:flex; align-items:center; gap:8px; margin-top:16px; color:var(--rose);
-  background:rgba(220,38,38,.05); border:1px solid rgba(220,38,38,.2); border-radius:11px; padding:11px 14px; font-size:13px; font-weight:500; }
-
-.cp-form{ margin-top:22px; display:flex; flex-direction:column; gap:18px; }
-.cp-block{ background:var(--ink2); border:1px solid var(--line); border-radius:16px; padding:22px; box-shadow:0 4px 6px -1px rgba(0,0,0,.03); }
-.cp-block--sky{ border-inline-start:4px solid var(--sky); }
-.cp-block--amber{ border-inline-start:4px solid var(--amber); }
-.cp-block-h{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk','IBM Plex Sans Arabic';
-  font-size:17px; font-weight:600; margin-bottom:18px; }
-.cp-block-h.t-sky{ color:var(--sky); } .cp-block-h.t-amber{ color:var(--amber); }
-.cp-num{ font-family:'JetBrains Mono'; font-size:12px; color:var(--mut); background:#f1f5f9; border:1px solid #e2e8f0;
-  padding:2px 8px; border-radius:7px; }
-
-.cp-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
-.cp-field{ display:flex; flex-direction:column; gap:6px; }
-.cp-field>span{ font-size:12px; font-weight:500; color:#475569; }
-.cp-field input,.cp-field select, .cp-field textarea{ background:var(--ink); border:1px solid #cbd5e1; border-radius:10px;
-  padding:10px 12px; color:var(--paper); font-family:inherit; font-size:13.5px; outline:none; transition:.2s; box-shadow:inset 0 1px 2px rgba(0,0,0,.02); }
-.cp-field input:focus,.cp-field select:focus, .cp-field textarea:focus{ border-color:var(--sky); box-shadow:0 0 0 3px rgba(2,132,199,.15); }
-.cp-field input::placeholder, .cp-field textarea::placeholder { color: #94a3b8; }
-.cp-check{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:500; color:var(--paper);
-  grid-column:1/-1; padding:6px 0; cursor:pointer; }
-.cp-check input{ width:17px; height:17px; accent-color:var(--sky); cursor:pointer; }
-
-.cp-contractor{ 
-  margin-top:16px; 
-  padding-top:18px; 
-  grid-column: 1 / -1; 
-}
-.cp-new-co{ 
-  display:grid; 
-  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); 
-  gap:14px; 
-  background:#fafafa; 
-  padding:16px; 
-  border-radius:12px; 
-  border:1px solid #e2e8f0; 
-}
-.cp-mode{ display:inline-flex; gap:5px; background:#f1f5f9; border:1px solid var(--line); padding:4px; border-radius:10px; margin-bottom:16px; }
-.cp-mode button{ display:inline-flex; align-items:center; gap:6px; border:none; background:transparent; color:var(--mut);
-  font-family:inherit; font-weight:600; font-size:12.5px; padding:7px 14px; border-radius:8px; cursor:pointer; transition:.2s; }
-.cp-mode button:hover{ color:var(--paper); }
-.cp-mode button.on{ background:#ffffff; color:var(--amber); box-shadow:0 1px 3px rgba(0,0,0,.05); }
-
-/* ✅ Search & Checkbox List Styles */
-.cp-contractor-select {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: #fafafa;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-.cp-search-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.cp-search-icon {
-  position: absolute;
-  left: 12px;
-  color: #94a3b8;
-  pointer-events: none;
-}
-.cp-search-input {
-  width: 100%;
-  padding: 10px 12px 10px 36px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 13.5px;
-  color: #0f172a;
-  background: #ffffff;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.cp-search-input:focus {
-  border-color: #d97706;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
-}
-.cp-checkbox-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-  max-height: 250px;
-  overflow-y: auto;
-  padding: 4px;
-}
-.cp-checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #334155;
-}
-.cp-checkbox-item:hover {
-  border-color: #d97706;
-  background: #fffbeb;
-}
-.cp-checkbox-item.checked {
-  border-color: #d97706;
-  background: #fef3c7;
-  color: #92400e;
-  font-weight: 600;
-}
-.cp-checkbox-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #d97706;
-  cursor: pointer;
-  margin: 0;
-}
-.cp-no-results {
-  grid-column: 1 / -1;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 13px;
-  padding: 20px 0;
-}
-
-.cp-foot{ display:flex; justify-content:flex-end; gap:12px; }
-.cp-ghost{ border:1px solid #cbd5e1; background:#ffffff; color:#334155; border-radius:11px;
-  padding:11px 22px; font-family:inherit; font-weight:600; cursor:pointer; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.03); }
-.cp-ghost:hover{ color:var(--paper); border-color:#94a3b8; background:#f8fafc; }
-.cp-save{ display:inline-flex; align-items:center; gap:8px; border:none; background:var(--emerald); color:#ffffff;
-  border-radius:11px; padding:11px 26px; font-family:inherit; font-weight:600; font-size:14px; cursor:pointer; transition:.2s; box-shadow:0 2px 4px rgba(5,150,105,.2); }
-.cp-save:hover{ filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 4px 6px rgba(5,150,105,.3); }
-.cp-save:disabled{ opacity:.6; cursor:not-allowed; transform:none; filter:grayscale(0.5); box-shadow:none; }
-`;
+export default ClosedProjects;
