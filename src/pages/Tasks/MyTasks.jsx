@@ -68,6 +68,7 @@ const STATUS_META = {
 
 const STATUS_FILTERS = [
   { label: 'All', value: '' },
+  { label: 'Uncharted', value: 'UNCHARTED' },
   { label: 'On Going', value: 'ON_GOING' },
   { label: 'Under Study', value: 'UNDER_STUDY' },
   { label: 'Comment', value: 'COMMENT' },
@@ -129,6 +130,20 @@ const TaskCard = ({
             <h3 className="font-bold text-gray-800 leading-snug truncate" title={task.title || task.discipline_name}>
               {task.title || task.discipline_name}
             </h3>
+            
+            {/* ✅ إضافة التخصص (Discipline) والمرحلة (Stage) للكارد */}
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              {task.discipline_name && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
+                  <Layers size={11} /> {task.discipline_name}
+                </span>
+              )}
+              {task.stage && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                  <Flag size={11} /> {task.stage}
+                </span>
+              )}
+            </div>
           </div>
 
           <span className={`shrink-0 inline-flex items-center text-[10px] font-semibold px-2 py-1 rounded-full ring-1 ${sm.c}`}>
