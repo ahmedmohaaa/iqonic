@@ -5,7 +5,7 @@ import {
   DollarSign, Users, FileText, Bell, Search, LogOut,
   ShellIcon, Building2, MessageSquare, Printer,
   PlayCircle, Archive, Clock, TrendingUp, UserX,
-  User, ListTodo, Shield, BarChart3, Loader2,HardHat,Menu
+  User, ListTodo, Shield, BarChart3, Loader2,HardHat,Menu,FolderOpen
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { getGlobalSearch } from '../../api/services/dashboard';
@@ -24,6 +24,16 @@ const SUPERVISION_ENGINEER_USERNAMES = [
   'mani.kumar',
   'jocelyn.mallilin', 'allen.guanzon', 'jason.cuison', 'mostafa.zabady',
   'isuru.palliyaguruge', 'faseela.foroth',
+];
+
+
+// ✅ محدثة لتطابق الـ usernames الجديدة في seed_users.py
+const DESIGN_TASK_ASSIGNEE_USERNAMES = [
+  'salah.ahmad', 'basem.taha', 'vicky.jr', 'mohammad.mostafa',
+  'mohammad.alqadi', 'mahmoud.aldemyati', 'abdulhamid.ahmad', 'jan.bina',
+  'shaaban.karam', 'basel.shaat', 'israa.omran', 'ahmad.alqadi',
+  'yousef.amro', 'salman.saeed', 'shahajan.puthi', 'mohammad.raheem',
+  'mohammad.lebbe', 'shammer.pareeth', 'mojib.rahiman', 'md.hossain',
 ];
 const MainLayout = () => {
   const { user, logout, isManagement, isDesignManager, isSupervisionManager, isAccountant, isSecretary } = useAuth();
@@ -111,11 +121,27 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   // All links in English
   const menuItems = [
     { path: '/dashboard', label: 'Home', icon: LayoutDashboard, roles: ['ALL'] },
-    { path: '/projects', label: 'Project Directory', icon: FolderKanban, roles: ['ALL'] },
+{
+  path: '/projects',
+  label: 'Design Projects',
+  icon: FolderOpen,
+  departments: ['Design'],
+  fullAccessRoles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'],
+    allowedUsernames: DESIGN_TASK_ASSIGNEE_USERNAMES,
+
+},
     { path: '/projects/active', label: 'Active Projects', icon: PlayCircle, roles: ['ALL'] },
     { path: '/projects/closed', label: 'Closed Projects', icon: Archive, roles: ['ALL'] },
     { path: '/projects/pending', label: 'Pending Projects', icon: Clock, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM'] },
-    { path: '/supervision/projects', label: 'Supervision Projects', icon: Building2, roles: ['SUP_MGR', 'PM', 'GM', 'AGM', 'ENGINEER', 'SENIOR_ENG', 'SECRETARY'] },
+{
+  path: '/supervision/projects',
+  label: 'Supervision Projects',
+  icon: Building2,
+  departments: ['Supervision'],
+  fullAccessRoles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'],
+    allowedUsernames: SUPERVISION_ENGINEER_USERNAMES,   // موجودة أصلاً في الملف
+
+},
     { path: '/contractors', label: 'Contractors', icon: Building2, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT', 'SECRETARY'] },
     { path: '/financials', label: 'Financials', icon: DollarSign, roles: ['GM', 'AGM', 'ACCOUNTANT'] },
     { path: '/financials/report', label: 'Financial Report', icon: TrendingUp, roles: ['GM', 'AGM', 'ACCOUNTANT'] },
@@ -145,24 +171,22 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   ];
 
 const filteredMenu = menuItems.filter(item => {
-  // 1. فحص الدور (Role)
-  const hasRole = item.roles?.includes('ALL') || item.roles?.includes(user?.role);
+  const isFullAccess = item.fullAccessRoles?.includes(user?.role);
+  const isAllowedUsername = item.allowedUsernames?.includes(user?.username);
 
-  // 2. فحص القسم (Department) — يدعم string واحد أو مصفوفة
+  const roleCheck = !item.roles || item.roles.includes('ALL') || item.roles.includes(user?.role);
+  const hasRole = roleCheck || isFullAccess || isAllowedUsername;
+
   let hasDepartment = true;
-  if (item.department) {
+  if (isFullAccess || isAllowedUsername) {
+    hasDepartment = true; // اليوزرنيمات الصريحة أو الإدارة بتتجاوز قيد القسم
+  } else if (item.department) {
     hasDepartment = item.department === user?.department;
   } else if (item.departments) {
     hasDepartment = item.departments.includes(user?.department);
   }
 
-  // 3. فحص أسماء مهندسي الإشراف (إذا تم تحديد القائمة)
-  let hasSupervisionUsername = true;
-  if (item.supervisionUsernames) {
-    hasSupervisionUsername = item.supervisionUsernames.includes(user?.username);
-  }
-
-  return hasRole && hasDepartment && hasSupervisionUsername;
+  return hasRole && hasDepartment;
 });
   return (
 <div className="flex h-screen bg-gray-100" dir="ltr">
