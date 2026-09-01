@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { getClosedProjects } from '../../api/services/projects';
 import { Link } from 'react-router-dom';
 import { Archive, Search, Filter, Loader, FolderOpen } from 'lucide-react';
-
+import { useAuth } from '../../context/AuthContext';
+import { getScopeRestriction } from '../../utils/projectScope';
 const ClosedProjects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterScope, setFilterScope] = useState('');
-
+  const { user } = useAuth();
   useEffect(() => {
     fetchProjects();
   }, [filterScope]);
@@ -18,8 +19,9 @@ const ClosedProjects = () => {
     try {
       const params = {};
       if (filterScope) params.scope = filterScope;
-      const res = await getClosedProjects(params);
-      setProjects(res.data.results || res.data);
+      const restriction = getScopeRestriction(user);
+      if (restriction) params.scope = restriction;
+      const res = await getClosedProjects(params);      setProjects(res.data.results || res.data);
     } catch (err) {
       console.error(err);
     } finally {
