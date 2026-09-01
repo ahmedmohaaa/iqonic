@@ -39,6 +39,13 @@ const SM = {
   DRAFT:          { c: 'slate',   t: 'Draft' },
   OVERDUE:        { c: 'rose',    t: 'Overdue' },
   ON_HOLD:        { c: 'rose',    t: 'On Hold' },
+  /* ✅ التعديل 5: حالات Offer/Contract الجديدة */
+  NOT_SUBMITTED:          { c: 'slate',   t: 'Not Submitted' },
+  SUBMITTED:              { c: 'sky',     t: 'Submitted' },
+  PENDING_BY_CLIENT:      { c: 'amber',   t: 'Pending by Client' },
+  PREPARATION:            { c: 'amber',   t: 'Preparation' },
+  APPROVED_SIGNED_BY_CLIENT: { c: 'emerald', t: 'Approved & Signed by Client' },
+  DECLINED_BY_CLIENT:     { c: 'rose',    t: 'Declined by Client' },
 };
 const meta = (s) => SM[s] || { c: 'slate', t: s || '—' };
 
@@ -65,7 +72,8 @@ function usePerms(user, project) {
     canUploadContract: isManagementSecretary,
     canSeeNumbers: isMgmt || isAcc || isDMgr || isSupMgr,
     canAddInvoice: isMgmt || isAcc,
-    canEditIFC: u === 'shaaban.karam' || isMgmt || isDMgr,
+    /* ✅ التعديل 4: شعبان + إسراء (عدّل username إسراء حسب المسجل بالنظام) */
+    canEditIFC: ['shaaban.karam', 'israa.omran'].includes(u) || isMgmt || isDMgr,
     canManageChangeOrder:
       isMgmt || isDMgr || isSupMgr ||
       (isSec && ['Design', 'Management', 'Supervision'].includes(d)),
@@ -287,13 +295,20 @@ export default function ProjectDetails() {
 
   /* ── Actions ──────────────────────────────────────────── */
   // ✅ حالات الـ Structural (قائمة اختيار — مصدر واحد)
-  const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
-
+const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
+const IFC_OPTIONS = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
   const setStructStatus = (status) => {
     apiClient.patch(`projects/${id}/structural-status/`, { status }).then(load);
   };
-  // ✅ مراحل العرض/العقد (مصدر واحد) + دالة حفظ واحدة
-  const OFFER_STAGES = ['NOT_SUBMITTED', 'SUBMITTED', 'APPROVED'];
+  /* ✅ التعديل 5: مراحل العرض/العقد الجديدة (سكرتيرة الإدارة) */
+  const OFFER_STAGES = [
+    'NOT_SUBMITTED',
+    'SUBMITTED',
+    'PENDING_BY_CLIENT',
+    'PREPARATION',
+    'APPROVED_SIGNED_BY_CLIENT',
+    'DECLINED_BY_CLIENT',
+  ];
   const patchOfferContract = (payload) =>
     apiClient.patch(`projects/${id}/offer-status/`, payload).then(load);
 
@@ -303,12 +318,9 @@ export default function ProjectDetails() {
       .then(() => { setHoldOpen(false); setHoldReason(''); load(); });
   };
   const resumeStruct = () => apiClient.patch(`projects/${id}/structural-status/`, { status: 'IN_PROGRESS' }).then(load);
-  const cycleIFC = () => {
-    const order = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
-    const next = order[Math.min(order.indexOf(ifcState) + 1, 2)];
-    if (next === ifcState) return;
-    apiClient.patch(`projects/${id}/ifc-status/`, { status: next }).then(load);
-  };
+const setIfcStatus = (status) => {
+  apiClient.patch(`projects/${id}/ifc-status/`, { status }).then(load);
+};
   const submitPrio = () => {
     apiClient.patch(`projects/${id}/priority/`, prioForm).then(() => { setPrioOpen(false); load(); });
   };
@@ -336,19 +348,25 @@ export default function ProjectDetails() {
         {/* ── Header ────────────────────────────────── */}
         <header className="rv pd-head">
           <Link to="/projects" className="pd-back"><ArrowLeft size={18} /></Link>
-          <button
-            onClick={() => setInfoOpen(true)}
-            className="ms-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0b1f3c] text-white text-sm font-bold hover:bg-[#16305a] transition shadow-sm"
-          >
-            <FileText size={16} /> Project Details
-          </button>
           <div className="pd-head-main">
             <div className="pd-pno"><Hash size={13} /> {p.project_no} <i className="pd-dotsep" /> {p.scope}</div>
             <h1 className="pd-title">{p.name}</h1>
             <div className="pd-meta">
               <span><Building2 size={13} /> {p.client_name || '—'}</span>
               {p.location && <span><MapPin size={13} /> {p.location}</span>}
-              <span><Calendar size={13} /> {p.start_date || 'Not started'}</span>
+              {/* ✅ التعديل 1: زر Project Details بجوار Location */}
+              <button
+                onClick={() => setInfoOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0b1f3c] text-white text-xs font-bold hover:bg-[#16305a] transition shadow-sm"
+                title="View full project details"
+              >
+                <FileText size={13} /> Project Details
+              </button>
+              <span><Calendar size={13} /> Start: {p.start_date || 'Not started'}</span>
+              {/* ✅ التعديل 2: عرض End Date الذي تم إدخاله */}
+              {p.end_date && (
+                <span><Calendar size={13} /> End: {p.end_date}</span>
+              )}
               {p.duration_days > 0 && <span><Clock size={13} /> {p.duration_days} days</span>}
             </div>
           </div>
@@ -368,6 +386,8 @@ export default function ProjectDetails() {
           <Slab label="Client" v={p.client_name || '—'} />
           <Slab label="Actual Start" v={p.start_date || 'Tied to first payment'} mono />
           <Slab label="Location" v={p.location || '—'} />
+          {/* ✅ التعديل 2: Slab للـ End Date */}
+          <Slab label="End Date" v={p.end_date || '—'} mono />
           {P.canSeeNumbers && (
             <Slab accent label="Contract Value" v={<CountUp value={p.contract_value} dec={0} />} money />
           )}
@@ -392,15 +412,15 @@ export default function ProjectDetails() {
               <Block rv tag="FLAGS" title="Status & Discipline Flags">
                 <div className="pd-flags">
                   <FlagCard label="DC1" accent="sky" state={dc1State} pct={dc1Pct}
-                    sub={`${dc1.total || 0}/${dc1.completed || 0} tasks`} />
+                    sub={`${dc1.completed || 0}/${dc1.total || 0} tasks`} />
                   <FlagCard label="DC2" accent="violet" state={dc2State} pct={dc2Pct}
-                    sub={`${dc2.total || 0}/${dc2.completed || 0} tasks`} />
+                    sub={`${dc2.completed || 0}/${dc2.total || 0} tasks`} />
                   <FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
                     interactive={P.canEditStruct} options={STRUCT_OPTIONS} onSelect={setStructStatus}
                     hold={structState === 'ON_HOLD'} holdInfo={struct}
                     onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
-                  <FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
-                    interactive={P.canEditIFC} onCycle={cycleIFC} />
+<FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
+  interactive={P.canEditIFC} options={IFC_OPTIONS} onSelect={setIfcStatus} />
                 </div>
               </Block>
             )}
@@ -410,11 +430,14 @@ export default function ProjectDetails() {
               action={canEditTasks
                 ? <span className="pd-editable">Updates Enabled</span>
                 : <span className="pd-readonly">Read-only</span>}>
-              <CompletedTasksSection
-                tasks={p.tasks || []}
-                user={user}
-                onReload={load}
-              />
+              {/* ✅ التعديل 3: سكرول داخلي لقسم المهام فقط */}
+              <div className="pd-tasks-scroll">
+                <CompletedTasksSection
+                  tasks={p.tasks || []}
+                  user={user}
+                  onReload={load}
+                />
+              </div>
             </Block>
 
             {p.scope === 'SUPERVISION' && (
@@ -446,7 +469,7 @@ export default function ProjectDetails() {
 
             {/* Financial status — figures for authorized, names+percentages for all */}
             <Block rv tag="FINANCE" title="Financial Status"
-              action={P.canSeeNumbers ? <span className="pd-editable">Full figures</span> : <span className="pd-readonly">Names & percentages only</span>}>
+              action={P.canSeeNumbers ? <span className="pd-editable">Full figures</span> : <span className="pd-readonly">Percentages only</span>}>
               <FinanceStrip invoices={p.invoices} seeNumbers={P.canSeeNumbers} />
             </Block>
             
@@ -860,21 +883,26 @@ function Tendering({ t, canEdit, onChanged, pid }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════
+✅ FinanceStrip — تم التعديل هنا:
+   - المديرون (seeNumbers=true): يشوفوا الأرقام الكاملة + النسبة
+   - الموظفون (seeNumbers=false): يشوفوا النسبة المئوية فقط بشكل صريح وواضح
+   - تم إضافة حماية ?? للتعامل مع كلا الاسمين من الباك-إند
+═══════════════════════════════════════════════════════════════ */
 function FinanceStrip({ invoices, seeNumbers }) {
   const list = invoices || [];
   if (!list.length) return <p className="pd-empty-mini">No invoices yet.</p>;
   return (
     <ul className="pd-fin">
       {list.map((iv) => {
-        // For authorized: compute from actual figures
-        // For engineers: use the sanitized percentage from the backend
+        // ✅ حماية مزدوجة: الباك-إند قد يرسل collection_percentage (الجديد) أو payment_progress_percentage (القديم)
         const pct = seeNumbers
           ? (Number(iv.total_amount) > 0
             ? Math.min(100, Math.round(
               ((iv.payments || []).reduce((s, x) => s + Number(x.amount_paid || 0), 0)
                 / Number(iv.total_amount)) * 100))
             : 0)
-          : (iv.payment_progress_percentage || 0);
+          : (iv.collection_percentage ?? iv.payment_progress_percentage ?? 0);
         const m = meta(iv.status);
         return (
           <li key={iv.id} className={`pd-fin-row ${iv.status === 'OVERDUE' ? 'over' : ''}`}>
@@ -883,10 +911,16 @@ function FinanceStrip({ invoices, seeNumbers }) {
               <span className="pd-fin-ms">{iv.milestone_type_display}</span>
             </div>
             <div className="pd-fin-bar"> <span style={{ width: `${pct}%` }} /> <em>{pct}%</em> </div>
-            {seeNumbers && (
+            {seeNumbers ? (
               <div className="pd-fin-nums">
                 <span>Total: <CountUp value={iv.total_amount} /></span>
                 <span>Paid: <CountUp value={(iv.payments || []).reduce((s, x) => s + Number(x.amount_paid || 0), 0)} /></span>
+              </div>
+            ) : (
+              /* ✅ عرض النسبة المئوية بشكل صريح وواضح للموظفين */
+              <div className="pd-fin-pct">
+                <span className="pd-fin-pct-label">Paid</span>
+                <span className="pd-fin-pct-value">{pct}%</span>
               </div>
             )}
             <span className={`pd-badge t-${m.c}`}>{m.t}</span>
@@ -1106,7 +1140,7 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-pno{ display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.18em; color:#d97706; font-weight:700;}
 .pd-dotsep{ width:4px; height:4px; border-radius:50%; background:var(--line); display:inline-block; }
 .pd-title{ font-family:'Space Grotesk','IBM Plex Sans Arabic'; font-size:clamp(28px,4.6vw,52px); font-weight:700; line-height:1.02; letter-spacing:-.02em; margin:6px 0 8px; color:var(--paper); }
-.pd-meta{ display:flex; flex-wrap:wrap; gap:14px; color:var(--mut); font-size:12.5px; font-weight:500;}
+.pd-meta{ display:flex; flex-wrap:wrap; gap:10px; color:var(--mut); font-size:12.5px; font-weight:500; align-items:center;}
 .pd-meta span{ display:inline-flex; align-items:center; gap:5px; }
 .pd-head-right{ display:flex; flex-direction:column; align-items:flex-end; gap:12px; flex:none; }
 .pd-ring-wrap{ display:flex; align-items:center; gap:10px; }
@@ -1128,7 +1162,7 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-pulse::after{ content:""; position:absolute; inset:-3px; border-radius:50%; background:currentColor; opacity:.4; animation:pdping 1.8s infinite; }
 @keyframes pdping{ 70%,100%{ transform:scale(2.4); opacity:0; } }
 /* Slabs */
-.pd-slabs{ display:grid; grid-template-columns:1.4fr 1.4fr 1fr 1fr; gap:12px; margin-top:18px; }
+.pd-slabs{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:18px; }
 .pd-slab{ background:var(--surf); border:1px solid var(--line); border-radius:14px; padding:13px 15px; transition:.3s; box-shadow:0 2px 8px rgba(0,0,0,.02); }
 .pd-slab:hover{ border-color:#cbd5e1; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.04); }
 .pd-slab.acc{ border-color:rgba(245,158,11,.3); background:linear-gradient(135deg,rgba(245,158,11,.05),var(--surf)); }
@@ -1149,6 +1183,12 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-editable{ font-size:10.5px; color:#059669; background:rgba(16,185,129,.12); padding:3px 9px; border-radius:999px; font-weight:600;}
 .pd-readonly{ font-size:10.5px; color:var(--mut); font-weight:600;}
 .pd-empty-mini{ font-size:12.5px; color:var(--mut); padding:8px 0; font-weight:500;}
+/* ✅ التعديل 3: سكرول داخلي لقسم المهام */
+.pd-tasks-scroll{ max-height:600px; overflow-y:auto; padding-right:6px; }
+.pd-tasks-scroll::-webkit-scrollbar{ width:8px; }
+.pd-tasks-scroll::-webkit-scrollbar-track{ background:rgba(0,0,0,.03); border-radius:10px; }
+.pd-tasks-scroll::-webkit-scrollbar-thumb{ background:rgba(14,165,233,.3); border-radius:10px; }
+.pd-tasks-scroll::-webkit-scrollbar-thumb:hover{ background:rgba(14,165,233,.5); }
 /* Lifecycle */
 .pd-lc{ list-style:none; margin:0; padding:0; display:flex; gap:0; overflow-x:auto; padding-bottom:6px; }
 .pd-lc-node{ position:relative; flex:1; min-width:108px; display:flex; flex-direction:column; align-items:center; gap:6px; padding-top:18px; }
@@ -1211,6 +1251,10 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-fin-bar span{ position:absolute; inset-inline-start:0; top:0; height:100%; border-radius:99px; background:var(--emerald); transition:width .8s ease; }
 .pd-fin-bar em{ position:absolute; inset-inline-end:0; top:-14px; font-style:normal; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--mut); font-weight:600;}
 .pd-fin-nums{ display:flex; flex-direction:column; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--mut); text-align:end; font-weight:600;}
+/* ✅ التعديل الجديد: عرض النسبة المئوية الصريحة للموظفين */
+.pd-fin-pct{ display:flex; flex-direction:column; align-items:flex-end; font-family:'JetBrains Mono',monospace; min-width:60px; }
+.pd-fin-pct-label{ font-size:9px; color:var(--mut); font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+.pd-fin-pct-value{ font-size:16px; font-weight:700; color:var(--emerald); line-height:1.1; }
 @media(max-width:640px){ .pd-fin-row{ grid-template-columns:1fr auto; } .pd-fin-bar,.pd-fin-nums{ display:none; } }
 /* Offer / Contract */
 .pd-offer{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
@@ -1279,3 +1323,4 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-select{ flex:1; border:1px solid var(--line); border-radius:8px; background:var(--surf); color:var(--paper); font-family:inherit; font-size:12px; font-weight:600; padding:5px 8px; outline:none; transition:border-color .2s; }
 .pd-select:focus{ border-color:var(--amber); }
 `;
+
