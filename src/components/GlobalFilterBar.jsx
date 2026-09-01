@@ -10,7 +10,7 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
     client_id: initialFilters.client_id || '',
     stage: initialFilters.stage || '',
     start_date_from: initialFilters.start_date_from || '',
-    start_date_to: initialFilters.start_date_to || '',
+  end_date: initialFilters.end_date || '',   // ✅ جديد
     q: initialFilters.q || '',
   });
 
@@ -29,8 +29,9 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
       client_id: '',
       stage: '',
       start_date_from: '',
-      start_date_to: '',
       q: '',
+          end_date: '',   // ✅ جديد
+
     };
     setFilters(emptyFilters);
     onFilterChange(emptyFilters);
@@ -62,7 +63,7 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
               type="text"
               value={filters.q}
               onChange={(e) => handleChange('q', e.target.value)}
-              placeholder="Project name, number, client, location..."
+              placeholder="Project name,pin num , client, location..."
               className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
@@ -148,15 +149,15 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date To</label>
-          <input
-            type="date"
-            value={filters.start_date_to}
-            onChange={(e) => handleChange('start_date_to', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          />
-        </div>
+<div>
+  <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+  <input
+    type="date"
+    value={filters.end_date || ''}
+    onChange={(e) => handleChange('end_date', e.target.value)}
+    className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+  />
+</div>
       </div>
     </div>
   );
@@ -164,4 +165,3 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
 
 export default GlobalFilterBar;
 
-     
