@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  // تم التعديل هنا: استخدام مسار نسبي بدلاً من الرابط المباشر
-  baseURL: '/api/', 
+  // تحديد رابط الدومين الصريح للـ API بـ HTTPS
+  baseURL: 'https://iconqa.online/api/', 
   headers: {
     'Content-Type': 'application/json',
   },
