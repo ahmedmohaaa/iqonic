@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "http://169.58.112.213/api/$1"
+      "destination": "https://iconqa.online/api/$1"
     },
     {
       "source": "/(.*)",
