@@ -164,7 +164,6 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     { path: '/tasks', label: 'My Tasks', icon: CheckSquare, roles: ['ALL'] },
     { path: '/tasks/all', label: 'All Tasks', icon: ListTodo, roles: ['ALL'] },
     { path: '/admin/staff', label: 'Staff Management', icon: Users, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM'] },
-    { path: '/admin/users', label: 'User Management', icon: Shield, roles: ['GM', 'AGM'] },
     { path: '/admin/reports', label: 'Reports & Analytics', icon: BarChart3, roles: ['GM', 'AGM'] },
     { path: '/supervision/external-logs', label: 'External Logs', icon: FileText, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'] },
     { path: '/reports', label: 'Reports', icon: BarChart3, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'] },
