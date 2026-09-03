@@ -251,9 +251,9 @@ const filteredConvs = useMemo(() => {
                     {!mine && !grouped && <Avatar name={m.sender_name} tone={ROLE_TONE[(users.find((u) => u.id === m.sender_id) || {}).role] || 'slate'} size={30} />}
                     {!mine && grouped && <span className="cha-row-spacer" />}
                     <div className="cha-bubble-wrap">
-                      {!mine && !grouped && active.room_type !== 'DIRECT' && (
-                        <span className="cha-sender">{m.sender_name}</span>
-                      )}
+{!mine && active.room_type !== 'DIRECT' && (
+  <span className="cha-sender">{m.sender_name}</span>
+)}
                       <div className={`cha-bubble ${mine ? 'mine' : 'theirs'}`}>
                         <p>{m.message}</p>
                         {m.attachment && <a className="cha-attach" href={m.attachment} target="_blank" rel="noreferrer"><Paperclip size={12} /> مرفق</a>}
@@ -402,7 +402,7 @@ const CSS = `
 .cha-av--rose{ background:linear-gradient(145deg,#fb7185,#e11d48); } .cha-av--slate{ background:linear-gradient(145deg,#94a3b8,#475569); }
 
 /* المنطقة الرئيسية */
-.cha-main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; }
+.cha-main{ flex:1; display:flex; flex-direction:column; min-width:0; height:100%; overflow:hidden; }
 .cha-noconv{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:30px; }
 .cha-noconv-orb{ width:84px; height:84px; border-radius:24px; display:grid; place-items:center; background:linear-gradient(145deg,rgba(14,165,233,.1),rgba(14,165,233,.02)); color:var(--sky); border:1px solid rgba(14,165,233,.2); animation:chafloat 4s ease-in-out infinite; box-shadow:0 12px 24px -10px rgba(14,165,233,.15); }
 @keyframes chafloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
@@ -416,8 +416,7 @@ const CSS = `
 
 /* رأس المحادثة */
 .cha-head{ display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.8); backdrop-filter:blur(8px); flex-shrink:0; }
-/* 👈 غيّر display من none إلى grid */
-.cha-back{ display:grid; width:36px; height:36px; border-radius:9px; background:var(--surf); border:1px solid var(--line); color:var(--paper); cursor:pointer; flex:none; place-items:center; }
+.cha-back{ display:none; width:36px; height:36px; border-radius:9px; background:var(--surf); border:1px solid var(--line); color:var(--paper); cursor:pointer; flex:none; place-items:center; }
 .cha-head-txt{ flex:1; min-width:0; }
 .cha-head-txt b{ font-family:'Space Grotesk','IBM Plex Sans Arabic'; font-size:16px; font-weight:700; display:block; color:var(--paper); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cha-head-txt span{ display:flex; align-items:center; gap:7px; font-size:11px; color:var(--mut); margin-top:2px; font-weight:600;}
@@ -426,9 +425,7 @@ const CSS = `
 .cha-live-dot::after{ content:""; position:absolute; inset:-3px; border-radius:50%; background:var(--emerald); opacity:.4; animation:chaping 1.8s infinite; }
 
 /* الرسائل */
-.cha-msgs{ flex:1; overflow-y:auto; padding:18px clamp(12px,3vw,30px);
-min-height: 0; 
-display:flex; flex-direction:column; gap:4px; -webkit-overflow-scrolling:touch; }
+.cha-msgs{ flex:1; overflow-y:auto; padding:18px clamp(12px,3vw,30px); min-height:0; display:flex; flex-direction:column; gap:4px; -webkit-overflow-scrolling:touch; }
 .cha-msgs::-webkit-scrollbar{ width:7px; } .cha-msgs::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:9px; }
 .cha-empty-msgs{ margin:auto; color:var(--mut); font-size:13px; font-weight:500;}
 .cha-row{ display:flex; align-items:flex-end; gap:8px; animation:charow .3s cubic-bezier(.2,.7,.2,1) both; }
@@ -448,7 +445,7 @@ display:flex; flex-direction:column; gap:4px; -webkit-overflow-scrolling:touch; 
 .cha-time svg{ color:var(--sky); }
 
 /* الإدخال */
-.cha-compose{ padding:10px clamp(12px,3vw,30px) 14px; border-top:1px solid var(--line); background:rgba(255,255,255,.8); backdrop-filter:blur(8px); flex-shrink:0; }
+.cha-compose{ padding:10px clamp(12px,3vw,30px) 14px; border-top:1px solid var(--line); background:rgba(255,255,255,.95); backdrop-filter:blur(8px); flex:none; z-index:10; }
 .cha-mentions{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
 .cha-mention-chip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0284c7; background:rgba(14,165,233,.1); border:1px solid rgba(14,165,233,.2); padding:3px 8px; border-radius:999px; }
 .cha-mention-chip button{ background:none; border:none; color:#0284c7; cursor:pointer; display:grid; place-items:center; }
@@ -496,14 +493,14 @@ display:flex; flex-direction:column; gap:4px; -webkit-overflow-scrolling:touch; 
 .cha-new-txt em{ font-style:normal; font-size:10.5px; color:var(--mut); font-weight:600;}
 .cha-new-item > svg{ color:var(--mut); }
 
-/* ═══ التجاوب مع الهواتف الشامل ═══ */
+/* ═══ التجاوب مع الهواتف ═══ */
 @media (max-width: 820px) {
   .cha { 
     height: calc(100dvh - 64px); 
     min-height: 0; 
   }
+  .cha-back { display: grid !important; }
   
-  /* القائمة الجانبية تعمل كـ Overlay كامل محلياً داخل حاوية الشات */
   .cha-side { 
     position: absolute; 
     top: 0;
@@ -529,20 +526,12 @@ display:flex; flex-direction:column; gap:4px; -webkit-overflow-scrolling:touch; 
     height: 100%;
   }
   
-  /* إظهار زر الرجوع للمستند الرئيسي */
-  .cha-back { display: grid; }
-  
-  /* أحجام ومساحات مخصصة للهواتف */
   .cha-head { padding: 10px 14px; gap: 10px; }
   .cha-head-txt b { font-size: 14.5px; }
   .cha-bubble-wrap { max-width: 88%; }
   
-  /* إضافة مساحة حماية لشاشات الآيفون السفلية (Safe Area) */
-  .cha-compose { 
-    padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); 
-  }
+  .cha-compose { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
   
-  /* منع الزوم التلقائي في Safari iOS عند التركيز على حقول النص */
   .cha-input, 
   .cha-search input, 
   .cha-mention-search input, 
@@ -555,3 +544,4 @@ display:flex; flex-direction:column; gap:4px; -webkit-overflow-scrolling:touch; 
   .cha-new { width: 100%; max-height: 90dvh; border-radius: 16px; }
 }
 `;
+
