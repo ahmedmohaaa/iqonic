@@ -6,6 +6,7 @@ import {
   AlertCircle, Clock, Loader, Plus
 } from 'lucide-react';
 import AddExternalLogModal from './AddExternalLogModal';
+
 const ExternalLogs = () => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]);
@@ -14,10 +15,12 @@ const ExternalLogs = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterProject, setFilterProject] = useState('');
-// نفس قاعدة الكتابة في CanManageExternalLogs (والباك-إند يفرضها أيضًا)
-const canAddLog =
-  ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'].includes(user?.role) ||
-  user?.username === 'ahmed.zabady';
+
+  // نفس قاعدة الكتابة في CanManageExternalLogs (والباك-إند يفرضها أيضًا)
+  const canAddLog =
+    ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'].includes(user?.role) ||
+    user?.username === 'ahmed.zabady';
+
   useEffect(() => {
     fetchLogs();
   }, []);
@@ -38,13 +41,18 @@ const canAddLog =
     }
   };
 
+  // ✅ تطبيق الفلترة محلياً (Search + Filter Type)
   const filteredLogs = logs.filter(log => {
+    // فلتر البحث
     const matchesSearch = 
       log.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.project_name?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesSearch;
+    // ✅ فلتر النوع (PENDING_DOCUMENTS / CRITICAL / All)
+    const matchesType = !filterType || log.sub_type === filterType;
+    
+    return matchesSearch && matchesType;
   });
 
   const getSubTypeColor = (subType) => {
@@ -60,27 +68,27 @@ const canAddLog =
     return <Clock size={16} className="text-yellow-500" />;
   };
 
-return (
+  return (
     <div className="space-y-6">
 
-    {/* Header */}
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-          <FileText className="mr-2 text-primary" size={28} />
-          External Logs
-        </h1>
-        <p className="text-sm text-gray-500">Track external documents and critical issues</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+            <FileText className="mr-2 text-primary" size={28} />
+            External Logs
+          </h1>
+          <p className="text-sm text-gray-500">Track external documents and critical issues</p>
+        </div>
+        {canAddLog && (
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center"
+          >
+            <Plus size={18} className="mr-1" /> Add External Log
+          </button>
+        )}
       </div>
-      {canAddLog && (
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center"
-        >
-          <Plus size={18} className="mr-1" /> Add External Log
-        </button>
-      )}
-    </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -179,8 +187,8 @@ return (
           ))}
         </div>
       )}
-    
-<AddExternalLogModal 
+
+      <AddExternalLogModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
         onLogAdded={fetchLogs} 
@@ -190,4 +198,3 @@ return (
 };
 
 export default ExternalLogs;
-
