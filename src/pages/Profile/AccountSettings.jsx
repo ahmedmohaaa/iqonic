@@ -87,14 +87,14 @@ const AccountSettings = () => {
     <div className="max-w-2xl mx-auto p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Account Settings</h1>
-        <p className="text-gray-500 mt-1">Update your personal information</p>
+        <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
+        <p className="text-gray-700 mt-1 font-medium">Update your personal information</p>
       </div>
 
       {/* Message Alert */}
       {message.text && (
-        <div className={`mb-6 p-4 rounded-lg flex items-center ${
-          message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+        <div className={`mb-6 p-4 rounded-lg flex items-center font-medium ${
+          message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
         }`}>
           {message.type === 'success' ? (
             <CheckCircle className="mr-2" size={20} />
@@ -110,34 +110,34 @@ const AccountSettings = () => {
         {/* Name Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
               First Name *
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <User className="absolute left-3 top-2.5 text-gray-600" size={18} />
               <input
                 type="text"
                 name="first_name"
                 value={formData.first_name}
                 onChange={handleChange}
                 required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
               Last Name *
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <User className="absolute left-3 top-2.5 text-gray-600" size={18} />
               <input
                 type="text"
                 name="last_name"
                 value={formData.last_name}
                 onChange={handleChange}
                 required
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
               />
             </div>
           </div>
@@ -145,52 +145,52 @@ const AccountSettings = () => {
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 mb-2">
             Email Address *
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-2.5 text-gray-400" size={18} />
+            <Mail className="absolute left-3 top-2.5 text-gray-600" size={18} />
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
             />
           </div>
         </div>
 
         {/* Phone */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 mb-2">
             Phone Number
           </label>
           <div className="relative">
-            <Phone className="absolute left-3 top-2.5 text-gray-400" size={18} />
+            <Phone className="absolute left-3 top-2.5 text-gray-600" size={18} />
             <input
               type="tel"
               name="phone_number"
               value={formData.phone_number}
               onChange={handleChange}
               placeholder="+974 XXXX XXXX"
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none"
             />
           </div>
         </div>
 
         {/* Department */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-semibold text-gray-900 mb-2">
             Department
           </label>
           <div className="relative">
-            <Building className="absolute left-3 top-2.5 text-gray-400" size={18} />
+            <Building className="absolute left-3 top-2.5 text-gray-600" size={18} />
             <select
               name="department"
               value={formData.department}
               onChange={handleChange}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none bg-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none bg-white"
             >
               <option value="">Select Department</option>
               <option value="Design">Design</option>
@@ -203,24 +203,24 @@ const AccountSettings = () => {
 
         {/* Read-only Fields */}
         <div className="pt-4 border-t">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Account Information (Read-only)</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Account Information (Read-only)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Username</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Username</label>
               <input
                 type="text"
                 value={authUser?.username || ''}
                 disabled
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Role</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Role</label>
               <input
                 type="text"
                 value={authUser?.role_display || authUser?.role || ''}
                 disabled
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800"
               />
             </div>
           </div>
@@ -231,14 +231,14 @@ const AccountSettings = () => {
           <button
             type="button"
             onClick={() => navigate('/profile')}
-            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 bg-gray-50 transition"
+            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-800 bg-gray-50 hover:bg-gray-100 transition font-medium"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2 bg-primary text-white rounded-lg bg-blue-800 transition flex items-center disabled:opacity-50"
+            className="px-6 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition flex items-center font-semibold disabled:opacity-50"
           >
             <Save className="mr-2" size={18} />
             {saving ? 'Saving...' : 'Save Changes'}
