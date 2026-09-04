@@ -787,7 +787,7 @@ if (!showAssignSelect && user?.id) {
                       ? 'Change Order Target (Sub‑Project) *'
                       : isInternal
                         ? 'Supervision Project *'
-                        : 'Project Number *'}
+                        : 'Design projects'}
                   </label>
 
                   <div className="relative mb-1.5">
