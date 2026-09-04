@@ -11,16 +11,16 @@ const APP_TYPE_LABELS = {
   COMPLETION_CERTIFICATE: 'Completion Certificate',
   MAINTENANCE_DEMOLITION: 'Maintenance and Demolition',
 };
+
 const SupervisionDirectory = () => {
   const { user } = useAuth();
   // ✅ سكرتيرة الإشراف فقط — نفس شرط permissions.py في المشروع
-const isSupervisionSecretary =
-  user?.role === 'SECRETARY' && user?.department === 'Supervision';
+  const isSupervisionSecretary =
+    user?.role === 'SECRETARY' && user?.department === 'Supervision';
   const [activeTab, setActiveTab] = useState('active');
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterClient, setFilterClient] = useState('');
 
   const tabs = [
     { id: 'active', label: 'Active Projects', icon: Building2, count: 0 },
@@ -71,14 +71,14 @@ const isSupervisionSecretary =
             <Building2 className="mr-2 text-primary" size={28} />
             Supervision Projects Directory
           </h1>
-            {isSupervisionSecretary && (
-    <Link
-      to="/projects/create"
-      className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center hover:bg-blue-900 transition"
-    >
-      <Plus size={18} className="mr-1" /> New project
-    </Link>
-  )}
+          {isSupervisionSecretary && (
+            <Link
+              to="/projects/create"
+              className="bg-primary text-white px-4 py-2 rounded-lg bg-blue-800 flex items-center hover:bg-blue-900 transition"
+            >
+              <Plus size={18} className="mr-1" /> New project
+            </Link>
+          )}
           <p className="text-sm text-gray-500">Manage and track all supervision projects</p>
         </div>
       </div>
@@ -106,7 +106,7 @@ const isSupervisionSecretary =
         </nav>
       </div>
 
-      {/* Search & Filters */}
+      {/* Search */}
       <div className="bg-white p-4 rounded-lg shadow-sm flex flex-wrap items-center gap-4">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
@@ -116,16 +116,6 @@ const isSupervisionSecretary =
             className="w-full pl-10 pr-4 py-2 border-2 border-gray-400 rounded-lg text-gray-900 font-semibold placeholder-gray-500 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-500"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Filter size={18} className="text-gray-500" />
-          <input
-            type="text"
-            placeholder="Filter by client..."
-            value={filterClient}
-            onChange={(e) => setFilterClient(e.target.value)}
-            className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
         </div>
       </div>
@@ -182,9 +172,9 @@ const isSupervisionSecretary =
                 </div>
               </div>
               <div className="bg-gray-50 px-5 py-3 border-t flex justify-end">
-<span className="text-blue-800 text-sm font-bold flex items-center group-hover:underline">
-  View Details <FolderOpen size={16} className="ml-1" />
-</span>
+                <span className="text-blue-800 text-sm font-bold flex items-center group-hover:underline">
+                  View Details <FolderOpen size={16} className="ml-1" />
+                </span>
               </div>
             </Link>
           ))}
