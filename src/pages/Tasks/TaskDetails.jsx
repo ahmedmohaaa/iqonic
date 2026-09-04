@@ -335,7 +335,7 @@ const TaskDetails = () => {
 
               <div>
                 <p className="text-xs text-gray-500">
-                  {task.end_date ? 'Actual End Date' : 'Expected End Date'}
+                  {task.end_date ? 'Estimated End Date' : 'Expected End Date'}
                 </p>
 
                 <p className="text-sm font-semibold text-gray-800 flex items-center">
@@ -500,3 +500,5 @@ const TaskDetails = () => {
 };
 
 export default TaskDetails;
+
+
