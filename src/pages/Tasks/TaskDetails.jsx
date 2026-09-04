@@ -396,9 +396,7 @@ const TaskDetails = () => {
           <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
             <Clock className="mr-2" size={20} /> Duration & Hold History
           </h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Creation: {task.created_at ? task.created_at.split('T')[0] : '—'} · Start (User): {task.start_date || '—'} · End (Approval): {task.approval_date || task.end_date || '—'}
-          </p>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
               <p className="text-xs text-blue-600">Total Duration</p>
