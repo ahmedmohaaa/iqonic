@@ -32,7 +32,9 @@ const StaffManagement = () => {
     { value: 'DOC_CONTROLLER', label: 'Document Controller' },
   ];
 
-  const departments = ['Design', 'Supervision', 'Management', 'Finance', 'Architecture', 'Structural', 'Electrical', 'Mechanical'];
+  // ✅ الأقسام العاملة فقط (تم حذف: Architecture, Structural, Electrical, Mechanical)
+  // لأنها غير مدعومة في الباك-إند حالياً
+  const departments = ['Design', 'Supervision', 'Management', 'Finance'];
 
   useEffect(() => {
     fetchStaff();
