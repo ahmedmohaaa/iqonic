@@ -33,10 +33,12 @@ const TaskStatusModal = ({ task, permission = 'none', onClose, onSuccess }) => {
   const [expectedResume, setExpectedResume] = useState(task?.expected_resume_date || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-const safeProgress = Math.min(
-  100,
-  Math.max(0, Number.isFinite(Number(progress)) ? Number(progress) : 0)
-);
+
+  const safeProgress = Math.min(
+    100,
+    Math.max(0, Number.isFinite(Number(progress)) ? Number(progress) : 0)
+  );
+
   if (!task || visibleStatuses.length === 0) {
     return null;
   }
@@ -67,13 +69,14 @@ const safeProgress = Math.min(
     setLoading(true);
     setError('');
 
-const payload = {
-  status,
-  progress_percentage: safeProgress,
-  is_on_hold: status === 'ON_HOLD',
-  hold_reason: status === 'ON_HOLD' ? holdReason : null,
-  expected_resume_date: status === 'ON_HOLD' ? expectedResume : null,
-};
+    const payload = {
+      status,
+      progress_percentage: safeProgress,
+      is_on_hold: status === 'ON_HOLD',
+      hold_reason: status === 'ON_HOLD' ? holdReason : null,
+      expected_resume_date: status === 'ON_HOLD' ? expectedResume : null,
+    };
+
     try {
       await updateTaskStatus(task.id, payload);
       onSuccess();
@@ -88,14 +91,14 @@ const payload = {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-bold text-gray-800">
+          <h2 className="text-lg font-bold text-gray-900">
             {permission === 'hold-only' ? 'Set Task On Hold' : 'Update Task Status'}
           </h2>
 
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-500 hover:text-gray-700"
           >
             <X size={20} />
           </button>
@@ -110,14 +113,14 @@ const payload = {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-900 mb-1">
               Status
             </label>
 
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full border rounded-lg p-2 text-sm"
+              className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               disabled={visibleStatuses.length === 1}
             >
               {visibleStatuses.map((option) => (
@@ -127,63 +130,65 @@ const payload = {
               ))}
             </select>
           </div>
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Progress
-  </label>
 
-  <div className="space-y-2">
-    <input
-      type="range"
-      min="0"
-      max="100"
-      value={safeProgress}
-      onChange={(e) => setProgress(e.target.value)}
-      className="w-full accent-blue-600"
-    />
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1">
+              Progress
+            </label>
 
-    <div className="flex items-center gap-3">
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
-        <div
-          className="h-full rounded-full bg-blue-600 transition-all"
-          style={{ width: `${safeProgress}%` }}
-        />
-      </div>
+            <div className="space-y-2">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={safeProgress}
+                onChange={(e) => setProgress(e.target.value)}
+                className="w-full accent-blue-600"
+              />
 
-      <span className="w-12 text-center text-xs font-semibold text-gray-600">
-        {safeProgress}%
-      </span>
-    </div>
+              <div className="flex items-center gap-3">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-all"
+                    style={{ width: `${safeProgress}%` }}
+                  />
+                </div>
 
-    <input
-      type="number"
-      min="0"
-      max="100"
-      value={progress}
-      onChange={(e) => setProgress(e.target.value)}
-      className="w-full border rounded-lg p-2 text-sm"
-      placeholder="0"
-    />
-  </div>
-</div>
+                <span className="w-12 text-center text-xs font-bold text-gray-900">
+                  {safeProgress}%
+                </span>
+              </div>
+
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={progress}
+                onChange={(e) => setProgress(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
           {status === 'ON_HOLD' && (
-            <div className="space-y-3 bg-red-50 p-3 rounded-lg border border-red-100">
+            <div className="space-y-3 bg-red-50 p-3 rounded-lg border border-red-200">
               <div>
-                <label className="block text-sm font-medium text-red-800 mb-1">
+                <label className="block text-sm font-semibold text-red-900 mb-1">
                   Hold Reason *
                 </label>
 
                 <textarea
                   value={holdReason}
                   onChange={(e) => setHoldReason(e.target.value)}
-                  className="w-full border border-red-200 rounded p-2 text-sm"
+                  className="w-full border border-red-300 rounded p-2 text-sm text-gray-900 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
                   rows="2"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-red-800 mb-1">
+                <label className="block text-sm font-semibold text-red-900 mb-1">
                   Expected Resume Date (Optional)
                 </label>
 
@@ -191,7 +196,7 @@ const payload = {
                   type="date"
                   value={expectedResume}
                   onChange={(e) => setExpectedResume(e.target.value)}
-                  className="w-full border border-red-200 rounded p-2 text-sm"
+                  className="w-full border border-red-300 rounded p-2 text-sm text-gray-900 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
                 />
               </div>
             </div>
@@ -201,7 +206,7 @@ const payload = {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border rounded text-gray-600 bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded text-gray-800 bg-gray-50 hover:bg-gray-100 font-medium"
             >
               Cancel
             </button>
@@ -209,7 +214,7 @@ const payload = {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-primary text-white rounded bg-blue-800 disabled:opacity-50"
+              className="px-4 py-2 bg-blue-800 text-white rounded hover:bg-blue-900 disabled:opacity-50 font-medium"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -221,4 +226,3 @@ const payload = {
 };
 
 export default TaskStatusModal;
-
