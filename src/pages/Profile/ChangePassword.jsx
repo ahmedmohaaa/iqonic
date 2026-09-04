@@ -1,4 +1,4 @@
-// src/pages/Profile/ChangePassword.jsx  — استبدال كامل
+// src/pages/Profile/ChangePassword.jsx — full replacement
 import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { changePassword } from '../../api/services/auth';
@@ -7,7 +7,7 @@ import {
   ArrowLeft, Fingerprint, Clock, LogOut, Sparkles,
 } from 'lucide-react';
 
-/* ── حساب قوة كلمة المرور (تغذية راجعة فورية) ─────────────── */
+/* ── Password strength scoring (instant feedback) ─────────────── */
 const scorePassword = (pw) => {
   const checks = {
     len: pw.length >= 8,
@@ -23,18 +23,18 @@ const scorePassword = (pw) => {
 };
 
 const LEVELS = [
-  { label: 'ضعيفة', tone: '#e11d48', fill: 1 },
-  { label: 'مقبولة', tone: '#f59e0b', fill: 2 },
-  { label: 'جيدة', tone: '#0ea5e9', fill: 3 },
-  { label: 'قوية', tone: '#10b981', fill: 4 },
+  { label: 'Weak',   tone: '#e11d48', fill: 1 },
+  { label: 'Fair',   tone: '#f59e0b', fill: 2 },
+  { label: 'Good',   tone: '#0ea5e9', fill: 3 },
+  { label: 'Strong', tone: '#10b981', fill: 4 },
 ];
 
 const REQUIREMENTS = [
-  { key: 'len', text: '٨ أحرف على الأقل' },
-  { key: 'upper', text: 'حرف كبير واحد (A–Z)' },
-  { key: 'lower', text: 'حرف صغير واحد (a–z)' },
-  { key: 'digit', text: 'رقم واحد (0–9)' },
-  { key: 'symbol', text: 'رمز خاص (! @ # …)' },
+  { key: 'len',   text: 'At least 8 characters' },
+  { key: 'upper', text: 'One uppercase letter (A–Z)' },
+  { key: 'lower', text: 'One lowercase letter (a–z)' },
+  { key: 'digit', text: 'One digit (0–9)' },
+  { key: 'symbol', text: 'One special symbol (! @ # …)' },
 ];
 
 export default function ChangePassword() {
@@ -67,13 +67,13 @@ export default function ChangePassword() {
     setError('');
     try {
       await changePassword({ old_password: form.old, new_password: form.next });
-      setDone(true); // الباك إند يُبقي جلسة JWT الحالية فعّالة
+      setDone(true); // The backend keeps the current JWT session active
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(
         err.response?.status === 400 && /old password/i.test(detail || '')
-          ? 'كلمة المرور الحالية غير صحيحة.'
-          : detail || 'تعذّر تغيير كلمة المرور. تحقّق من الاتصال بالخادم.',
+          ? 'The current password is incorrect.'
+          : detail || 'Unable to change the password. Please check your connection to the server.',
       );
     } finally {
       setBusy(false);
@@ -89,18 +89,18 @@ export default function ChangePassword() {
           to="/profile"
           className="reveal d1 inline-flex items-center gap-2 text-sm text-slate-500 transition hover:text-slate-900"
         >
-          <ArrowLeft size={16} /> العودة إلى الملف الشخصي
+          <ArrowLeft size={16} /> Back to Profile
         </Link>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[300px_1fr]">
-          {/* ── لوحة الأمان الداكنة (بؤرة وتباين) ───────── */}
+          {/* ── Dark security panel (focus & contrast) ───────── */}
           <aside className="reveal d2 sec-dark rounded-2xl p-6 text-slate-200">
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-xl bg-white/10">
                 <ShieldCheck size={22} className="text-emerald-300" />
               </span>
               <div>
-                <p className="font-disp text-lg leading-none text-white">الأمان</p>
+                <p className="font-disp text-lg leading-none text-white">Security</p>
                 <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-slate-400">
                   Account Security
                 </p>
@@ -108,35 +108,35 @@ export default function ChangePassword() {
             </div>
 
             <div className="mt-7 space-y-4 text-sm">
-              <Fact icon={<KeyRound size={15} />} title="كلمة المرور" value="قابلة للتغيير الآن" />
-              <Fact icon={<Fingerprint size={15} />} title="الجلسة الحالية" value="تبقى فعّالة بعد التغيير" />
-              <Fact icon={<Clock size={15} />} title="آخر تحديث" value="عند الحفظ أدناه" />
+              <Fact icon={<KeyRound size={15} />} title="Password" value="Can be changed now" />
+              <Fact icon={<Fingerprint size={15} />} title="Current Session" value="Remains active after change" />
+              <Fact icon={<Clock size={15} />} title="Last Update" value="Upon save below" />
             </div>
 
             <div className="mt-7 rounded-xl border border-white/10 bg-white/5 p-3 text-[12px] leading-relaxed text-slate-300">
-              <span className="text-emerald-300">تلميح:</span> النظام يستخدم رموز
-              JWT، لذا لا تُسجَّل خروجك تلقائياً. لإخراج كل الأجهزة استخدم «تسجيل
-              الخروج» بعد التغيير.
+              <span className="text-emerald-300">Tip:</span> The system uses JWT
+              tokens, so you are not logged out automatically. To log out all
+              devices, use "Log Out" after the change.
             </div>
           </aside>
 
-          {/* ── النموذج الحيّ ─────────────────────────── */}
+          {/* ── Live form ─────────────────────────── */}
           <section className="reveal d3 sec-card rounded-2xl p-6 sm:p-8">
             {done ? (
               <SuccessState onExit={() => navigate('/profile')} />
             ) : (
               <form onSubmit={submit} noValidate>
                 <h1 className="font-disp text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                  تغيير كلمة المرور
+                  Change Password
                 </h1>
                 <p className="mt-2 text-sm text-slate-500">
-                  حدّث كلمة مرورك لحماية حسابك داخل نظام ERP.
+                  Update your password to protect your account within the ERP system.
                 </p>
 
-                {/* مقياس القوة */}
+                {/* Strength meter */}
                 <div className="mt-7">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-500">قوة كلمة المرور الجديدة</span>
+                    <span className="text-xs font-medium text-slate-500">New Password Strength</span>
                     <span
                       className="font-mono text-xs font-bold transition-colors"
                       style={{ color: form.next ? lvl.tone : '#94a3b8' }}
@@ -158,10 +158,10 @@ export default function ChangePassword() {
                   </div>
                 </div>
 
-                {/* الحقول */}
+                {/* Fields */}
                 <div className="mt-7 space-y-4">
                   <Field
-                    label="كلمة المرور الحالية"
+                    label="Current Password"
                     value={form.old}
                     onChange={set('old')}
                     show={show.old}
@@ -169,20 +169,20 @@ export default function ChangePassword() {
                     placeholder="••••••••"
                   />
                   <Field
-                    label="كلمة المرور الجديدة"
+                    label="New Password"
                     value={form.next}
                     onChange={set('next')}
                     show={show.next}
                     toggle={() => setShow((s) => ({ ...s, next: !s.next }))}
-                    placeholder="أدخل كلمة مرور جديدة"
+                    placeholder="Enter a new password"
                   />
                   <Field
-                    label="تأكيد كلمة المرور الجديدة"
+                    label="Confirm New Password"
                     value={form.confirm}
                     onChange={set('confirm')}
                     show={show.confirm}
                     toggle={() => setShow((s) => ({ ...s, confirm: !s.confirm }))}
-                    placeholder="أعد كتابة كلمة المرور"
+                    placeholder="Re-enter the password"
                     trailing={
                       form.confirm &&
                       (match ? (
@@ -194,7 +194,7 @@ export default function ChangePassword() {
                   />
                 </div>
 
-                {/* المتطلبات الحية */}
+                {/* Live requirements */}
                 <ul className="mt-5 grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
                   {REQUIREMENTS.map((r) => {
                     const ok = checks[r.key];
@@ -228,14 +228,14 @@ export default function ChangePassword() {
                     onClick={() => navigate('/profile')}
                     className="rounded-xl px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
                   >
-                    إلغاء
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!canSubmit}
                     className="btn-primary rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {busy ? 'جارٍ الحفظ…' : 'حفظ كلمة المرور'}
+                    {busy ? 'Saving…' : 'Save Password'}
                   </button>
                 </div>
               </form>
@@ -247,7 +247,7 @@ export default function ChangePassword() {
   );
 }
 
-/* ── مكوّنات فرعية ─────────────────────────────────────── */
+/* ── Sub-components ─────────────────────────────────────── */
 function Field({ label, value, onChange, show, toggle, placeholder, trailing }) {
   return (
     <label className="block">
@@ -295,30 +295,30 @@ function SuccessState({ onExit }) {
       <span className="grid h-16 w-16 place-items-center rounded-2xl bg-emerald-100 text-emerald-600">
         <ShieldCheck size={32} />
       </span>
-      <h2 className="font-disp mt-5 text-2xl font-bold text-slate-900">تم التغيير بنجاح</h2>
+      <h2 className="font-disp mt-5 text-2xl font-bold text-slate-900">Changed Successfully</h2>
       <p className="mt-2 max-w-sm text-sm text-slate-500">
-        أُحدِثت كلمة مرورك. جلستك الحالية ما زالت فعّالة؛ إن أردت إخراج باقي الأجهزة
-        فسجّل الخروج.
+        Your password has been updated. Your current session remains active; to log
+        out other devices, please sign out.
       </p>
       <div className="mt-6 flex gap-3">
         <button
           onClick={onExit}
           className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
         >
-          العودة للملف الشخصي
+          Back to Profile
         </button>
         <button className="flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
-          <LogOut size={15} /> تسجيل الخروج
+          <LogOut size={15} /> Log Out
         </button>
       </div>
     </div>
   );
 }
 
-/* ── الطبقات والحركات (مضمّنة لتعمل فور اللصق) ──────────── */
+/* ── Styles & animations (inlined to work immediately on paste) ──────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-.bp-wrap{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;position:relative;
+.bp-wrap{font-family:'Space Grotesk','IBM Plex Sans Arabic',system-ui,sans-serif;position:relative;
   background:#f6f7f9;
   background-image:
     radial-gradient(40rem 30rem at 100% -10%, rgba(245,158,11,.10), transparent 60%),
