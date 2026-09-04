@@ -295,8 +295,8 @@ export default function ProjectDetails() {
 
   /* ── Actions ──────────────────────────────────────────── */
   // ✅ حالات الـ Structural (قائمة اختيار — مصدر واحد)
-const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
-const IFC_OPTIONS = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
+  const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
+  const IFC_OPTIONS = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
   const setStructStatus = (status) => {
     apiClient.patch(`projects/${id}/structural-status/`, { status }).then(load);
   };
@@ -318,9 +318,9 @@ const IFC_OPTIONS = ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED'];
       .then(() => { setHoldOpen(false); setHoldReason(''); load(); });
   };
   const resumeStruct = () => apiClient.patch(`projects/${id}/structural-status/`, { status: 'IN_PROGRESS' }).then(load);
-const setIfcStatus = (status) => {
-  apiClient.patch(`projects/${id}/ifc-status/`, { status }).then(load);
-};
+  const setIfcStatus = (status) => {
+    apiClient.patch(`projects/${id}/ifc-status/`, { status }).then(load);
+  };
   const submitPrio = () => {
     apiClient.patch(`projects/${id}/priority/`, prioForm).then(() => { setPrioOpen(false); load(); });
   };
@@ -352,16 +352,7 @@ const setIfcStatus = (status) => {
             <div className="pd-pno"><Hash size={13} /> {p.project_no} <i className="pd-dotsep" /> {p.scope}</div>
             <h1 className="pd-title">{p.name}</h1>
             <div className="pd-meta">
-              <span><Building2 size={13} /> {p.client_name || '—'}</span>
-              {p.location && <span><MapPin size={13} /> {p.location}</span>}
-              {/* ✅ التعديل 1: زر Project Details بجوار Location */}
-              <button
-                onClick={() => setInfoOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0b1f3c] text-white text-xs font-bold hover:bg-[#16305a] transition shadow-sm"
-                title="View full project details"
-              >
-                <FileText size={13} /> Project Details
-              </button>
+              {/* ✅ تم حذف Client و Location من هنا (مكررين في الـ Slabs تحت) */}
               <span><Calendar size={13} /> Start: {p.start_date || 'Not started'}</span>
               {/* ✅ التعديل 2: عرض End Date الذي تم إدخاله */}
               {p.end_date && (
@@ -378,6 +369,14 @@ const setIfcStatus = (status) => {
               <Ring pct={pct} />
               <div className="pd-ring-txt"><CountUp value={pct} suffix="%" /><span>Done</span></div>
             </div>
+            {/* ✅ التعديل: زر Project Details ينتقل هنا — تحت نسبة الإنجاز مباشرة */}
+            <button
+              onClick={() => setInfoOpen(true)}
+              className="pd-details-btn"
+              title="View full project details"
+            >
+              <FileText size={14} /> Project Details
+            </button>
           </div>
         </header>
 
@@ -419,8 +418,8 @@ const setIfcStatus = (status) => {
                     interactive={P.canEditStruct} options={STRUCT_OPTIONS} onSelect={setStructStatus}
                     hold={structState === 'ON_HOLD'} holdInfo={struct}
                     onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
-<FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
-  interactive={P.canEditIFC} options={IFC_OPTIONS} onSelect={setIfcStatus} />
+                  <FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
+                    interactive={P.canEditIFC} options={IFC_OPTIONS} onSelect={setIfcStatus} />
                 </div>
               </Block>
             )}
@@ -1149,6 +1148,33 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-ring-txt{ display:flex; flex-direction:column; align-items:flex-start; }
 .pd-ring-txt{ font-family:'Space Grotesk'; font-size:24px; font-weight:700; line-height:1; color:var(--paper); }
 .pd-ring-txt span{ font-family:'IBM Plex Sans Arabic'; font-size:10px; color:var(--mut); letter-spacing:.1em; font-weight:600;}
+
+/* ✅ زر Project Details الجديد — تحت Ring مباشرة */
+.pd-details-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 14px;
+  background:#0b1f3c;
+  color:#ffffff;
+  border:none;
+  border-radius:10px;
+  font-family:'Space Grotesk','IBM Plex Sans Arabic';
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.02em;
+  cursor:pointer;
+  transition:all .25s ease;
+  box-shadow:0 2px 6px rgba(11,31,60,.15);
+  white-space:nowrap;
+}
+.pd-details-btn:hover{
+  background:#16305a;
+  transform:translateY(-1px);
+  box-shadow:0 4px 10px rgba(11,31,60,.25);
+}
+.pd-details-btn svg{ flex:none; }
+
 /* Badges & colors */
 .pd-badge{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap; }
 .pd-badge.big{ font-size:13px; padding:5px 13px; }
@@ -1323,5 +1349,3 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-select{ flex:1; border:1px solid var(--line); border-radius:8px; background:var(--surf); color:var(--paper); font-family:inherit; font-size:12px; font-weight:600; padding:5px 8px; outline:none; transition:border-color .2s; }
 .pd-select:focus{ border-color:var(--amber); }
 `;
-
- 
