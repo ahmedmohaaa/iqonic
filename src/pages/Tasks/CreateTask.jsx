@@ -144,6 +144,13 @@ useEffect(() => {
   const selectedSupervisionProject = watch('supervision_project');
   const selectedOptionBReviewStage = watch('review_stage');
 
+  // ✅ هل المرحلة المختارة "Other"؟ (مهمة بدون Stage وبدون Discipline)
+  const isOtherStage = isMainStageOther(selectedStage);
+
+  function isMainStageOther(stage) {
+    return stage === 'OTHER';
+  }
+
   // ✅ حساب تاريخ الانتهاء تلقائيًا (Start Date + Duration)
   const computedEndDate = useMemo(() => {
     if (!startDateValue || !durationDaysValue || Number(durationDaysValue) <= 0) return '';
@@ -279,6 +286,14 @@ useEffect(() => {
   }
 }, [showDiscipline, unregister]);
 
+// ✅ عند اختيار "Other": نظّف أي Discipline قديم (مهام Other بدون Discipline)
+useEffect(() => {
+  if (selectedStage === 'OTHER') {
+    setValue('discipline', '');
+    setDisciplines([]);
+  }
+}, [selectedStage, setValue]);
+
 useEffect(() => {
   if (!isMain && !isSupervision && !isInternal) {
     setTypedProjects([]);
@@ -360,16 +375,24 @@ useEffect(() => {
   const onSubmit = async (data) => {
     setError('');
 
-    const hasA = !!(data.project || data.stage);
+    // ✅ مهام "Other": مشروع بدون Stage وبدون Discipline — مسموحة تماماً
+    const isOther = isMain && data.stage === 'OTHER';
+    const hasA = isOther ? !!data.project : !!(data.project || data.stage);
     const hasB = !!(data.supervision_project || data.review_stage);
-    
+
     if (isMain) {
-      if (data.project && !data.stage) return setError('Stage is required when Project Number is selected.');
-      if (data.stage && !data.project) return setError('Project Number is required when Stage is selected.');
-      if (data.supervision_project && !data.review_stage) return setError('Review Stage is required when Supervision Project is selected.');
-      if (data.review_stage && !data.supervision_project) return setError('Supervision Project is required when Review Stage is selected.');
-      if (hasA && hasB) return setError('Please use either Project Number + Stage OR Supervision Project + Review Stage, not both.');
-      if (!hasA && !hasB) return setError('Please provide either Project Number + Stage OR Supervision Project + Review Stage.');
+      if (isOther) {
+        // ✅ مهمة Other: المشروع فقط مطلوب — لا Stage ولا Discipline
+        if (!data.project) return setError('Project Number is required for "Other" tasks.');
+        if (hasB) return setError('Please use either Project Number OR Supervision Project + Review Stage, not both.');
+      } else {
+        if (data.project && !data.stage) return setError('Stage is required when Project Number is selected — or choose "Other".');
+        if (data.stage && !data.project) return setError('Project Number is required when Stage is selected.');
+        if (data.supervision_project && !data.review_stage) return setError('Review Stage is required when Supervision Project is selected.');
+        if (data.review_stage && !data.supervision_project) return setError('Supervision Project is required when Review Stage is selected.');
+        if (hasA && hasB) return setError('Please use either Project Number + Stage OR Supervision Project + Review Stage, not both.');
+        if (!hasA && !hasB) return setError('Please provide either Project Number + Stage OR Supervision Project + Review Stage.');
+      }
     }
 // ✅ الإدارة العليا (ناصر/نسرين) لا ترى قسم الإشراف
 const isTopManagement = ['GM', 'AGM'].includes(user?.role);
@@ -406,9 +429,10 @@ if (isInternal) {
   payload.internal_review_stage_name = reviewStageName || 'OTHER';
 }
 
+// ✅ مهام Other: تُحفظ بدون Stage وبدون Discipline نهائياً
 if (isMain && payload.stage === 'OTHER') {
-delete payload.stage;
-delete payload.discipline;
+  delete payload.stage;
+  delete payload.discipline;
 }
 // ✅ لا ترسل null/فارغ أبدًا — الغياب الكامل هو الـ "اختياري" الصحيح
 if (!payload.project) delete payload.project;
@@ -877,6 +901,13 @@ if (!showAssignSelect && user?.id) {
     <option value="OTHER">Other</option>
   )}
 </select>
+                  )}
+
+                  {/* ✅ توضيح لمهام Other: بدون Stage وبدون Discipline */}
+                  {isMain && isOtherStage && (
+                    <p className="mt-1.5 text-sky-600 text-xs inline-flex items-center gap-1">
+                      <Sparkles size={12} /> "Other" tasks are saved without Stage and without Discipline.
+                    </p>
                   )}
 
                   {((isInternal && errors.internal_review_stage) ||
