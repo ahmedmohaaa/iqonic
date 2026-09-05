@@ -27,9 +27,9 @@ const STATUS_TONE = {
   UNCHARTED: 'slate', UNDER_STUDY: 'sky', COMMENT: 'amber',
   ON_GOING: 'amber', COMPLETED: 'emerald', APPROVED: 'emerald',
 };
-const STATUS_AR = {
-  UNCHARTED: 'غير مخطط', UNDER_STUDY: 'قيد الدراسة', COMMENT: 'تعليق',
-  ON_GOING: 'جارٍ', COMPLETED: 'مكتمل', APPROVED: 'معتمَد',
+const STATUS_LABELS = {
+  UNCHARTED: 'Uncharted', UNDER_STUDY: 'Under Study', COMMENT: 'Comment',
+  ON_GOING: 'On Going', COMPLETED: 'Completed', APPROVED: 'Approved',
 };
 
 export default function EngineerDetailModal({ engineer, onClose }) {
@@ -56,9 +56,9 @@ export default function EngineerDetailModal({ engineer, onClose }) {
   const initials = ((d.first_name?.[0] || '') + (d.last_name?.[0] || '') || d.username?.[0] || '?').toUpperCase();
 
   const tabs = [
-    { id: 'active', label: 'النشطة', count: activeCount, Icon: Activity },
-    { id: 'completed', label: 'المكتملة', count: completed, Icon: CheckCircle2 },
-    { id: 'history', label: 'سجل التسليم', count: handovers, Icon: History },
+    { id: 'active', label: 'Active', count: activeCount, Icon: Activity },
+    { id: 'completed', label: 'Completed', count: completed, Icon: CheckCircle2 },
+    { id: 'history', label: 'Handover History', count: handovers, Icon: History },
   ];
 
   return (
@@ -94,20 +94,20 @@ export default function EngineerDetailModal({ engineer, onClose }) {
         </header>
 
         {loading ? (
-          <div className="skm-load"><Loader2 className="spin" size={26} /> جارٍ تحميل التفاصيل…</div>
+          <div className="skm-load"><Loader2 className="spin" size={26} /> Loading details…</div>
         ) : (
           <>
             <div className="skm-stats">
-              <Stat icon={<ListChecks size={16} />} label="إجمالي المهام" value={total} tone="sky" />
-              <Stat icon={<CheckCircle2 size={16} />} label="مكتملة" value={completed} tone="emerald" pulse={completed > 0} />
-              <Stat icon={<Activity size={16} />} label="نشطة" value={activeCount} tone="amber" />
-              <Stat icon={<CircleDot size={16} />} label="موقوفة" value={onHold} tone="rose" />
-              <Stat icon={<Clock size={16} />} label="أيام عمل" value={days} tone="violet" />
-              <Stat icon={<RefreshCw size={16} />} label="تسليمات" value={handovers} tone="slate" />
+              <Stat icon={<ListChecks size={16} />} label="Total Tasks" value={total} tone="sky" />
+              <Stat icon={<CheckCircle2 size={16} />} label="Completed" value={completed} tone="emerald" pulse={completed > 0} />
+              <Stat icon={<Activity size={16} />} label="Active" value={activeCount} tone="amber" />
+              <Stat icon={<CircleDot size={16} />} label="On Hold" value={onHold} tone="rose" />
+              <Stat icon={<Clock size={16} />} label="Days Worked" value={days} tone="violet" />
+              <Stat icon={<RefreshCw size={16} />} label="Handovers" value={handovers} tone="slate" />
             </div>
 
             <div className="skm-prog">
-              <div className="skm-prog-h"><span>معدل الإنجاز</span><span className="skm-prog-v"><Num value={rate} />%</span></div>
+              <div className="skm-prog-h"><span>Completion Rate</span><span className="skm-prog-v"><Num value={rate} />%</span></div>
               <div className="skm-prog-bar"><span style={{ width: `${rate}%` }} /></div>
             </div>
 
@@ -120,8 +120,8 @@ export default function EngineerDetailModal({ engineer, onClose }) {
             </div>
 
             <div className="skm-body">
-              {tab === 'active' && <TaskList items={d.active_tasks} emptyIcon={<Activity size={26} />} emptyText="لا توجد مهام نشطة حالياً." kind="active" />}
-              {tab === 'completed' && <TaskList items={d.completed_tasks_list} emptyIcon={<Award size={26} />} emptyText="لا توجد مهام مكتملة بعد." kind="completed" />}
+              {tab === 'active' && <TaskList items={d.active_tasks} emptyIcon={<Activity size={26} />} emptyText="No active tasks at the moment." kind="active" />}
+              {tab === 'completed' && <TaskList items={d.completed_tasks_list} emptyIcon={<Award size={26} />} emptyText="No completed tasks yet." kind="completed" />}
               {tab === 'history' && <HistoryList items={d.handover_logs} />}
             </div>
           </>
@@ -156,7 +156,7 @@ function TaskList({ items, emptyIcon, emptyText, kind }) {
             <div className="skm-item-right">
               {kind === 'active' && <span className="skm-item-pct">{t.progress_percentage || 0}%</span>}
               {kind === 'completed' && t.approval_date && <span className="skm-item-date">{t.approval_date}</span>}
-              <span className={`skm-badge t-${tone}`}>{STATUS_AR[t.status] || t.status}</span>
+              <span className={`skm-badge t-${tone}`}>{STATUS_LABELS[t.status] || t.status}</span>
             </div>
           </li>
         );
@@ -166,7 +166,7 @@ function TaskList({ items, emptyIcon, emptyText, kind }) {
 }
 
 function HistoryList({ items }) {
-  if (!items || items.length === 0) return <div className="skm-empty"><ClipboardList size={26} /><p>لا سجلّ تسليم أو استبدال.</p></div>;
+  if (!items || items.length === 0) return <div className="skm-empty"><ClipboardList size={26} /><p>No handover or replacement history.</p></div>;
   return (
     <ul className="skm-list">
       {items.map((h, i) => (
@@ -174,11 +174,11 @@ function HistoryList({ items }) {
           <span className="skm-item-dot" />
           <div className="skm-item-main">
             <span className="skm-item-title">{h.task_title || h.task_discipline}</span>
-            <span className="skm-item-sub">{h.project_name} · {h.days_worked} يوم عمل</span>
+            <span className="skm-item-sub">{h.project_name} · {h.days_worked} days worked</span>
           </div>
           <div className="skm-item-right">
             <span className="skm-item-date"><Calendar size={11} /> {h.handover_date}</span>
-            <span className={`skm-badge t-${STATUS_TONE[h.status_at_handover] || 'slate'}`}>{STATUS_AR[h.status_at_handover] || h.status_at_handover}</span>
+            <span className={`skm-badge t-${STATUS_TONE[h.status_at_handover] || 'slate'}`}>{STATUS_LABELS[h.status_at_handover] || h.status_at_handover}</span>
           </div>
         </li>
       ))}
@@ -261,5 +261,3 @@ const CSS = `
 .skm-badge.t-emerald{ background:rgba(63,178,134,.16); color:#059669; } .skm-badge.t-sky{ background:rgba(92,198,239,.16); color:#0284c7; }
 .skm-badge.t-amber{ background:rgba(230,171,76,.16); color:#d97706; } .skm-badge.t-rose{ background:rgba(227,112,126,.16); color:#dc2626; } .skm-badge.t-slate{ background:rgba(255,255,255,.08); color:#475569; }
 `;
-
-
