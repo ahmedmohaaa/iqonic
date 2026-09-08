@@ -6,11 +6,12 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
     scope: initialFilters.scope || '',
     is_active: initialFilters.is_active || '',
     priority: initialFilters.priority || '',
+    application_type: initialFilters.application_type || '', // ✅ جديد: Permit Type
     permit_status: initialFilters.permit_status || '',
     client_id: initialFilters.client_id || '',
     stage: initialFilters.stage || '',
     start_date_from: initialFilters.start_date_from || '',
-  end_date: initialFilters.end_date || '',   // ✅ جديد
+    end_date: initialFilters.end_date || '',
     q: initialFilters.q || '',
   });
 
@@ -25,13 +26,13 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
       scope: '',
       is_active: '',
       priority: '',
+      application_type: '', // ✅ جديد
       permit_status: '',
       client_id: '',
       stage: '',
       start_date_from: '',
+      end_date: '',
       q: '',
-          end_date: '',   // ✅ جديد
-
     };
     setFilters(emptyFilters);
     onFilterChange(emptyFilters);
@@ -69,10 +70,6 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
           </div>
         </div>
 
-
-
-  
-
         {/* Priority */}
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1">Priority</label>
@@ -86,6 +83,22 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
             <option value="HIGH" className="text-gray-900 bg-white">High</option>
             <option value="MEDIUM" className="text-gray-900 bg-white">Medium</option>
             <option value="LOW" className="text-gray-900 bg-white">Low</option>
+          </select>
+        </div>
+
+        {/* ✅ Permit Type (Application Type) - تم إضافته قبل Permit Status */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">Permit Type</label>
+          <select
+            value={filters.application_type}
+            onChange={(e) => handleChange('application_type', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            <option value="" className="text-gray-900 bg-white">All Types</option>
+            <option value="NEW_PERMIT" className="text-gray-900 bg-white">New Permit</option>
+            <option value="MODIFICATION_PERMIT" className="text-gray-900 bg-white">Modification Permit</option>
+            <option value="COMPLETION_CERTIFICATE" className="text-gray-900 bg-white">Completion Certificate</option>
+            <option value="MAINTENANCE_DEMOLITION" className="text-gray-900 bg-white">Maintenance and Demolition</option>
           </select>
         </div>
 
@@ -105,26 +118,26 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
         </div>
 
         {/* Stage */}
-           {/* Stage */}
-     <div>
-       <label className="block text-xs font-semibold text-gray-700 mb-1">Lifecycle Stage</label>
-       <select
-         value={filters.stage}
-         onChange={(e) => handleChange('stage', e.target.value)}
-         className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-       >
-         <option value="" className="text-gray-900 bg-white">All Stages</option>
-         <option value="OFFER" className="text-gray-900 bg-white">RFQ / Offer</option>
-         <option value="CONTRACT_SUBMITTED" className="text-gray-900 bg-white">Contract Submitted</option>
-         <option value="CONTRACT_SIGNED" className="text-gray-900 bg-white">Contract Signed</option>
-         <option value="CONCEPT" className="text-gray-900 bg-white">Concept Design</option>
-         <option value="DC1" className="text-gray-900 bg-white">DC1</option>
-         <option value="DC2" className="text-gray-900 bg-white">DC2</option>
-         <option value="TENDER" className="text-gray-900 bg-white">Tender Documents</option>
-         <option value="COLLECTION" className="text-gray-900 bg-white">Collection</option>
-         <option value="CLOSED" className="text-gray-900 bg-white">Closed</option>
-       </select>
-     </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">Lifecycle Stage</label>
+          <select
+            value={filters.stage}
+            onChange={(e) => handleChange('stage', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          >
+            <option value="" className="text-gray-900 bg-white">All Stages</option>
+            <option value="OFFER" className="text-gray-900 bg-white">RFQ / Offer</option>
+            <option value="CONTRACT_SUBMITTED" className="text-gray-900 bg-white">Contract Submitted</option>
+            <option value="CONTRACT_SIGNED" className="text-gray-900 bg-white">Contract Signed</option>
+            <option value="CONCEPT" className="text-gray-900 bg-white">Concept Design</option>
+            <option value="DC1" className="text-gray-900 bg-white">DC1</option>
+            <option value="DC2" className="text-gray-900 bg-white">DC2</option>
+            <option value="TENDER" className="text-gray-900 bg-white">Tender Documents</option>
+            <option value="COLLECTION" className="text-gray-900 bg-white">Collection</option>
+            <option value="CLOSED" className="text-gray-900 bg-white">Closed</option>
+          </select>
+        </div>
+
         {/* Date Range */}
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date From</label>
@@ -136,19 +149,18 @@ const GlobalFilterBar = ({ onFilterChange, initialFilters = {} }) => {
           />
         </div>
 
-<div>
-  <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
-  <input
-    type="date"
-    value={filters.end_date || ''}
-    onChange={(e) => handleChange('end_date', e.target.value)}
-    className="border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-  />
-</div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">End Date</label>
+          <input
+            type="date"
+            value={filters.end_date || ''}
+            onChange={(e) => handleChange('end_date', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+        </div>
       </div>
     </div>
   );
 };
 
 export default GlobalFilterBar;
-
