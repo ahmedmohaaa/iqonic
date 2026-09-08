@@ -288,7 +288,41 @@ export default function ProjectDetails() {
   const structState = struct.status || 'PENDING';
   const ifcState = ifc.status || 'NOT_STARTED';
   const overall = p.is_active ? 'ACTIVE' : 'CLOSED';
-  const stages = [...(p.lifecycle_stages || [])].sort((a, b) => a.sequence_order - b.sequence_order);
+
+  // ✅ Override lifecycle stages based on offer/contract status
+  const stages = [...(p.lifecycle_stages || [])].sort((a, b) => a.sequence_order - b.sequence_order).map(s => {
+    let overrideStatus = s.status;
+    
+    // OFFER stage: ACHIEVED only when offer_status === 'APPROVED_SIGNED_BY_CLIENT'
+    if (s.stage_name === 'OFFER') {
+      if (p.offer_status === 'APPROVED_SIGNED_BY_CLIENT') {
+        overrideStatus = 'ACHIEVED';
+      } else {
+        overrideStatus = s.status === 'ACHIEVED' ? 'IN_PROGRESS' : s.status;
+      }
+    }
+    
+    // CONTRACT_SUBMITTED: ACHIEVED when contract_status is SUBMITTED or APPROVED_SIGNED_BY_CLIENT
+    if (s.stage_name === 'CONTRACT_SUBMITTED') {
+      if (p.contract_status === 'SUBMITTED' || p.contract_status === 'APPROVED_SIGNED_BY_CLIENT') {
+        overrideStatus = 'ACHIEVED';
+      } else {
+        overrideStatus = s.status === 'ACHIEVED' ? 'IN_PROGRESS' : s.status;
+      }
+    }
+    
+    // CONTRACT_SIGNED: ACHIEVED only when contract_status === 'APPROVED_SIGNED_BY_CLIENT'
+    if (s.stage_name === 'CONTRACT_SIGNED') {
+      if (p.contract_status === 'APPROVED_SIGNED_BY_CLIENT') {
+        overrideStatus = 'ACHIEVED';
+      } else {
+        overrideStatus = s.status === 'ACHIEVED' ? 'IN_PROGRESS' : s.status;
+      }
+    }
+    
+    return { ...s, status: overrideStatus };
+  });
+
   const done = stages.filter((s) => s.status === 'ACHIEVED' || s.status === 'APPROVED').length;
   const pct = stages.length ? Math.round((done / stages.length) * 100) : 0;
   const isDesign = p.scope !== 'SUPERVISION';
