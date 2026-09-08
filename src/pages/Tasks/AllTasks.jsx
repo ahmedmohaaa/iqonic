@@ -196,6 +196,7 @@ const AllTasks = () => {
                 <option value="DC1">DC1</option>
                 <option value="DC2">DC2</option>
                 <option value="TENDER">Tender</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
             <div>
@@ -248,7 +249,7 @@ const AllTasks = () => {
         )}
       </div>
 
-{/* ✅ Priority Drag & Drop — مخفي حاليًا (احذف سطري التعليق لإعادة تفعيله)
+{/*  Priority Drag & Drop — مخفي حاليًا (احذف سطري التعليق لإعادة تفعيله)
 {canManage && filters.priority === '' && filters.status === '' && (
 <PriorityDragDrop tasks={tasks} onUpdate={fetchTasks} />
 )}
@@ -420,5 +421,3 @@ const AllTasks = () => {
 };
 
 export default AllTasks;
-
- 
