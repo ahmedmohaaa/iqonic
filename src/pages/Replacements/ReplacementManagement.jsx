@@ -4,14 +4,22 @@ import { useAuth } from '../../context/AuthContext';
 import { UserX, Briefcase, HardHat, Loader, AlertCircle } from 'lucide-react';
 import ReplacementCard from './components/ReplacementCard';
 import RespondModal from './components/RespondModal';
+
 const MANAGER_ROLES = ['SUP_MGR', 'PM', 'DESIGN_MGR', 'GM', 'AGM'];
 const ENGINEER_ROLES = ['ENGINEER', 'SENIOR_ENG'];
 
 const ReplacementManagement = () => {
   const { user } = useAuth();
-  // ✅ التاب يظهر للمديرين + كل المهندسين — والباك-إند يرجّع لكل واحد طلباته فقط
+
+  // ✅ التاب يظهر فقط لقسم الإشراف:
+  // - مديرو الإشراف (SUP_MGR, PM)
+  // - الإدارة العليا (GM, AGM) - يرون كل شيء
+  // - المهندسون في قسم الإشراف فقط (department === 'Supervision')
+  // ❌ لا يظهر لـ DESIGN_MGR أو مهندسي التصميم
   const canViewSupervisionTab =
-    MANAGER_ROLES.includes(user?.role) || ENGINEER_ROLES.includes(user?.role);
+    ['SUP_MGR', 'PM'].includes(user?.role) ||
+    (ENGINEER_ROLES.includes(user?.role) && user?.department === 'Supervision');
+
   const [activeTab, setActiveTab] = useState('tasks');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -130,4 +138,3 @@ const ReplacementManagement = () => {
 };
 
 export default ReplacementManagement;
-
