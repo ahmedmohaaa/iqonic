@@ -396,7 +396,7 @@ export default function ProjectDetails() {
         <div className="pd-grid">
           <div className="pd-main">
             {/* Lifecycle */}
-            <Block rv tag="LIFECYCLE" title="Project Lifecycle"
+            <Block rv tag="LIFECYCLE" title="project status"
               action={P.canEditLifecycle ? <span className="pd-editable">Editable</span> : <span className="pd-readonly">Read-only</span>}>
               <LifecycleRibbon
                 stages={stages}
