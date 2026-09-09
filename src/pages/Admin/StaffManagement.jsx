@@ -198,19 +198,21 @@ const StaffManagement = () => {
               <tbody className="divide-y">
                 {filteredStaff.map(member => (
                   <tr key={member.id} className="bg-gray-50">
-                    <td className="p-4">
+                                     <td className="p-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <span className="text-primary font-semibold text-xs">
+                        <div className="w-8 h-8 bg-blue-100 border border-blue-200 rounded-full flex items-center justify-center">
+                          <span className="text-blue-800 font-bold text-xs">
                             {member.first_name?.[0]}{member.last_name?.[0]}
                           </span>
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-800">
+                          <p className="font-bold text-gray-900">
                             {member.first_name} {member.last_name}
                           </p>
                           {member.username === 'salman.saeed' && (
-                            <span className="text-xs text-yellow-600">Multi-Dept</span>
+                            <span className="text-xs font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 px-2 py-0.5 rounded-full">
+                              Multi-Dept
+                            </span>
                           )}
                         </div>
                       </div>
