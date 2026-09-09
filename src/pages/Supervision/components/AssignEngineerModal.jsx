@@ -5,6 +5,15 @@ import { X, AlertTriangle, Shield } from 'lucide-react';
 
 const DAYS_OF_WEEK = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
+// ✅ خيارات Role الجديدة (مستقلة عن دور المستخدم الأصلي في النظام)
+const ASSIGNMENT_ROLES = [
+  { value: 'PM', label: 'PM' },
+  { value: 'SITE_ENGINEER', label: 'Site Engineer' },
+  { value: 'COORDINATOR', label: 'Coordinator' },
+  { value: 'INSPECTOR', label: 'Inspector' },
+  { value: 'SENIOR_ENGINEER', label: 'Senior Engineer' },
+];
+
 const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSuccess }) => {
   const isEdit = !!assignment;
 
@@ -14,9 +23,9 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
   const [selectedProjectId, setSelectedProjectId] = useState(projectId || '');
   const [formData, setFormData] = useState({
     engineer: '',
-    role: 'ENGINEER',
-    department: 'Civil',
-    is_pm: false,
+    role: 'PM',
+    department: 'Supervision',
+    is_pm: true,
     days_of_week: [],
     time_from: '08:00',
     time_to: '17:00',
@@ -28,8 +37,10 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
   // ═══ تحميل المهندسين + بيانات التعديل ═══
   useEffect(() => {
     getUsersList().then(res => {
+      // ✅ فلترة: فقط قسم الإشراف (Supervision) - بدون التصميم
       const engs = (res.data.results || res.data).filter(u =>
-        ['ENGINEER', 'SENIOR_ENG', 'PM', 'SUP_MGR'].includes(u.role)
+        ['ENGINEER', 'SENIOR_ENG', 'PM', 'SUP_MGR', 'SITE_ENGINEER', 'COORDINATOR', 'INSPECTOR'].includes(u.role) &&
+        u.department === 'Supervision'
       );
       setEngineers(engs);
     });
@@ -37,9 +48,9 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
     if (isEdit) {
       setFormData({
         engineer: assignment.engineer,
-        role: assignment.role || 'ENGINEER',
-        department: assignment.department || 'Civil',
-        is_pm: assignment.is_pm || false,
+        role: assignment.role || 'PM',
+        department: assignment.department || 'Supervision',
+        is_pm: assignment.is_pm || assignment.role === 'PM',
         days_of_week: assignment.days_of_week || [],
         time_from: assignment.time_from?.substring(0, 5) || '08:00',
         time_to: assignment.time_to?.substring(0, 5) || '17:00',
@@ -55,7 +66,7 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
   const setField = (key, value) =>
     setFormData(prev => ({ ...prev, [key]: value }));
 
-  // ✅ الدور والقسم يُجلبان تلقائيًا من قاعدة البيانات حسب المهندس المختار
+  // ✅ المهندس المختار (للعرض فقط)
   const selectedEngineer = engineers.find((u) => String(u.id) === String(formData.engineer));
 
   const handleEngineerChange = (e) => {
@@ -64,8 +75,17 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
     setFormData((prev) => ({
       ...prev,
       engineer: id,
-      role: eng?.role || prev.role,
+      // ✅ لا نغير الـ role تلقائياً - المستخدم يختار Role من الـ select
       department: eng?.department || prev.department,
+    }));
+  };
+
+  // ✅ معالج تغيير Role: يعيّن is_pm تلقائياً
+  const handleRoleChange = (newRole) => {
+    setFormData(prev => ({
+      ...prev,
+      role: newRole,
+      is_pm: newRole === 'PM',
     }));
   };
 
@@ -99,11 +119,16 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
     }
   };
 
+  // ✅ كلاس مشترك للحقول (نص أسود + حدود واضحة)
+  const inputClass = "w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 font-semibold bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none";
+  const selectClass = "w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 font-semibold bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-100";
+  const labelClass = "block text-sm font-semibold text-gray-900 mb-1";
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-bold text-gray-800">
+          <h2 className="text-lg font-bold text-gray-900">
             {isEdit ? 'Edit' : 'Assign'} Engineer
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -113,19 +138,19 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
           {error && (
-            <div className="bg-red-50 text-red-700 p-3 rounded text-sm flex items-center">
+            <div className="bg-red-50 text-red-700 p-3 rounded text-sm flex items-center font-medium">
               <AlertTriangle size={16} className="mr-2" /> {error}
             </div>
           )}
 
           {/* ── Project Selection ── */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project *</label>
+            <label className={labelClass}>Project *</label>
             <select
               value={selectedProjectId}
               onChange={e => setSelectedProjectId(e.target.value)}
               disabled={isEdit}
-              className="w-full border rounded-lg p-2 text-sm bg-white disabled:bg-gray-100"
+              className={selectClass}
               required
             >
               <option value="">Select Project...</option>
@@ -137,62 +162,70 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
             </select>
           </div>
 
-          {/* ── Engineer + PM ── */}
+          {/* ── Assign to + Role ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ✅ Assign to (بدل Engineer) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Engineer *</label>
+              <label className={labelClass}>Assign to *</label>
               <select
                 value={formData.engineer}
                 onChange={handleEngineerChange}
                 disabled={isEdit}
-                className="w-full border rounded-lg p-2 text-sm bg-white disabled:bg-gray-100"
+                className={selectClass}
                 required
               >
                 <option value="">Select Engineer...</option>
-                {engineers.map(eng => (
-                  <option key={eng.id} value={eng.id}>
-                    {eng.first_name} {eng.last_name} ({eng.department || 'General'})
-                  </option>
-                ))}
+                {engineers.length === 0 ? (
+                  <option value="" disabled>No supervision engineers available</option>
+                ) : (
+                  engineers.map(eng => (
+                    <option key={eng.id} value={eng.id}>
+                      {eng.first_name} {eng.last_name} ({eng.department || 'Supervision'})
+                    </option>
+                  ))
+                )}
               </select>
-              {/* ✅ الدور والقسم من قاعدة البيانات (للتأكيد فقط) */}
               {selectedEngineer && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {selectedEngineer.role} · {selectedEngineer.department || 'General'}
+                <p className="text-xs text-gray-600 mt-1 font-medium">
+                  {selectedEngineer.role} · {selectedEngineer.department || 'Supervision'}
                 </p>
               )}
             </div>
 
-            {/* ── PM Checkbox ── */}
-            <div className="flex items-end pb-1">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={formData.is_pm}
-                  onChange={e => setField('is_pm', e.target.checked)}
-                  className="w-4 h-4 accent-blue-600 rounded"
-                />
-                <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                  <Shield size={14} className="text-blue-500" />
-                  Is PM
-                </span>
-              </label>
+            {/* ✅ Role الجديد (بدل checkbox Is PM) */}
+            <div>
+              <label className={labelClass}>Role *</label>
+              <select
+                value={formData.role}
+                onChange={e => handleRoleChange(e.target.value)}
+                className={selectClass}
+                required
+              >
+                {ASSIGNMENT_ROLES.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+              {formData.role === 'PM' && (
+                <p className="text-xs text-blue-700 mt-1 font-medium flex items-center gap-1">
+                  <Shield size={12} /> Project Manager — full project oversight
+                </p>
+              )}
             </div>
           </div>
 
           {/* ── Working Days ── */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Working Days *</label>
+            <label className={labelClass}>Working Days *</label>
             <div className="flex flex-wrap gap-2">
               {DAYS_OF_WEEK.map(day => (
                 <button
                   key={day}
                   type="button"
                   onClick={() => handleDayToggle(day)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition ${
                     formData.days_of_week.includes(day)
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
                   }`}
                 >
                   {day}
@@ -204,66 +237,74 @@ const AssignEngineerModal = ({ projectId, projects, assignment, onClose, onSucce
           {/* ── Times + Start Date ── */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Time From</label>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">Time From</label>
               <input
                 type="time"
                 value={formData.time_from}
                 onChange={e => setField('time_from', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Time To</label>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">Time To</label>
               <input
                 type="time"
                 value={formData.time_to}
                 onChange={e => setField('time_to', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+              <label className="block text-xs font-semibold text-gray-900 mb-1">Start Date</label>
               <input
                 type="date"
                 value={formData.assignment_started_at}
                 onChange={e => setField('assignment_started_at', e.target.value)}
-                className="w-full border rounded-lg p-2 text-sm"
+                className={inputClass}
               />
             </div>
           </div>
 
           {/* ── Percentages ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded-lg p-4 bg-blue-50 border-blue-100">
-              <label className="block text-sm font-semibold text-blue-800 mb-1">Contract %</label>
-              <p className="text-xs text-blue-600 mb-2">Official agreed percentage.</p>
+            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <label className="block text-sm font-bold text-blue-900 mb-1">Contract %</label>
+              <p className="text-xs text-blue-700 mb-2 font-medium">Official agreed percentage.</p>
               <input
                 type="number"
                 min="0" max="100"
                 value={formData.contract_percentage}
                 onChange={e => setField('contract_percentage', parseFloat(e.target.value) || 0)}
-                className="w-full border border-blue-200 rounded-lg p-2 text-sm bg-white"
+                className="w-full border border-blue-300 rounded-lg p-2 text-sm text-gray-900 font-semibold bg-white focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
-            <div className="border rounded-lg p-4 bg-purple-50 border-purple-100">
-              <label className="block text-sm font-semibold text-purple-800 mb-1">Actual %</label>
-              <p className="text-xs text-purple-600 mb-2">Real effort set by the manager.</p>
+            <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+              <label className="block text-sm font-bold text-purple-900 mb-1">Actual %</label>
+              <p className="text-xs text-purple-700 mb-2 font-medium">Real effort set by the manager.</p>
               <input
                 type="number"
                 min="0" max="100"
                 value={formData.actual_percentage}
                 onChange={e => setField('actual_percentage', parseFloat(e.target.value) || 0)}
-                className="w-full border border-purple-200 rounded-lg p-2 text-sm bg-white"
+                className="w-full border border-purple-300 rounded-lg p-2 text-sm text-gray-900 font-semibold bg-white focus:ring-2 focus:ring-purple-500 outline-none"
               />
             </div>
           </div>
 
           {/* ── Actions ── */}
           <div className="flex justify-end space-x-2 pt-4 border-t">
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded text-gray-600 bg-gray-50">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-4 py-2 border border-gray-300 rounded text-gray-800 bg-gray-50 font-semibold hover:bg-gray-100 transition"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-800 text-white rounded disabled:opacity-50">
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="px-4 py-2 bg-blue-800 text-white rounded font-bold disabled:opacity-50 hover:bg-blue-900 transition"
+            >
               {loading ? 'Saving...' : (isEdit ? 'Update Assignment' : 'Assign Engineer')}
             </button>
           </div>
