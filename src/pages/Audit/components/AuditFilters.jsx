@@ -3,7 +3,6 @@ import { Filter, X } from 'lucide-react';
 const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
   const handleReset = () => {
     onFilterChange('search', '');
-    onFilterChange('project', '');
     onFilterChange('user', '');
     onFilterChange('action_type', '');
     onFilterChange('date_from', '');
@@ -62,18 +61,6 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
               <option key={at.value} value={at.value}>{at.label}</option>
             ))}
           </select>
-        </div>
-
-        {/* Project Filter (Text-based for simplicity, can be upgraded to Select) */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Project (Name or Number)</label>
-          <input
-            type="text"
-            value={filters.project}
-            onChange={e => onFilterChange('project', e.target.value)}
-            placeholder="Project Name / No."
-            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
-          />
         </div>
 
         {/* Date Range */}
