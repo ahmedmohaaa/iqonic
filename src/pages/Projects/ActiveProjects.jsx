@@ -5,10 +5,11 @@ import { Link } from 'react-router-dom';
 import { 
   FolderKanban, Search, Filter, Loader, 
   Flag, Calendar, AlertCircle, TrendingUp, 
-  Clock, Edit, Eye 
+  Clock, Edit, Eye, FileText
 } from 'lucide-react';
 import GlobalFilterBar from '../../components/GlobalFilterBar';
 import { getScopeRestriction } from '../../utils/projectScope';
+
 const ActiveProjects = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState([]);
@@ -24,9 +25,11 @@ const ActiveProjects = () => {
   });
   const [pagination, setPagination] = useState({ count: 0, next: null, previous: null });
   const [currentPage, setCurrentPage] = useState(1);
-// ✅ زر التعديل لسكرتيرة التصميم وسكرتيرة الإشراف فقط — لا أحد غيرهما
-const isDeptSecretary =
-  user?.role === 'SECRETARY' && ['Design', 'Supervision'].includes(user?.department);
+
+  // ✅ زر التعديل لسكرتيرة التصميم وسكرتيرة الإشراف فقط — لا أحد غيرهما
+  const isDeptSecretary =
+    user?.role === 'SECRETARY' && ['Design', 'Supervision'].includes(user?.department);
+
   // ------------------------------------------------------------------------
   // نظام شامل للتحقق من الصلاحيات (يقرأ كل بيانات المستخدم للبحث عن المنصب)
   // ------------------------------------------------------------------------
@@ -50,26 +53,27 @@ const isDeptSecretary =
   };
 
   const hasActionPermissions = checkPermissions();
+
   // ✅ زر التعديل لا يظهر لناصر (GM) ولا نسرين (AGM)
-const canEditProject = !['GM', 'AGM'].includes(user?.role);
+  const canEditProject = !['GM', 'AGM'].includes(user?.role);
   // ------------------------------------------------------------------------
 
   useEffect(() => {
     fetchProjects();
   }, [filters, currentPage]);
 
-const fetchProjects = async () => {
-  setLoading(true);
-  try {
-    const params = {
-      ...filters,
-      is_active: 'true',
-      page: currentPage,
-    };
-    const restriction = getScopeRestriction(user);
-    if (restriction) params.scope = restriction;
+  const fetchProjects = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        ...filters,
+        is_active: 'true',
+        page: currentPage,
+      };
+      const restriction = getScopeRestriction(user);
+      if (restriction) params.scope = restriction;
 
-        const res = await getGlobalFilterProjects(params);
+      const res = await getGlobalFilterProjects(params);
       
       setProjects(res.data.results || res.data);
       setPagination({
@@ -161,6 +165,17 @@ const fetchProjects = async () => {
                 <div className="space-y-2 text-sm text-gray-600">
                   <p><span className="font-semibold">Client:</span> {project.client_name}</p>
                   <p><span className="font-semibold">Scope:</span> {project.scope}</p>
+
+                  {/* ✅ نوع الطلب (Application Type) - جديد */}
+                  {project.application_type && (
+                    <p className="flex items-center gap-1.5 text-xs text-gray-600">
+                      <FileText size={12} className="text-violet-500" />
+                      <span className="font-semibold">
+                        {project.application_type_display || project.application_type}
+                      </span>
+                    </p>
+                  )}
+
                   <div className="flex items-center text-gray-500">
                     <Calendar size={14} className="mr-1" />
                     <span>Start: {project.start_date || 'TBD'}</span>
@@ -208,13 +223,14 @@ const fetchProjects = async () => {
                       <Flag size={14} /> Priority
                     </Link>
 
-  {isDeptSecretary && (
-                  <Link 
-                      to={`/projects/${project.id}/edit`}
-                      className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 rounded transition"
-                    >
-                      <Edit size={14} /> Edit
-                    </Link>)}
+                    {isDeptSecretary && (
+                      <Link 
+                        to={`/projects/${project.id}/edit`}
+                        className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 rounded transition"
+                      >
+                        <Edit size={14} /> Edit
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
@@ -252,6 +268,3 @@ const fetchProjects = async () => {
 };
 
 export default ActiveProjects;
-
-
- 
