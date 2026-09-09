@@ -240,23 +240,25 @@ const ActiveProjects = () => {
       )}
 
       {/* Pagination */}
+      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
-          <p className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
+        <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <p className="text-sm font-semibold text-gray-900">
+            Page <span className="font-bold text-blue-800">{currentPage}</span> of{' '}
+            <span className="font-bold text-blue-800">{totalPages}</span>
           </p>
           <div className="flex space-x-2">
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={!pagination.previous}
-              className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+              className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-50 disabled:hover:border-gray-300"
             >
               Previous
             </button>
             <button
               onClick={() => setCurrentPage(prev => prev + 1)}
               disabled={!pagination.next}
-              className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+              className="px-4 py-1.5 border border-blue-800 rounded-lg text-sm font-semibold text-white bg-blue-800 hover:bg-blue-900 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-800"
             >
               Next
             </button>
