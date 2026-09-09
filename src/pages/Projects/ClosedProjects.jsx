@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { getClosedProjects } from '../../api/services/projects';
 import { Link } from 'react-router-dom';
-import { Archive, Search, Filter, Loader, FolderOpen } from 'lucide-react';
+import { Archive, Search, Filter, Loader, FolderOpen, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getScopeRestriction } from '../../utils/projectScope';
+
 const ClosedProjects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterScope, setFilterScope] = useState('');
   const { user } = useAuth();
+
   useEffect(() => {
     fetchProjects();
   }, [filterScope]);
@@ -21,7 +23,8 @@ const ClosedProjects = () => {
       if (filterScope) params.scope = filterScope;
       const restriction = getScopeRestriction(user);
       if (restriction) params.scope = restriction;
-      const res = await getClosedProjects(params);      setProjects(res.data.results || res.data);
+      const res = await getClosedProjects(params);
+      setProjects(res.data.results || res.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -62,7 +65,6 @@ const ClosedProjects = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-
       </div>
 
       {/* Projects Grid */}
@@ -90,6 +92,17 @@ const ClosedProjects = () => {
                 <div className="space-y-2 text-sm text-gray-600">
                   <p><span className="font-semibold">Client:</span> {project.client_name}</p>
                   <p><span className="font-semibold">Scope:</span> {project.scope}</p>
+
+                  {/* ✅ نوع الطلب (Application Type) - جديد */}
+                  {project.application_type && (
+                    <p className="flex items-center gap-1.5 text-xs text-gray-600">
+                      <FileText size={12} className="text-violet-500" />
+                      <span className="font-semibold">
+                        {project.application_type_display || project.application_type}
+                      </span>
+                    </p>
+                  )}
+
                   {project.revision_number && (
                     <p className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded inline-block">
                       Rev: {project.revision_number}
@@ -98,9 +111,9 @@ const ClosedProjects = () => {
                 </div>
               </div>
               <div className="bg-gray-50 px-5 py-3 border-t flex justify-end">
-<span className="text-blue-800 text-sm font-bold flex items-center group-hover:underline">
-  View Details <FolderOpen size={16} className="ml-1" />
-</span>
+                <span className="text-blue-800 text-sm font-bold flex items-center group-hover:underline">
+                  View Details <FolderOpen size={16} className="ml-1" />
+                </span>
               </div>
             </Link>
           ))}
