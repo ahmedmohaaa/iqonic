@@ -16,6 +16,28 @@ const ExternalLogs = () => {
   const [filterType, setFilterType] = useState('');
   const [filterProject, setFilterProject] = useState('');
 
+  // ✅ تحديد scope المستخدم:
+  // - أحمد زبادى + SUP_MGR + PM → يرون فقط مشاريع SUPERVISION
+  // - ناصر/نسرين/فهمى (GM, AGM, DESIGN_MGR) → يرون فقط مشاريع DESIGN
+  const getUserScope = () => {
+    const role = user?.role;
+    const username = user?.username;
+    
+    // ✅ قسم الإشراف: أحمد زبادى + مديرو الإشراف (SUP_MGR / PM)
+    if (username === 'ahmed.zabady' || role === 'SUP_MGR' || role === 'PM') {
+      return 'SUPERVISION';
+    }
+    
+    // ✅ قسم التصميم: الإدارة العليا (GM, AGM) + مدير التصميم
+    if (role === 'GM' || role === 'AGM' || role === 'DESIGN_MGR') {
+      return 'DESIGN';
+    }
+    
+    return '';
+  };
+
+  const userScope = getUserScope();
+
   // نفس قاعدة الكتابة في CanManageExternalLogs (والباك-إند يفرضها أيضًا)
   const canAddLog =
     ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR'].includes(user?.role) ||
@@ -23,7 +45,7 @@ const ExternalLogs = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [userScope]);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -31,6 +53,11 @@ const ExternalLogs = () => {
       const params = {};
       if (filterType) params.log_type = filterType;
       if (filterProject) params.project = filterProject;
+      
+      // ✅ فلترة حسب قسم المستخدم (التصميم / الإشراف)
+      if (userScope) {
+        params.scope = userScope;
+      }
       
       const res = await getExternalLogs(params);
       setLogs(res.data.results || res.data);
@@ -68,6 +95,13 @@ const ExternalLogs = () => {
     return <Clock size={16} className="text-yellow-500" />;
   };
 
+  // ✅ نص يوضح للمستخدم أي قسم يرى
+  const scopeLabel = userScope === 'SUPERVISION' 
+    ? 'Supervision Projects' 
+    : userScope === 'DESIGN' 
+      ? 'Design Projects' 
+      : '';
+
   return (
     <div className="space-y-6">
 
@@ -78,7 +112,18 @@ const ExternalLogs = () => {
             <FileText className="mr-2 text-primary" size={28} />
             External Logs
           </h1>
-          <p className="text-sm text-gray-500">Track external documents and critical issues</p>
+          <p className="text-sm text-gray-500">
+            Track external documents and critical issues
+            {scopeLabel && (
+              <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
+                userScope === 'SUPERVISION' 
+                  ? 'bg-emerald-100 text-emerald-700' 
+                  : 'bg-sky-100 text-sky-700'
+              }`}>
+                {scopeLabel}
+              </span>
+            )}
+          </p>
         </div>
         {canAddLog && (
           <button
@@ -192,6 +237,7 @@ const ExternalLogs = () => {
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
         onLogAdded={fetchLogs} 
+        userScope={userScope}
       />
     </div>
   );
