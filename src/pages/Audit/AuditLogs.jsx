@@ -11,7 +11,6 @@ const AuditLogs = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     search: '',
-    project: '',
     user: '',
     action_type: '',
     date_from: '',
@@ -60,7 +59,6 @@ const AuditLogs = () => {
       // بناء كائن الفلاتر وإزالة الحقول الفارغة
       const params = {};
       if (filters.search) params.search = filters.search;
-      if (filters.project) params.project = filters.project;
       if (filters.user) params.user = filters.user;
       if (filters.action_type) params.action_type = filters.action_type;
       if (filters.date_from) params.created_at__date__gte = filters.date_from;
