@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { updateTask, getTaskDetails, getTaskFormOptions } from '../../api/services/tasks';
@@ -119,7 +119,10 @@ const EditTask = () => {
   const [disciplines, setDisciplines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // ✅ الإصلاح الجذري: علم يحمي من التفريغ أثناء التحميل الأولي
+  const initialDataLoaded = useRef(false);
+  const originalTaskData = useRef(null);
 
   const [allowedTaskTypes, setAllowedTaskTypes] = useState(
     ['MAIN_DESIGN', 'SUPERVISION', 'CHANGE_ORDER', 'INTERNAL_REVIEW']
@@ -166,7 +169,6 @@ const EditTask = () => {
 
   const projectOptions = isCO ? changeOrders : typedProjects;
 
-  // ✅ تم إزالة شرط internal_design_review_required من هنا لكي تظهر مشاريع الإشراف العادية أيضاً
   const filteredSupervisionProjects = projectOptions.filter(p => 
     p.name?.toLowerCase().includes(supervisionProjectSearch.toLowerCase()) || 
     p.project_no?.toLowerCase().includes(supervisionProjectSearch.toLowerCase())
@@ -211,14 +213,21 @@ const EditTask = () => {
     Boolean(selectedStage) &&
     selectedStage !== 'OTHER';
 
+  // ═══════════════════════════════════════════════════════════
+  // ✅ الإصلاح الجذري: جلب البيانات الأساسية + بيانات المهمة
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
+    let cancelled = false;
+    
     Promise.all([
       getProjects({ is_active: 'true' }),
       getUsersList(),
       getActiveChangeOrders(),
       getTaskDetails(id),
     ])
-      .then(([projRes, usersRes, coRes, taskRes]) => {
+      .then(async ([projRes, usersRes, coRes, taskRes]) => {
+        if (cancelled) return;
+        
         const projData = projRes?.data?.results || projRes?.data || [];
         const usersData = usersRes?.data?.results || usersRes?.data || [];
         const coData = coRes?.data?.results || coRes?.data || [];
@@ -248,6 +257,9 @@ const EditTask = () => {
             reviewStageVal = taskData.internal_review_stage_name;
         }
 
+        // ✅ حفظ البيانات الأصلية لاستخدامها في تحميل الخيارات
+        originalTaskData.current = taskData;
+
         const resetData = {
           ...taskData,
           work_type: LEGACY_WORK_TYPE[taskData.work_type] || taskData.work_type || '',
@@ -260,6 +272,7 @@ const EditTask = () => {
           end_date: taskData.end_date || '',
         };
 
+        // ✅ إذا كانت المهمة من النوع MAIN_DESIGN ولديها review_stage، فهي Option B
         if (taskData.task_type === 'MAIN_DESIGN' && reviewStageVal) {
             resetData.supervision_project = resetData.project;
             resetData.review_stage = reviewStageVal;
@@ -268,18 +281,72 @@ const EditTask = () => {
         }
         
         reset(resetData);
-        setLoading(false); // ✅ الإصلاح الجوهري: إخفاء مؤشر التحميل بعد جلب البيانات
-        setTimeout(() => setIsInitialLoad(false), 100);
+        
+        // ✅ تحميل الخيارات (projects/engineers) بناءً على بيانات المهمة الأصلية
+        const taskTypeForOptions = taskData.task_type || 'MAIN_DESIGN';
+        const projectIdForOptions = taskData.project_id || taskData.project;
+        
+        try {
+          const params = { task_type: taskTypeForOptions };
+          if ((taskTypeForOptions === 'SUPERVISION' || taskTypeForOptions === 'INTERNAL_REVIEW') && projectIdForOptions) {
+            params.project_id = projectIdForOptions;
+          }
+          
+          const optionsRes = await getTaskFormOptions(params);
+          if (cancelled) return;
+          
+          setTypedProjects(optionsRes.data.projects || []);
+          setFilteredEngineers(optionsRes.data.engineers || []);
+          setCanAssignOthers(Boolean(optionsRes.data.can_assign_others));
+          
+          if (optionsRes.data.allowed_task_types) {
+            setAllowedTaskTypes(optionsRes.data.allowed_task_types);
+          }
+          
+          // ✅ تحميل التخصصات (Disciplines) إذا كانت المهمة لها stage
+          if (taskData.stage && taskData.stage !== 'OTHER' && 
+              taskTypeForOptions !== 'SUPERVISION' && taskTypeForOptions !== 'INTERNAL_REVIEW') {
+            const discRes = await getDisciplineItems({ stage: taskData.stage });
+            if (cancelled) return;
+            const responseData = discRes?.data || discRes;
+            const items = responseData?.results || responseData;
+            setDisciplines(Array.isArray(items) ? items : []);
+          }
+        } catch (optErr) {
+          console.error('Failed to load options:', optErr);
+        }
+        
+        // ✅ بعد اكتمال كل شيء: تعيين initialDataLoaded
+        initialDataLoaded.current = true;
+        setLoading(false);
       })
       .catch((err) => {
+        if (cancelled) return;
         console.error(err);
         setError('Failed to load task data.');
         setLoading(false);
       });
+      
+    return () => { cancelled = true; };
   }, [id, reset]);
 
+  // ═══════════════════════════════════════════════════════════
+  // ✅ عند تغيير task_type يدوياً (بعد التحميل الأولي فقط)
+  // ═══════════════════════════════════════════════════════════
+  const previousTaskType = useRef(taskType);
+  
   useEffect(() => {
-    if (isInitialLoad) return;
+    // ✅ تخطي إذا لم يكتمل التحميل الأولي بعد
+    if (!initialDataLoaded.current) {
+      previousTaskType.current = taskType;
+      return;
+    }
+    
+    // ✅ تخطي إذا لم يتغير task_type فعلياً
+    if (previousTaskType.current === taskType) return;
+    previousTaskType.current = taskType;
+    
+    // ✅ تفريغ الحقول عند التغيير اليدوي لـ task_type
     setValue('project', '');
     setValue('assigned_to', '');
     setValue('stage', '');
@@ -298,7 +365,7 @@ const EditTask = () => {
     setSupervisionProjectSearch('');
     setMainProjectSearch('');
     setOptionBProjectSearch('');
-  }, [taskType, setValue, isInitialLoad]);
+  }, [taskType, setValue]);
 
   useEffect(() => {
     if (!isMain) return;
@@ -322,7 +389,13 @@ const EditTask = () => {
     }
   }, [showDiscipline, unregister]);
 
+  // ═══════════════════════════════════════════════════════════
+  // ✅ تحميل الخيارات عند تغيير task_type أو project يدوياً (بعد التحميل الأولي فقط)
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
+    // ✅ تخطي أثناء التحميل الأولي (تم التحميل بالفعل في الـ useEffect الرئيسي)
+    if (!initialDataLoaded.current) return;
+    
     if (!isMain && !isSupervision && !isInternal) {
       setTypedProjects([]);
       setFilteredEngineers([]);
@@ -357,9 +430,12 @@ const EditTask = () => {
         setCanAssignOthers(false);
       })
       .finally(() => setOptionsLoading(false));
-  }, [taskType, selectedProject, isMain, isSupervision, isInternal, setValue, isInitialLoad]);
+  }, [taskType, selectedProject, isMain, isSupervision, isInternal, setValue]);
 
   useEffect(() => {
+    // ✅ تخطي أثناء التحميل الأولي
+    if (!initialDataLoaded.current) return;
+    
     if (shouldSelfAssign && user?.id) {
       setValue('assigned_to', user.id);
     } else if (!showAssignSelect && (isMain || isSupervision)) {
@@ -368,6 +444,9 @@ const EditTask = () => {
   }, [shouldSelfAssign, showAssignSelect, user?.id, isMain, isSupervision, setValue]);
 
   useEffect(() => {
+    // ✅ تخطي أثناء التحميل الأولي
+    if (!initialDataLoaded.current) return;
+    
     if ((isSupervision || isInternal) && canAssignOthers) {
       setValue('assigned_to', '');
     }
@@ -379,7 +458,13 @@ const EditTask = () => {
     }
   }, [isSupervision, isOnHold, holdDateValue, setValue]);
 
+  // ═══════════════════════════════════════════════════════════
+  // ✅ تحميل التخصصات عند تغيير Stage يدوياً (بعد التحميل الأولي فقط)
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
+    // ✅ تخطي أثناء التحميل الأولي (تم التحميل بالفعل في الـ useEffect الرئيسي)
+    if (!initialDataLoaded.current) return;
+    
     setDisciplines([]);
     if (isSupervision || isInternal) return;
     if (!selectedStage || selectedStage === 'OTHER') return;
