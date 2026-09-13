@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   ArrowLeft,
   Plus,
+  Minus,
   AlertCircle,
   Loader,
   GitBranch,
@@ -55,14 +56,16 @@ const TYPE_META = {
     dot: 'bg-teal-500',
   },*/
 };
+
 const SUBMIT_TONE = {
   MAIN_DESIGN: 'from-sky-500 to-sky-600',
   SUPERVISION: 'from-emerald-500 to-teal-600',
   CHANGE_ORDER: 'from-violet-500 to-fuchsia-600',
   INTERNAL_REVIEW: 'from-teal-500 to-emerald-600',
 };
+
 const INTERNAL_REVIEW_STAGES = [
-    { value: 'DC1', label: 'DC1' },
+  { value: 'DC1', label: 'DC1' },
   { value: 'DC2', label: 'DC2' },
   { value: 'DESIGN_CRITERIA', label: 'Design Criteria' },
   { value: 'CONCEPT_DESIGN', label: 'Concept Design' },
@@ -75,18 +78,19 @@ const INTERNAL_REVIEW_STAGES = [
 const EXTRA_ASSIGN = {
   'mohammad.mostafa': ['vicky.jr', 'mohammad.alqadi', 'ahmad.alqadi', 'mohammad.mostafa'],
 };
+
 const CreateTask = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-const {
-  register,
-  handleSubmit,
-  watch,
-  setValue,
-  unregister,
-  formState: { errors, isSubmitting },
-} = useForm({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    unregister,
+    formState: { errors, isSubmitting },
+  } = useForm({
     defaultValues: {
       task_type: 'MAIN_DESIGN',
       priority: 'MEDIUM',
@@ -114,22 +118,26 @@ const {
   const [disciplines, setDisciplines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-const [allowedTaskTypes, setAllowedTaskTypes] = useState(
-  ['MAIN_DESIGN', 'SUPERVISION', 'CHANGE_ORDER', 'INTERNAL_REVIEW']
-);
 
-const [supervisionReviewProjects, setSupervisionReviewProjects] = useState([]);
+  const [allowedTaskTypes, setAllowedTaskTypes] = useState(
+    ['MAIN_DESIGN', 'SUPERVISION', 'CHANGE_ORDER', 'INTERNAL_REVIEW']
+  );
 
-// ✅ حالات البحث لقوائم المشاريع
-const [supervisionProjectSearch, setSupervisionProjectSearch] = useState('');
-const [mainProjectSearch, setMainProjectSearch] = useState('');
-const [optionBProjectSearch, setOptionBProjectSearch] = useState('');
+  const [supervisionReviewProjects, setSupervisionReviewProjects] = useState([]);
 
-useEffect(() => {
-  getGlobalFilterProjects({ scope: 'SUPERVISION', internal_review: 'true', is_active: 'true' })
-    .then((res) => setSupervisionReviewProjects(res?.data?.results || res?.data || []))
-    .catch(() => setSupervisionReviewProjects([]));
-}, []);
+  // ✅ حالات البحث لقوائم المشاريع
+  const [supervisionProjectSearch, setSupervisionProjectSearch] = useState('');
+  const [mainProjectSearch, setMainProjectSearch] = useState('');
+  const [optionBProjectSearch, setOptionBProjectSearch] = useState('');
+
+  // ✅ حالة إظهار/إخفاء حقول Design Review Project + Review Stage
+  const [showOptionB, setShowOptionB] = useState(false);
+
+  useEffect(() => {
+    getGlobalFilterProjects({ scope: 'SUPERVISION', internal_review: 'true', is_active: 'true' })
+      .then((res) => setSupervisionReviewProjects(res?.data?.results || res?.data || []))
+      .catch(() => setSupervisionReviewProjects([]));
+  }, []);
 
   const taskType = watch('task_type');
   const selectedStage = watch('stage');
@@ -167,55 +175,55 @@ useEffect(() => {
   const isEngineerOrDraftsman =
     user?.role === 'ENGINEER' || user?.role === 'DRAFTSMAN';
 
-const projectOptions = isCO ? changeOrders : typedProjects;
+  const projectOptions = isCO ? changeOrders : typedProjects;
 
-// ✅ فلترة قوائم المشاريع بناءً على البحث + شرط الـ Internal Design Review
-const filteredSupervisionProjects = projectOptions.filter(p => 
-  p.internal_design_review_required && (
-    p.name?.toLowerCase().includes(supervisionProjectSearch.toLowerCase()) || 
-    p.project_no?.toLowerCase().includes(supervisionProjectSearch.toLowerCase())
-  )
-);
+  // ✅ فلترة قوائم المشاريع بناءً على البحث + شرط الـ Internal Design Review
+  const filteredSupervisionProjects = projectOptions.filter(p =>
+    p.internal_design_review_required && (
+      p.name?.toLowerCase().includes(supervisionProjectSearch.toLowerCase()) ||
+      p.project_no?.toLowerCase().includes(supervisionProjectSearch.toLowerCase())
+    )
+  );
 
-const filteredMainProjects = projectOptions.filter(p => 
-  p.name?.toLowerCase().includes(mainProjectSearch.toLowerCase()) || 
-  p.project_no?.toLowerCase().includes(mainProjectSearch.toLowerCase()) ||
-  (p.parent_project_no && p.parent_project_no.toLowerCase().includes(mainProjectSearch.toLowerCase()))
-);
+  const filteredMainProjects = projectOptions.filter(p =>
+    p.name?.toLowerCase().includes(mainProjectSearch.toLowerCase()) ||
+    p.project_no?.toLowerCase().includes(mainProjectSearch.toLowerCase()) ||
+    (p.parent_project_no && p.parent_project_no.toLowerCase().includes(mainProjectSearch.toLowerCase()))
+  );
 
-const filteredOptionBProjects = supervisionReviewProjects.filter(p => 
-  p.name?.toLowerCase().includes(optionBProjectSearch.toLowerCase()) || 
-  p.project_no?.toLowerCase().includes(optionBProjectSearch.toLowerCase())
-);
+  const filteredOptionBProjects = supervisionReviewProjects.filter(p =>
+    p.name?.toLowerCase().includes(optionBProjectSearch.toLowerCase()) ||
+    p.project_no?.toLowerCase().includes(optionBProjectSearch.toLowerCase())
+  );
 
-// ✅ صلاحية التعيين الإضافية لمحمد مصطفى (تصميم فقط — مطابقة للباك-إند)
-const extraAssignees = isMain
-  ? (EXTRA_ASSIGN[user?.username] || [])
-      .map((uname) => legacyEngineers.find((e) => e.username === uname))
-      .filter(Boolean)
-  : [];
+  // ✅ صلاحية التعيين الإضافية لمحمد مصطفى (تصميم فقط — مطابقة للباك-إند)
+  const extraAssignees = isMain
+    ? (EXTRA_ASSIGN[user?.username] || [])
+        .map((uname) => legacyEngineers.find((e) => e.username === uname))
+        .filter(Boolean)
+    : [];
 
-const assigneeOptions =
-  isMain || isSupervision || isInternal
-    ? [
-        ...filteredEngineers,
-        ...extraAssignees.filter((e) => !filteredEngineers.some((f) => f.id === e.id)),
-      ]
-    : legacyEngineers;
+  const assigneeOptions =
+    isMain || isSupervision || isInternal
+      ? [
+          ...filteredEngineers,
+          ...extraAssignees.filter((e) => !filteredEngineers.some((f) => f.id === e.id)),
+        ]
+      : legacyEngineers;
 
-const showAssignSelect =
-  isMain || isSupervision || isInternal
-    ? canAssignOthers || extraAssignees.length > 0
-    : !isEngineerOrDraftsman;
+  const showAssignSelect =
+    isMain || isSupervision || isInternal
+      ? canAssignOthers || extraAssignees.length > 0
+      : !isEngineerOrDraftsman;
 
-const shouldSelfAssign =
-  isMain || isSupervision || isInternal ? !canAssignOthers : isEngineerOrDraftsman;
+  const shouldSelfAssign =
+    isMain || isSupervision || isInternal ? !canAssignOthers : isEngineerOrDraftsman;
 
-const showDiscipline =
-  !isSupervision &&
-  !isInternal &&
-  Boolean(selectedStage) &&
-  selectedStage !== 'OTHER';
+  const showDiscipline =
+    !isSupervision &&
+    !isInternal &&
+    Boolean(selectedStage) &&
+    selectedStage !== 'OTHER';
 
   useEffect(() => {
     Promise.all([
@@ -239,98 +247,102 @@ const showDiscipline =
       .finally(() => setLoading(false));
   }, []);
 
-useEffect(() => {
-  setValue('project', '');
-  setValue('assigned_to', '');
-  setValue('stage', '');
-  setValue('discipline', '');
-  setValue('internal_review_stage', '');
-  setValue('work_type', '');
-  setValue('title', '');
-  setValue('description', '');
-  setValue('is_on_hold', false);
-  setValue('hold_reason', '');
-  setValue('hold_date', '');
-  setValue('end_date', '');
-  setValue('supervision_project', '');
-  setValue('review_stage', '');
-  setDisciplines([]);
-  // ✅ تصفير حقول البحث عند تغيير نوع المهمة
-  setSupervisionProjectSearch('');
-  setMainProjectSearch('');
-  setOptionBProjectSearch('');
-}, [taskType, setValue]);
-
-// ✅ دالة الإغلاق المتبادل (Mutual Exclusion) بين Option A و Option B
-useEffect(() => {
-  if (!isMain) return;
-  // إذا تم اختيار Project Number أو Stage (Option A) → نفرغ حقول Option B
-  if (selectedProject || selectedStage) {
-    if (selectedSupervisionProject) setValue('supervision_project', '');
-    if (selectedOptionBReviewStage) setValue('review_stage', '');
-  }
-}, [selectedProject, selectedStage, isMain, selectedSupervisionProject, selectedOptionBReviewStage, setValue]);
-
-useEffect(() => {
-  if (!isMain) return;
-  // إذا تم اختيار Supervision Project أو Review Stage (Option B) → نفرغ حقول Option A
-  if (selectedSupervisionProject || selectedOptionBReviewStage) {
-    if (selectedProject) setValue('project', '');
-    if (selectedStage) setValue('stage', '');
-  }
-}, [selectedSupervisionProject, selectedOptionBReviewStage, isMain, selectedProject, selectedStage, setValue]);
-
-useEffect(() => {
-  if (!showDiscipline) {
-    unregister('discipline');
-  }
-}, [showDiscipline, unregister]);
-
-// ✅ عند اختيار "Other": نظّف أي Discipline قديم (مهام Other بدون Discipline)
-useEffect(() => {
-  if (selectedStage === 'OTHER') {
+  useEffect(() => {
+    setValue('project', '');
+    setValue('assigned_to', '');
+    setValue('stage', '');
     setValue('discipline', '');
+    setValue('internal_review_stage', '');
+    setValue('work_type', '');
+    setValue('title', '');
+    setValue('description', '');
+    setValue('is_on_hold', false);
+    setValue('hold_reason', '');
+    setValue('hold_date', '');
+    setValue('end_date', '');
+    setValue('supervision_project', '');
+    setValue('review_stage', '');
     setDisciplines([]);
-  }
-}, [selectedStage, setValue]);
 
-useEffect(() => {
-  if (!isMain && !isSupervision && !isInternal) {
-    setTypedProjects([]);
-    setFilteredEngineers([]);
-    setCanAssignOthers(false);
-    return;
-  }
+    // ✅ تصفير حقول البحث عند تغيير نوع المهمة
+    setSupervisionProjectSearch('');
+    setMainProjectSearch('');
+    setOptionBProjectSearch('');
 
-  const params = { task_type: taskType };
+    // ✅ إغلاق حقول Design Review عند تغيير نوع المهمة
+    setShowOptionB(false);
+  }, [taskType, setValue]);
 
-  if ((isSupervision || isInternal) && selectedProject) {
-    params.project_id = selectedProject;
-  }
+  // ✅ دالة الإغلاق المتبادل (Mutual Exclusion) بين Option A و Option B
+  useEffect(() => {
+    if (!isMain) return;
+    // إذا تم اختيار Project Number أو Stage (Option A) → نفرغ حقول Option B
+    if (selectedProject || selectedStage) {
+      if (selectedSupervisionProject) setValue('supervision_project', '');
+      if (selectedOptionBReviewStage) setValue('review_stage', '');
+    }
+  }, [selectedProject, selectedStage, isMain, selectedSupervisionProject, selectedOptionBReviewStage, setValue]);
 
-  setOptionsLoading(true);
+  useEffect(() => {
+    if (!isMain) return;
+    // إذا تم اختيار Supervision Project أو Review Stage (Option B) → نفرغ حقول Option A
+    if (selectedSupervisionProject || selectedOptionBReviewStage) {
+      if (selectedProject) setValue('project', '');
+      if (selectedStage) setValue('stage', '');
+    }
+  }, [selectedSupervisionProject, selectedOptionBReviewStage, isMain, selectedProject, selectedStage, setValue]);
 
-  getTaskFormOptions(params)
-    .then((res) => {
-      setTypedProjects(res.data.projects || []);
-      setFilteredEngineers(res.data.engineers || []);
-      setCanAssignOthers(Boolean(res.data.can_assign_others));
+  useEffect(() => {
+    if (!showDiscipline) {
+      unregister('discipline');
+    }
+  }, [showDiscipline, unregister]);
 
-      if (res.data.allowed_task_types) {
-        setAllowedTaskTypes(res.data.allowed_task_types);
+  // ✅ عند اختيار "Other": نظّف أي Discipline قديم (مهام Other بدون Discipline)
+  useEffect(() => {
+    if (selectedStage === 'OTHER') {
+      setValue('discipline', '');
+      setDisciplines([]);
+    }
+  }, [selectedStage, setValue]);
 
-        if (!res.data.allowed_task_types.includes(taskType)) {
-          setValue('task_type', res.data.allowed_task_types[0]);
-        }
-      }
-    })
-    .catch(() => {
+  useEffect(() => {
+    if (!isMain && !isSupervision && !isInternal) {
       setTypedProjects([]);
       setFilteredEngineers([]);
       setCanAssignOthers(false);
-    })
-    .finally(() => setOptionsLoading(false));
-}, [taskType, selectedProject, isMain, isSupervision, isInternal, setValue]);
+      return;
+    }
+
+    const params = { task_type: taskType };
+
+    if ((isSupervision || isInternal) && selectedProject) {
+      params.project_id = selectedProject;
+    }
+
+    setOptionsLoading(true);
+
+    getTaskFormOptions(params)
+      .then((res) => {
+        setTypedProjects(res.data.projects || []);
+        setFilteredEngineers(res.data.engineers || []);
+        setCanAssignOthers(Boolean(res.data.can_assign_others));
+
+        if (res.data.allowed_task_types) {
+          setAllowedTaskTypes(res.data.allowed_task_types);
+
+          if (!res.data.allowed_task_types.includes(taskType)) {
+            setValue('task_type', res.data.allowed_task_types[0]);
+          }
+        }
+      })
+      .catch(() => {
+        setTypedProjects([]);
+        setFilteredEngineers([]);
+        setCanAssignOthers(false);
+      })
+      .finally(() => setOptionsLoading(false));
+  }, [taskType, selectedProject, isMain, isSupervision, isInternal, setValue]);
 
   useEffect(() => {
     if (shouldSelfAssign && user?.id) {
@@ -340,11 +352,11 @@ useEffect(() => {
     }
   }, [shouldSelfAssign, showAssignSelect, user?.id, isMain, isSupervision, setValue]);
 
-useEffect(() => {
-  if ((isSupervision || isInternal) && canAssignOthers) {
-    setValue('assigned_to', '');
-  }
-}, [selectedProject, isSupervision, isInternal, canAssignOthers, setValue]);
+  useEffect(() => {
+    if ((isSupervision || isInternal) && canAssignOthers) {
+      setValue('assigned_to', '');
+    }
+  }, [selectedProject, isSupervision, isInternal, canAssignOthers, setValue]);
 
   useEffect(() => {
     if (isSupervision && isOnHold && !holdDateValue) {
@@ -352,25 +364,25 @@ useEffect(() => {
     }
   }, [isSupervision, isOnHold, holdDateValue, setValue]);
 
-useEffect(() => {
-  setDisciplines([]);
+  useEffect(() => {
+    setDisciplines([]);
 
-  if (isSupervision || isInternal) {
-    return;
-  }
+    if (isSupervision || isInternal) {
+      return;
+    }
 
-  if (!selectedStage || selectedStage === 'OTHER') {
-    return;
-  }
+    if (!selectedStage || selectedStage === 'OTHER') {
+      return;
+    }
 
-  getDisciplineItems({ stage: selectedStage })
-    .then((res) => {
-      const responseData = res?.data || res;
-      const items = responseData?.results || responseData;
-      setDisciplines(Array.isArray(items) ? items : []);
-    })
-    .catch(() => setDisciplines([]));
-}, [selectedStage, isInternal, isSupervision]);
+    getDisciplineItems({ stage: selectedStage })
+      .then((res) => {
+        const responseData = res?.data || res;
+        const items = responseData?.results || responseData;
+        setDisciplines(Array.isArray(items) ? items : []);
+      })
+      .catch(() => setDisciplines([]));
+  }, [selectedStage, isInternal, isSupervision]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -394,56 +406,60 @@ useEffect(() => {
         if (!hasA && !hasB) return setError('Please provide either Project Number + Stage OR Supervision Project + Review Stage.');
       }
     }
-// ✅ الإدارة العليا (ناصر/نسرين) لا ترى قسم الإشراف
-const isTopManagement = ['GM', 'AGM'].includes(user?.role);
-const payload = { ...data };
 
-if (computedEndDate) {
-  payload.end_date = computedEndDate;
-}
+    // ✅ الإدارة العليا (ناصر/نسرين) لا ترى قسم الإشراف
+    const isTopManagement = ['GM', 'AGM'].includes(user?.role);
+    const payload = { ...data };
 
-if (isSupervision) {
-  delete payload.stage;
-  delete payload.discipline;
-  delete payload.internal_review_stage;
-  delete payload.work_type;
+    if (computedEndDate) {
+      payload.end_date = computedEndDate;
+    }
 
-  payload.is_on_hold = Boolean(payload.is_on_hold);
+    if (isSupervision) {
+      delete payload.stage;
+      delete payload.discipline;
+      delete payload.internal_review_stage;
+      delete payload.work_type;
 
-  if (!payload.is_on_hold) {
-    delete payload.hold_reason;
-    delete payload.hold_date;
-  }
-} else {
-  delete payload.is_on_hold;
-  delete payload.hold_reason;
-  delete payload.hold_date;
-}
-if (isInternal) {
-  const reviewStageName = payload.internal_review_stage;
+      payload.is_on_hold = Boolean(payload.is_on_hold);
 
-  delete payload.internal_review_stage;
-  delete payload.stage;
-  delete payload.discipline;
+      if (!payload.is_on_hold) {
+        delete payload.hold_reason;
+        delete payload.hold_date;
+      }
+    } else {
+      delete payload.is_on_hold;
+      delete payload.hold_reason;
+      delete payload.hold_date;
+    }
 
-  payload.internal_review_stage_name = reviewStageName || 'OTHER';
-}
+    if (isInternal) {
+      const reviewStageName = payload.internal_review_stage;
 
-// ✅ مهام Other: تُحفظ بدون Stage وبدون Discipline نهائياً
-if (isMain && payload.stage === 'OTHER') {
-  delete payload.stage;
-  delete payload.discipline;
-}
-// ✅ لا ترسل null/فارغ أبدًا — الغياب الكامل هو الـ "اختياري" الصحيح
-if (!payload.project) delete payload.project;
-if (!payload.stage) delete payload.stage;
-if (!payload.supervision_project) delete payload.supervision_project;
-if (!payload.review_stage) delete payload.review_stage;
-if (!payload.end_date) delete payload.end_date;
+      delete payload.internal_review_stage;
+      delete payload.stage;
+      delete payload.discipline;
 
-if (!showAssignSelect && user?.id) {
-  payload.assigned_to = user.id;
-}
+      payload.internal_review_stage_name = reviewStageName || 'OTHER';
+    }
+
+    // ✅ مهام Other: تُحفظ بدون Stage وبدون Discipline نهائياً
+    if (isMain && payload.stage === 'OTHER') {
+      delete payload.stage;
+      delete payload.discipline;
+    }
+
+    // ✅ لا ترسل null/فارغ أبدًا — الغياب الكامل هو الـ "اختياري" الصحيح
+    if (!payload.project) delete payload.project;
+    if (!payload.stage) delete payload.stage;
+    if (!payload.supervision_project) delete payload.supervision_project;
+    if (!payload.review_stage) delete payload.review_stage;
+    if (!payload.end_date) delete payload.end_date;
+
+    if (!showAssignSelect && user?.id) {
+      payload.assigned_to = user.id;
+    }
+
     try {
       const response = await createTask(payload);
       navigate(`/tasks/${response?.data?.id || response?.id}`);
@@ -544,52 +560,52 @@ if (!showAssignSelect && user?.id) {
           style={{ animationDelay: '.08s' }}
         >
           {/* Task Type */}
-       {/* Task Type — يعرض فقط الأنواع المسموحة للمستخدم */}
-<div>
-
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-    {Object.entries(TYPE_META)
-      .filter(([value]) => allowedTaskTypes.includes(value))
-      .map(([value, meta]) => {
-        const active = taskType === value;
-        return (
-          <label key={value} className="relative cursor-pointer">
-            <input
-              type="radio"
-              value={value}
-              {...register('task_type', { required: true })}
-              className="peer sr-only"
-            />
-            <div
-              className={`ct-type p-4 rounded-xl border-2 bg-white flex items-center gap-3 ${
-                active
-                  ? `${meta.ring} ${meta.bg} shadow-md`
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <span
-                className={`grid place-items-center w-9 h-9 rounded-lg ${
-                  active ? meta.bg : 'bg-gray-100'
-                } ${active ? meta.tx : 'text-gray-400'}`}
-              >
-                <meta.Icon size={18} />
-              </span>
-              <span
-                className={`text-sm font-bold ${
-                  active ? meta.tx : 'text-gray-600'
-                }`}
-              >
-                {meta.label}
-              </span>
-              {active && (
-                <span className={`ms-auto w-2 h-2 rounded-full ${meta.dot} animate-pulse`} />
-              )}
+          {/* Task Type — يعرض فقط الأنواع المسموحة للمستخدم */}
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {Object.entries(TYPE_META)
+                .filter(([value]) => allowedTaskTypes.includes(value))
+                .map(([value, meta]) => {
+                  const active = taskType === value;
+                  return (
+                    <label key={value} className="relative cursor-pointer">
+                      <input
+                        type="radio"
+                        value={value}
+                        {...register('task_type', { required: true })}
+                        className="peer sr-only"
+                      />
+                      <div
+                        className={`ct-type p-4 rounded-xl border-2 bg-white flex items-center gap-3 ${
+                          active
+                            ? `${meta.ring} ${meta.bg} shadow-md`
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`grid place-items-center w-9 h-9 rounded-lg ${
+                            active ? meta.bg : 'bg-gray-100'
+                          } ${active ? meta.tx : 'text-gray-400'}`}
+                        >
+                          <meta.Icon size={18} />
+                        </span>
+                        <span
+                          className={`text-sm font-bold ${
+                            active ? meta.tx : 'text-gray-600'
+                          }`}
+                        >
+                          {meta.label}
+                        </span>
+                        {active && (
+                          <span className={`ms-auto w-2 h-2 rounded-full ${meta.dot} animate-pulse`} />
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
             </div>
-          </label>
-        );
-      })}
-  </div>
-</div>
+          </div>
+
           {isSupervision ? (
             <>
               {/* Supervision Project + Assignee */}
@@ -873,34 +889,34 @@ if (!showAssignSelect && user?.id) {
 
                   {isInternal ? (
                     <select
-  {...register('internal_review_stage', {
-    required: isInternal,
-  })}
-  className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-teal-300 outline-none transition"
->
-  <option value="">— Select Review Stage —</option>
+                      {...register('internal_review_stage', {
+                        required: isInternal,
+                      })}
+                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-teal-300 outline-none transition"
+                    >
+                      <option value="">— Select Review Stage —</option>
 
-  {INTERNAL_REVIEW_STAGES.map((stage) => (
-    <option key={stage.value} value={stage.value}>
-      {stage.label}
-    </option>
-  ))}
-</select>
+                      {INTERNAL_REVIEW_STAGES.map((stage) => (
+                        <option key={stage.value} value={stage.value}>
+                          {stage.label}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
-<select
-  {...register('stage', { required: !isMain })}
-  className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none transition"
->
-  <option value="">— Select Stage —</option>
-  <option value="CONCEPT">Concept Design</option>
-  <option value="DC1">DC1</option>
-  <option value="DC2">DC2</option>
-  <option value="TENDER">Tender Documents</option>
+                    <select
+                      {...register('stage', { required: !isMain })}
+                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none transition"
+                    >
+                      <option value="">— Select Stage —</option>
+                      <option value="CONCEPT">Concept Design</option>
+                      <option value="DC1">DC1</option>
+                      <option value="DC2">DC2</option>
+                      <option value="TENDER">Tender Documents</option>
 
-  {isMain && (
-    <option value="OTHER">Other</option>
-  )}
-</select>
+                      {isMain && (
+                        <option value="OTHER">Other</option>
+                      )}
+                    </select>
                   )}
 
                   {/* ✅ توضيح لمهام Other: بدون Stage وبدون Discipline */}
@@ -916,47 +932,6 @@ if (!showAssignSelect && user?.id) {
                   )}
                 </div>
               </div>
-
-{isMain && (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Design Review Project</label>
-      
-      <div className="relative mb-1.5">
-        <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
-        <input
-          type="text"
-          placeholder="Search projects..."
-          value={optionBProjectSearch}
-          onChange={(e) => setOptionBProjectSearch(e.target.value)}
-          className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-300 outline-none transition"
-        />
-      </div>
-
-      <select {...register('supervision_project')}
-        className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
-        <option value="">— Select Supervision Project —</option>
-        {filteredOptionBProjects.length === 0 ? (
-          <option value="" disabled>No projects found</option>
-        ) : (
-          filteredOptionBProjects.map((p) => (
-            <option key={p.id} value={p.id}>{p.project_no} · {p.name}</option>
-          ))
-        )}
-      </select>
-    </div>
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1.5">Review Stage</label>
-      <select {...register('review_stage')}
-        className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
-        <option value="">— Select Review Stage —</option>
-        {INTERNAL_REVIEW_STAGES.map((s) => (
-          <option key={s.value} value={s.value}>{s.label}</option>
-        ))}
-      </select>
-    </div>
-  </div>
-)}
 
               {/* Title + Work Type */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -993,6 +968,7 @@ if (!showAssignSelect && user?.id) {
                   </select>
                 </div>
               </div>
+
               {/* Change Order Description */}
               {isCO && (
                 <div>
@@ -1007,6 +983,7 @@ if (!showAssignSelect && user?.id) {
                   />
                 </div>
               )}
+
               {/* Discipline + Assignee */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {showDiscipline ? (
@@ -1136,27 +1113,118 @@ if (!showAssignSelect && user?.id) {
               </div>
             </>
           )}
-{(isInternal || isMain) && (
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-      Task Description
-    </label>
-    <textarea
-      rows={4}
-      placeholder={
-        isInternal
-          ? 'Write the internal review task details...'
-          : 'Write the main design task details...'
-      }
-      {...register('description')}
-      className={`w-full border border-gray-300 rounded-xl p-2.5 text-sm outline-none transition focus:ring-2 ${
-        isInternal
-          ? 'focus:ring-teal-300'
-          : 'focus:ring-sky-300'
-      }`}
-    />
-  </div>
-)}
+
+          {(isInternal || isMain) && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Task Description
+              </label>
+              <textarea
+                rows={4}
+                placeholder={
+                  isInternal
+                    ? 'Write the internal review task details...'
+                    : 'Write the main design task details...'
+                }
+                {...register('description')}
+                className={`w-full border border-gray-300 rounded-xl p-2.5 text-sm outline-none transition focus:ring-2 ${
+                  isInternal
+                    ? 'focus:ring-teal-300'
+                    : 'focus:ring-sky-300'
+                }`}
+              />
+
+              {/* ✅ علامة + / - صغيرة تحت Task Description لإظهار/إخفاء حقلي Design Review */}
+              {isMain && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    title={showOptionB ? 'Hide Design Review fields' : 'Show Design Review fields'}
+                    aria-label={showOptionB ? 'Hide Design Review fields' : 'Show Design Review fields'}
+                    onClick={() => {
+                      const willShow = !showOptionB;
+                      setShowOptionB(willShow);
+
+                      // ✅ عند الإخفاء: نفرّغ الحقول حتى لا تُرسل بيانات غير مطلوبة
+                      if (!willShow) {
+                        setValue('supervision_project', '');
+                        setValue('review_stage', '');
+                        setOptionBProjectSearch('');
+                      }
+                    }}
+                    className={`inline-flex items-center justify-center w-8 h-8 rounded-full border font-bold transition ${
+                      showOptionB
+                        ? 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100'
+                        : 'bg-sky-50 border-sky-300 text-sky-700 hover:bg-sky-100'
+                    }`}
+                  >
+                    {showOptionB ? (
+                      <Minus size={18} strokeWidth={3} />
+                    ) : (
+                      <Plus size={18} strokeWidth={3} />
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* ✅ الحقول تظهر فقط بعد الضغط على علامة + */}
+              {isMain && showOptionB && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Design Review Project
+                    </label>
+
+                    <div className="relative mb-1.5">
+                      <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                      <input
+                        type="text"
+                        placeholder="Search projects..."
+                        value={optionBProjectSearch}
+                        onChange={(e) => setOptionBProjectSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-300 outline-none transition"
+                      />
+                    </div>
+
+                    <select
+                      {...register('supervision_project')}
+                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none"
+                    >
+                      <option value="">— Select Supervision Project —</option>
+                      {filteredOptionBProjects.length === 0 ? (
+                        <option value="" disabled>No projects found</option>
+                      ) : (
+                        filteredOptionBProjects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.project_no} · {p.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Review Stage
+                    </label>
+
+                    <select
+                      {...register('review_stage')}
+                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none"
+                    >
+                      <option value="">— Select Review Stage —</option>
+                      {INTERNAL_REVIEW_STAGES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
             <button
@@ -1183,4 +1251,3 @@ if (!showAssignSelect && user?.id) {
 };
 
 export default CreateTask;
-
