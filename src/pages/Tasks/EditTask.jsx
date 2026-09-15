@@ -19,6 +19,8 @@ import {
   ShieldCheck,
   PauseCircle,
   Search,
+  Plus,
+  Minus,
 } from 'lucide-react';
 
 const TYPE_META = {
@@ -123,6 +125,9 @@ const EditTask = () => {
   // ✅ الإصلاح الجذري: علم يحمي من التفريغ أثناء التحميل الأولي
   const initialDataLoaded = useRef(false);
   const originalTaskData = useRef(null);
+
+  // ✅ حالة إظهار/إخفاء حقول Design Review Project + Review Stage
+  const [showOptionB, setShowOptionB] = useState(false);
 
   const [allowedTaskTypes, setAllowedTaskTypes] = useState(
     ['MAIN_DESIGN', 'SUPERVISION', 'CHANGE_ORDER', 'INTERNAL_REVIEW']
@@ -273,7 +278,9 @@ const EditTask = () => {
         };
 
         // ✅ إذا كانت المهمة من النوع MAIN_DESIGN ولديها review_stage، فهي Option B
-        if (taskData.task_type === 'MAIN_DESIGN' && reviewStageVal) {
+        const hasExistingOptionB = taskData.task_type === 'MAIN_DESIGN' && reviewStageVal;
+        
+        if (hasExistingOptionB) {
             resetData.supervision_project = resetData.project;
             resetData.review_stage = reviewStageVal;
             resetData.project = '';
@@ -281,6 +288,9 @@ const EditTask = () => {
         }
         
         reset(resetData);
+        
+        // ✅ فتح قسم Option B تلقائياً إذا كانت المهمة تحتوي على بيانات موجودة
+        setShowOptionB(hasExistingOptionB);
         
         // ✅ تحميل الخيارات (projects/engineers) بناءً على بيانات المهمة الأصلية
         const taskTypeForOptions = taskData.task_type || 'MAIN_DESIGN';
@@ -365,6 +375,8 @@ const EditTask = () => {
     setSupervisionProjectSearch('');
     setMainProjectSearch('');
     setOptionBProjectSearch('');
+    // ✅ إغلاق قسم Option B عند تغيير النوع
+    setShowOptionB(false);
   }, [taskType, setValue]);
 
   useEffect(() => {
@@ -996,47 +1008,6 @@ const EditTask = () => {
                 </div>
               </div>
 
-              {isMain && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Design Review Project</label>
-                    
-                    <div className="relative mb-1.5">
-                      <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
-                      <input
-                        type="text"
-                        placeholder="Search projects..."
-                        value={optionBProjectSearch}
-                        onChange={(e) => setOptionBProjectSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-300 outline-none transition"
-                      />
-                    </div>
-
-                    <select {...register('supervision_project')}
-                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
-                      <option value="">— Select Supervision Project —</option>
-                      {filteredOptionBProjects.length === 0 ? (
-                        <option value="" disabled>No projects found</option>
-                      ) : (
-                        filteredOptionBProjects.map((p) => (
-                          <option key={p.id} value={p.id}>{p.project_no} · {p.name}</option>
-                        ))
-                      )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Review Stage</label>
-                    <select {...register('review_stage')}
-                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none">
-                      <option value="">— Select Review Stage —</option>
-                      {INTERNAL_REVIEW_STAGES.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -1233,6 +1204,95 @@ const EditTask = () => {
                     : 'focus:ring-sky-300'
                 }`}
               />
+
+              {/* ✅ زر +/- لإظهار/إخفاء حقول Design Review Project + Review Stage */}
+              {isMain && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    title={showOptionB ? 'Hide Design Review fields' : 'Show Design Review fields'}
+                    aria-label={showOptionB ? 'Hide Design Review fields' : 'Show Design Review fields'}
+                    onClick={() => {
+                      const willShow = !showOptionB;
+                      setShowOptionB(willShow);
+
+                      // ✅ عند الإخفاء: نفرّغ الحقول حتى لا تُرسل بيانات غير مطلوبة
+                      if (!willShow) {
+                        setValue('supervision_project', '');
+                        setValue('review_stage', '');
+                        setOptionBProjectSearch('');
+                      }
+                    }}
+                    className={`inline-flex items-center justify-center w-8 h-8 rounded-full border font-bold transition ${
+                      showOptionB
+                        ? 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100'
+                        : 'bg-sky-50 border-sky-300 text-sky-700 hover:bg-sky-100'
+                    }`}
+                  >
+                    {showOptionB ? (
+                      <Minus size={18} strokeWidth={3} />
+                    ) : (
+                      <Plus size={18} strokeWidth={3} />
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* ✅ حقول Design Review Project + Review Stage (تظهر فقط عند تفعيل showOptionB) */}
+              {isMain && showOptionB && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Design Review Project
+                    </label>
+
+                    <div className="relative mb-1.5">
+                      <Search className="absolute left-3 top-2.5 text-gray-400" size={14} />
+                      <input
+                        type="text"
+                        placeholder="Search projects..."
+                        value={optionBProjectSearch}
+                        onChange={(e) => setOptionBProjectSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs bg-gray-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-300 outline-none transition"
+                      />
+                    </div>
+
+                    <select
+                      {...register('supervision_project')}
+                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none"
+                    >
+                      <option value="">— Select Supervision Project —</option>
+                      {filteredOptionBProjects.length === 0 ? (
+                        <option value="" disabled>No projects found</option>
+                      ) : (
+                        filteredOptionBProjects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.project_no} · {p.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                      Review Stage
+                    </label>
+
+                    <select
+                      {...register('review_stage')}
+                      className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none"
+                    >
+                      <option value="">— Select Review Stage —</option>
+                      {INTERNAL_REVIEW_STAGES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
