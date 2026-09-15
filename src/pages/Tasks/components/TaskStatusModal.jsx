@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { updateTaskStatus } from '../../../api/services/tasks';
 import { X, AlertTriangle } from 'lucide-react';
 
 const STATUS_OPTIONS = [
+  { value: 'UNCHARTED',   label: 'Uncharted' },
   { value: 'UNDER_STUDY', label: 'Under Study' },
-  { value: 'COMMENT', label: 'Comment' },
-  { value: 'ON_GOING', label: 'On Going' },
-  { value: 'ON_HOLD', label: 'On Hold' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'APPROVED', label: 'Approved' },
+  { value: 'COMMENT',     label: 'Comment' },
+  { value: 'ON_GOING',    label: 'On Going' },
+  { value: 'ON_HOLD',     label: 'On Hold' },
+  { value: 'COMPLETED',   label: 'Completed' },
+  { value: 'APPROVED',    label: 'Approved' },
 ];
+
+// ✅ الحالات النهائية التي تتطلب Progress = 100%
+const FINAL_STATUSES = ['COMPLETED', 'APPROVED'];
 
 const TaskStatusModal = ({ task, permission = 'none', onClose, onSuccess }) => {
   const allowedStatuses =
@@ -33,6 +37,15 @@ const TaskStatusModal = ({ task, permission = 'none', onClose, onSuccess }) => {
   const [expectedResume, setExpectedResume] = useState(task?.expected_resume_date || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // ✅ الإصلاح الجذري: عند اختيار COMPLETED أو APPROVED، اجعل Progress = 100% تلقائياً
+  useEffect(() => {
+    if (FINAL_STATUSES.includes(status)) {
+      setProgress(100);
+    }
+  }, [status]);
+
+  const isFinalStatus = FINAL_STATUSES.includes(status);
 
   const safeProgress = Math.min(
     100,
@@ -69,9 +82,12 @@ const TaskStatusModal = ({ task, permission = 'none', onClose, onSuccess }) => {
     setLoading(true);
     setError('');
 
+    // ✅ ضمان إضافي: إذا كانت الحالة نهائية، Progress دائماً 100%
+    const finalProgress = isFinalStatus ? 100 : safeProgress;
+
     const payload = {
       status,
-      progress_percentage: safeProgress,
+      progress_percentage: finalProgress,
       is_on_hold: status === 'ON_HOLD',
       hold_reason: status === 'ON_HOLD' ? holdReason : null,
       expected_resume_date: status === 'ON_HOLD' ? expectedResume : null,
@@ -136,6 +152,13 @@ const TaskStatusModal = ({ task, permission = 'none', onClose, onSuccess }) => {
               Progress
             </label>
 
+            {/* ✅ رسالة توضيحية عند اختيار حالة نهائية */}
+            {isFinalStatus && (
+              <div className="mb-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold px-3 py-1.5 rounded-md">
+                ✓ Progress is automatically set to 100% for {status === 'APPROVED' ? 'Approved' : 'Completed'} tasks.
+              </div>
+            )}
+
             <div className="space-y-2">
               <input
                 type="range"
@@ -143,18 +166,23 @@ const TaskStatusModal = ({ task, permission = 'none', onClose, onSuccess }) => {
                 max="100"
                 value={safeProgress}
                 onChange={(e) => setProgress(e.target.value)}
-                className="w-full accent-blue-600"
+                disabled={isFinalStatus}
+                className={`w-full accent-blue-600 ${isFinalStatus ? 'opacity-60 cursor-not-allowed' : ''}`}
               />
 
               <div className="flex items-center gap-3">
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
                   <div
-                    className="h-full rounded-full bg-blue-600 transition-all"
+                    className={`h-full rounded-full transition-all ${
+                      isFinalStatus ? 'bg-emerald-600' : 'bg-blue-600'
+                    }`}
                     style={{ width: `${safeProgress}%` }}
                   />
                 </div>
 
-                <span className="w-12 text-center text-xs font-bold text-gray-900">
+                <span className={`w-12 text-center text-xs font-bold ${
+                  isFinalStatus ? 'text-emerald-700' : 'text-gray-900'
+                }`}>
                   {safeProgress}%
                 </span>
               </div>
@@ -165,7 +193,10 @@ const TaskStatusModal = ({ task, permission = 'none', onClose, onSuccess }) => {
                 max="100"
                 value={progress}
                 onChange={(e) => setProgress(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                disabled={isFinalStatus}
+                className={`w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                  isFinalStatus ? 'bg-gray-50 cursor-not-allowed' : ''
+                }`}
                 placeholder="0"
               />
             </div>
