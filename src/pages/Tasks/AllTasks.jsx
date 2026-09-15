@@ -8,7 +8,7 @@ import {
   AlertCircle, CheckCircle, Clock, PauseCircle,
   User, Calendar, Flag, GitBranch
 } from 'lucide-react';
-import PriorityDragDrop from './components/PriorityDragDrop';
+// import PriorityDragDrop from './components/PriorityDragDrop'; // مفعل إذا احتجته
 
 const AllTasks = () => {
   const { user } = useAuth();
@@ -47,6 +47,7 @@ const AllTasks = () => {
       if (filters.stage) params.stage = filters.stage;
       if (filters.is_on_hold) params.is_on_hold = filters.is_on_hold;
       if (filters.department) params.department = filters.department;
+      
       const res = await getAllTasks(params);
       setTasks(res.data.results || res.data);
       setPagination({
@@ -97,6 +98,35 @@ const AllTasks = () => {
   const isUpdated = (task) => {
     if (!task.updated_at || !task.created_at) return false;
     return new Date(task.updated_at).getTime() !== new Date(task.created_at).getTime();
+  };
+
+  // ✅ دالة مساعدة لتنسيق التاريخ بشكل واضح
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return '—';
+    }
+  };
+
+  // ✅ دالة مساعدة لفحص ما إذا كان التاريخ متأخراً (End Date < Today)
+  const isOverdue = (dateStr) => {
+    if (!dateStr) return false;
+    try {
+      const end = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return end < today;
+    } catch {
+      return false;
+    }
   };
 
   return (
@@ -211,36 +241,36 @@ const AllTasks = () => {
                 <option value="false">Active Only</option>
               </select>
             </div>
-                 <div>
-          <label className="block text-xs font-semibold text-gray-800 mb-1">Department</label>
-          <select
-            value={filters.department}
-            onChange={(e) => handleFilterChange('department', e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-2 text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-          >
-            <option value="">All Departments</option>
-            <option value="MECH">Mechanical</option>
-            <option value="ELEC">Electrical</option>
-            <option value="STRUCT">Structural</option>
-            <option value="ARCH">Architectural</option>
-          </select>
-        </div>
-        <div className="md:col-span-2 flex items-end">
-          <button
-            onClick={() => {
-              setFilters({
-                search: '',
-                project: '',
-                assigned_to: '',
-                status: '',
-                priority: '',
-                stage: '',
-                is_on_hold: '',
-                department: '',
-              });
-              setCurrentPage(1);
-            }}
-                className="w-full px-4 py-2 border border-red-300 text-red-600 rounded-lg bg-red-50 text-sm"
+            <div>
+              <label className="block text-xs font-semibold text-gray-800 mb-1">Department</label>
+              <select
+                value={filters.department}
+                onChange={(e) => handleFilterChange('department', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2 text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+              >
+                <option value="">All Departments</option>
+                <option value="MECH">Mechanical</option>
+                <option value="ELEC">Electrical</option>
+                <option value="STRUCT">Structural</option>
+                <option value="ARCH">Architectural</option>
+              </select>
+            </div>
+            <div className="md:col-span-2 flex items-end">
+              <button
+                onClick={() => {
+                  setFilters({
+                    search: '',
+                    project: '',
+                    assigned_to: '',
+                    status: '',
+                    priority: '',
+                    stage: '',
+                    is_on_hold: '',
+                    department: '',
+                  });
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-2 border border-red-300 text-red-600 rounded-lg bg-red-50 text-sm hover:bg-red-100 transition"
               >
                 Clear All Filters
               </button>
@@ -248,12 +278,6 @@ const AllTasks = () => {
           </div>
         )}
       </div>
-
-{/*  Priority Drag & Drop — مخفي حاليًا (احذف سطري التعليق لإعادة تفعيله)
-{canManage && filters.priority === '' && filters.status === '' && (
-<PriorityDragDrop tasks={tasks} onUpdate={fetchTasks} />
-)}
-*/}
 
       {/* Tasks Table */}
       {loading ? (
@@ -272,120 +296,158 @@ const AllTasks = () => {
               <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
                 <tr>
                   <th className="p-4">Task</th>
-                      <th className="p-4">Discipline</th>  
-
+                  <th className="p-4">Discipline</th>  
                   <th className="p-4">Project</th>
                   <th className="p-4">Assigned To</th>
                   <th className="p-4">Stage</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Priority</th>
                   <th className="p-4">Progress</th>
+                  <th className="p-4">Start Date</th>
+                  <th className="p-4">End Date</th>
                   <th className="p-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {tasks.map(task => (
-                  <tr 
-                    key={task.id} 
-                    className={`bg-gray-50 transition ${task.is_on_hold ? 'bg-red-50' : ''}`}
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center space-x-3">
-                        {task.is_on_hold && (
-                          <PauseCircle size={16} className="text-red-500 flex-shrink-0" />
-                        )}
+                {tasks.map(task => {
+                  const overdue = isOverdue(task.end_date) && 
+                    task.status !== 'COMPLETED' && 
+                    task.status !== 'APPROVED';
+                    
+                  return (
+                    <tr 
+                      key={task.id} 
+                      className={`bg-gray-50 transition ${task.is_on_hold ? 'bg-red-50' : ''}`}
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center space-x-3">
+                          {task.is_on_hold && (
+                            <PauseCircle size={16} className="text-red-500 flex-shrink-0" />
+                          )}
+                          <div>
+                            <Link 
+                              to={`/tasks/${task.id}`}
+                              className="font-semibold text-gray-800 text-primary hover:underline"
+                            >
+                              {task.title || task.discipline_name}
+                            </Link>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Created: {new Date(task.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-medium">
+                          {task.discipline_name || '—'}
+                        </span>
+                      </td>
+                      <td className="p-4">
                         <div>
+                          <p className="font-medium text-gray-800">{task.project_name}</p>
+                          <p className="text-xs text-gray-500 font-mono">{task.project_no}</p>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        {task.assigned_to_name ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center">
+                              <User size={14} className="text-primary" />
+                            </div>
+                            <span className="text-sm text-gray-700">{task.assigned_to_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-semibold">
+                          {task.stage}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)}`}>
+                            {getStatusIcon(task.status)}
+                            <span>{task.status.replace('_', ' ')}</span>
+                          </span>
+                          {isUpdated(task) && (
+                            <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ring-1 ring-blue-200">
+                              Updated
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center space-x-1">
+                          <Flag size={14} className={getPriorityColor(task.priority)} />
+                          <span className={`text-xs font-semibold ${getPriorityColor(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                        </div>
+                      </td>
+                      
+                      {/* ✅ تم تصحيح عمود الإنجاز وإزالة </> الزائدة */}
+                      <td className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-blue-600 h-1.5 rounded-full"
+                              style={{ width: `${task.progress_percentage || 0}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-gray-600">{task.progress_percentage || 0}%</span>
+                        </div>
+                      </td>
+
+                      {/* ✅ تم تصحيح عمود تاريخ البداية */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                          <Calendar size={12} className="text-sky-600 flex-shrink-0" />
+                          <span className="text-gray-800 font-semibold">
+                            {formatDate(task.start_date)}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* ✅ تم تصحيح عمود تاريخ النهاية وعرض حالة التأخير */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                          <Calendar size={12} className={overdue ? "text-red-600 flex-shrink-0" : "text-sky-600 flex-shrink-0"} />
+                          <span className={overdue ? "text-red-700 font-bold" : "text-gray-800 font-semibold"}>
+                            {formatDate(task.end_date)}
+                          </span>
+                          {overdue && (
+                            <span className="bg-red-100 text-red-800 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ring-1 ring-red-200">
+                              Late
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* ✅ تم تصحيح عمود الإجراءات وإضافة فتحة <td> الناقصة */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
                           <Link 
                             to={`/tasks/${task.id}`}
-                            className="font-semibold text-gray-800 text-primary"
+                            className="text-primary text-blue-800 text-xs font-semibold hover:underline whitespace-nowrap"
                           >
-                            {task.title || task.discipline_name}
+                            View Details →
                           </Link>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            Created: {new Date(task.created_at).toLocaleDateString()}
-                          </p>
+                          {showChangeOrderInAllTasks(user, task) && (  
+                            <Link 
+                              to={`/tasks/${task.id}/edit`}
+                              className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold transition shadow-sm"
+                            >
+                              <GitBranch size={12} />
+                              Update
+                            </Link>
+                          )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-  <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-medium">
-    {task.discipline_name || '—'}
-  </span>
-</td>
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium text-gray-800">{task.project_name}</p>
-                        <p className="text-xs text-gray-500 font-mono">{task.project_no}</p>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      {task.assigned_to_name ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User size={14} className="text-primary" />
-                          </div>
-                          <span className="text-sm text-gray-700">{task.assigned_to_name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-semibold">
-                        {task.stage}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)}`}>
-                          {getStatusIcon(task.status)}
-                          <span>{task.status.replace('_', ' ')}</span>
-                        </span>
-                        {isUpdated(task) && (
-                          <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ring-1 ring-blue-200">
-                            Updated
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center space-x-1">
-                        <Flag size={14} className={getPriorityColor(task.priority)} />
-                        <span className={`text-xs font-semibold ${getPriorityColor(task.priority)}`}>
-                          {task.priority}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                          <div 
-                            className="bg-primary h-1.5 rounded-full"
-                            style={{ width: `${task.progress_percentage}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs text-gray-600">{task.progress_percentage}%</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <Link 
-                          to={`/tasks/${task.id}`}
-                          className="text-primary text-blue-800 text-xs font-semibold hover:underline"
-                        >
-                          View Details →
-                        </Link>
-                      {showChangeOrderInAllTasks(user, task) && (  <Link 
-                          to={`/tasks/${task.id}/edit`}
-                          className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold transition shadow-sm"
-                        >
-                          <GitBranch size={12} />
-                          update
-                        </Link>)}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -400,14 +462,14 @@ const AllTasks = () => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={!pagination.previous}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                  className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setCurrentPage(prev => prev + 1)}
                   disabled={!pagination.next}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                  className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
                 >
                   Next
                 </button>
