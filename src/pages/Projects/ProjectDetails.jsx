@@ -452,7 +452,7 @@ export default function ProjectDetails() {
                     interactive={P.canEditStruct} options={STRUCT_OPTIONS} onSelect={setStructStatus}
                     hold={structState === 'ON_HOLD'} holdInfo={struct}
                     onHold={() => setHoldOpen(true)} onResume={resumeStruct} />
-                  <FlagCard label="IFC Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
+                  <FlagCard label="Coordinated Package" accent="emerald" state={ifcState} icon={<Wrench size={15} />}
                     interactive={P.canEditIFC} options={IFC_OPTIONS} onSelect={setIfcStatus} />
                 </div>
               </Block>
