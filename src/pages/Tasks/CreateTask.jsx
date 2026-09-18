@@ -965,6 +965,9 @@ const CreateTask = () => {
                     <option value="RENDERING_3D">3D Rendering</option>
                     <option value="PRESENTATION">Presentation</option>
                     <option value="PRINTING">Printing</option>
+                    {/* ✅ جديد: خيارات Work Type المضافة */}
+                    <option value="FILE_OPENING">File Opening</option>
+                    <option value="COORDINATED_PACKAGE">Coordinated Package</option>
                   </select>
                 </div>
               </div>
