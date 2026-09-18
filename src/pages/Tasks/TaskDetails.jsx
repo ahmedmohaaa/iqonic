@@ -14,7 +14,8 @@ import {
   Edit,
   History,
   GitBranch,
-  Layers
+  Layers,
+  Briefcase
 } from 'lucide-react';
 import TaskStatusModal from './components/TaskStatusModal';
 
@@ -190,7 +191,7 @@ const TaskDetails = () => {
       </div>
 
       {/* Task Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Project */}
         <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
           <p className="text-xs text-gray-500 uppercase">Project</p>
@@ -241,6 +242,19 @@ const TaskDetails = () => {
             </p>
           </div>
         </div>
+
+        {/* ✅ Work Type (جديد) */}
+        {(task.work_type_display || task.work_type) && (
+          <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-teal-500">
+            <p className="text-xs text-gray-500 uppercase">Work Type</p>
+            <div className="flex items-center space-x-2 mt-1">
+              <Briefcase size={16} className="text-teal-500" />
+              <p className="font-semibold text-gray-800 text-sm">
+                {task.work_type_display || task.work_type}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Status */}
         <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-500">
@@ -498,5 +512,3 @@ const TaskDetails = () => {
 };
 
 export default TaskDetails;
-
-
