@@ -129,6 +129,23 @@ const AllTasks = () => {
     }
   };
 
+  // ✅ جديد: تحديد صلاحية ظهور زر Update (السينيور + المدراء + منطق Change Order الأصلي)
+  const canEditTaskInList = (task) => {
+    if (!user) return false;
+
+    // 1) المنطق الأصلي الخاص بـ Change Order (محفوظ كما هو)
+    if (showChangeOrderInAllTasks(user, task)) return true;
+
+    // 2) المهندسون السينيور
+    if (user.role === 'SENIOR_ENG') return true;
+
+    // 3) المدراء (الإدارة العليا + مديرو التصميم + مديرو الإشراف + PM)
+    const managerRoles = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM'];
+    if (managerRoles.includes(user.role)) return true;
+
+    return false;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -434,7 +451,7 @@ const AllTasks = () => {
                           >
                             View Details →
                           </Link>
-                          {showChangeOrderInAllTasks(user, task) && (  
+                          {canEditTaskInList(task) && (  
                             <Link 
                               to={`/tasks/${task.id}/edit`}
                               className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md text-xs font-bold transition shadow-sm"
