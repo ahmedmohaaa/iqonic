@@ -6,7 +6,7 @@ import {
   selfAssignTask
 } from '../../api/services/tasks';
 import { Link, useNavigate } from 'react-router-dom';
-import { GitBranch, CheckSquare, FileText, UserPlus, AlertCircle, Loader, CornerDownRight, Layers, Flag, Filter, Search } from 'lucide-react';
+import { GitBranch, CheckSquare, FileText, UserPlus, AlertCircle, Loader, CornerDownRight, Layers, Flag, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { showChangeOrderInMyTasks } from './taskPermissions';
 import { useAuth } from '../../context/AuthContext';
 import TaskStatusModal from './components/TaskStatusModal';
@@ -259,13 +259,18 @@ const MyTasks = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReplacementModal, setShowReplacementModal] = useState(false);
+  
+  // ✅ Pagination states
+  const [pagination, setPagination] = useState({ count: 0, next: null, previous: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const tabs = [
     { id: 'main', label: 'Main Tasks', icon: CheckSquare, fetchFn: getMyTasks },
   ];
 
   // ✅ تم إصلاح دالة fetchTasks وإزالة التداخلات والأكواد العشوائية
-  const fetchTasks = () => {
+  const fetchTasks = (page = 1) => {
     const currentTab = tabs.find((tab) => tab.id === activeTab);
 
     if (!currentTab) {
@@ -277,22 +282,35 @@ const MyTasks = () => {
     setLoading(true);
 
     const filterOnHoldLocally = statusFilter === 'ON_HOLD';
-    const params = statusFilter && !filterOnHoldLocally ? { status: statusFilter } : {};
+    const params = { page: page };
+    
+    if (statusFilter && !filterOnHoldLocally) {
+      params.status = statusFilter;
+    }
 
     currentTab
       .fetchFn(params)
       .then((res) => {
-        const data = res.data.results || res.data || [];
+        // ✅ التعامل مع الـ Pagination القادم من الباك-إند
+        const responseData = res.data || {};
+        const results = responseData.results || responseData || [];
+        const count = responseData.count || results.length;
+        const next = responseData.next || null;
+        const previous = responseData.previous || null;
 
+        let displayTasks = results;
         if (filterOnHoldLocally) {
-          setTasks(data.filter(isTaskOnHold));
-        } else {
-          setTasks(data);
+          displayTasks = results.filter(isTaskOnHold);
         }
+
+        setTasks(displayTasks);
+        setPagination({ count, next, previous });
+        setCurrentPage(page);
       })
       .catch((err) => {
         console.error(err);
         setTasks([]);
+        setPagination({ count: 0, next: null, previous: null });
       })
       .finally(() => {
         setLoading(false);
@@ -300,15 +318,35 @@ const MyTasks = () => {
   };
 
   useEffect(() => {
-    fetchTasks();
+    fetchTasks(1);
   }, [activeTab, statusFilter]);
 
   const handleSelfAssign = async (taskId) => {
     if (window.confirm('Are you sure you want to self-assign this task?')) {
       await selfAssignTask(taskId);
-      fetchTasks();
+      fetchTasks(currentPage);
     }
   };
+
+  // ✅ دوال التنقل بين الصفحات
+  const goToNextPage = () => {
+    if (pagination.next) {
+      fetchTasks(currentPage + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (pagination.previous) {
+      fetchTasks(currentPage - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // ✅ حساب معلومات الـ Pagination
+  const startItem = pagination.count > 0 ? ((currentPage - 1) * pageSize) + 1 : 0;
+  const endItem = Math.min(currentPage * pageSize, pagination.count);
+  const totalPages = Math.ceil(pagination.count / pageSize);
 
   return (
     <div className="space-y-6">
@@ -372,6 +410,7 @@ const MyTasks = () => {
                 setActiveTab(tab.id);
                 setStatusFilter('');
                 setSearchQuery(''); // ✅ Clear search on tab change
+                setCurrentPage(1); // ✅ Reset pagination on tab change
               }}
               className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
@@ -394,7 +433,7 @@ const MyTasks = () => {
         </div>
       ) : (
         <div className="w-full">
-          {tasks.length === 0 ? (
+          {tasks.length === 0 && pagination.count === 0 ? (
             <div className="text-center py-12 text-gray-500">No tasks found in this section.</div>
           ) : (
             (() => {
@@ -404,7 +443,7 @@ const MyTasks = () => {
                 return name.includes(searchQuery.toLowerCase());
               });
 
-              if (filteredTasks.length === 0) {
+              if (filteredTasks.length === 0 && searchQuery) {
                 return <div className="text-center py-12 text-gray-500">No tasks found matching your search.</div>;
               }
 
@@ -473,6 +512,51 @@ const MyTasks = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* ✅ Pagination Controls */}
+                  {pagination.count > pageSize && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-gray-200">
+                      <div className="text-sm text-gray-600">
+                        Showing <span className="font-semibold text-gray-900">{startItem}</span> to{' '}
+                        <span className="font-semibold text-gray-900">{endItem}</span> of{' '}
+                        <span className="font-semibold text-gray-900">{pagination.count}</span> tasks
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={goToPrevPage}
+                          disabled={!pagination.previous}
+                          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                            pagination.previous
+                              ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                              : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                          }`}
+                        >
+                          <ChevronLeft size={16} />
+                          Previous
+                        </button>
+
+                        <div className="flex items-center gap-1 text-sm text-gray-600 px-3">
+                          <span className="font-semibold text-gray-900">{currentPage}</span>
+                          <span>/</span>
+                          <span>{totalPages}</span>
+                        </div>
+
+                        <button
+                          onClick={goToNextPage}
+                          disabled={!pagination.next}
+                          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                            pagination.next
+                              ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                              : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                          }`}
+                        >
+                          Next
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()
@@ -488,7 +572,7 @@ const MyTasks = () => {
           onClose={() => setShowStatusModal(false)}
           onSuccess={() => {
             setShowStatusModal(false);
-            fetchTasks();
+            fetchTasks(currentPage);
           }}
         />
       )}
