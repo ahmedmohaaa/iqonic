@@ -74,7 +74,8 @@ const ExternalLogs = () => {
     const matchesSearch = 
       log.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.project_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      log.project_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.project_no?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // ✅ فلتر النوع (PENDING_DOCUMENTS / CRITICAL / All)
     const matchesType = !filterType || log.sub_type === filterType;
@@ -200,9 +201,31 @@ const ExternalLogs = () => {
                   {getSubTypeIcon(log.sub_type)}
                   <div>
                     <h3 className="font-semibold text-gray-800">{log.log_type || 'External Log'}</h3>
-                    <p className="text-xs text-gray-500">
-                      Project: {log.project_name || log.project_id || 'N/A'}
-                    </p>
+                    
+                    {/* ✅ عرض رقم المشروع + اسمه بشكل كامل ومنظم */}
+                    <div className="mt-1">
+                      <p className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-gray-600">Project:</span>
+                        {log.project_no && (
+                          <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-800 font-bold">
+                            {log.project_no}
+                          </span>
+                        )}
+                        {log.project_name && (
+                          <span className="text-gray-700 font-medium">
+                            {log.project_name}
+                          </span>
+                        )}
+                        {!log.project_no && !log.project_name && log.project_id && (
+                          <span className="text-gray-500 italic">
+                            ID: {log.project_id}
+                          </span>
+                        )}
+                        {!log.project_no && !log.project_name && !log.project_id && (
+                          <span className="text-gray-400 italic">N/A</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getSubTypeColor(log.sub_type)}`}>
