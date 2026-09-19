@@ -70,6 +70,10 @@ const TaskDetails = () => {
     String(assignedToId) === String(user.id)
   );
 
+  // ✅ جديد: المهندسون السينيور والمدراء يمكنهم التعديل الكامل
+  const isSeniorEngineer = user?.role === 'SENIOR_ENG';
+  const isManager = ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM'].includes(user?.role);
+
   const isDesignHoldManager = ['GM', 'AGM', 'DESIGN_MGR'].includes(user?.role);
   const isZabady = user?.username === 'ahmed.zabady';
   const taskScope = task?.scope;
@@ -78,9 +82,10 @@ const TaskDetails = () => {
     (isDesignHoldManager && (taskScope === 'DESIGN' || taskScope === 'BOTH')) ||
     (isZabady && (taskScope === 'SUPERVISION' || taskScope === 'BOTH'));
 
+  // ✅ التعديل: المهندس المعيّن + السينيور + المدراء = executor (Update + Hold)
   const statusPermission = !task
     ? 'none'
-    : isTaskExecutor
+    : isTaskExecutor || isSeniorEngineer || isManager
       ? 'executor'
       : canHoldByRole
         ? 'hold-only'
