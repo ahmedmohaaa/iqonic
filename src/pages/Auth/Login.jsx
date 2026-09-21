@@ -12,34 +12,35 @@ const Login = () => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const [error, setError] = useState('');
 
-const onSubmit = async (data) => {
-  setError('');
+  const onSubmit = async (data) => {
+    setError('');
+    
+    // ✅ الحل السريع: امسح كل الـ tokens قبل تسجيل الدخول
+    localStorage.clear();
+    
+    try {
+      // 1. Fetch tokens (Access & Refresh)
+      const tokenResponse = await login(data);
+      const { access, refresh } = tokenResponse.data;
 
-  try {
-    const tokenResponse = await login(data);
-    const { access, refresh } = tokenResponse.data;
+      // 2. Fetch current user with the Access Token
+      const userResponse = await getCurrentUser(access);
+      const userData = userResponse.data;
 
-    const userResponse = await getCurrentUser(access);
-    const userData = userResponse.data;
+      // 3. Save into Context + LocalStorage
+      authLogin({ access, refresh }, userData);
 
-    authLogin({ access, refresh }, userData);
-
-    navigate('/dashboard');
-  } catch (err) {
-    console.log('========== AUTH ERROR ==========');
-    console.log('URL:', err.config?.url);
-    console.log('METHOD:', err.config?.method);
-    console.log('STATUS:', err.response?.status);
-    console.log('DATA:', err.response?.data);
-    console.log('================================');
-
-    if (err.response?.status === 401) {
-      setError('401');
-    } else {
-      setError('Connection error.');
+      // 4. Redirect to dashboard
+      navigate('/dashboard');
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        setError('Invalid username or password.');
+      } else {
+        setError('Connection error. Please make sure the backend is running.');
+      }
     }
-  }
-};
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#0b1f3c]">
       {/* خلفية محيطة بنفس ستايل السايدبار والنافبار */}
@@ -58,17 +59,16 @@ const onSubmit = async (data) => {
       <div className="w-full max-w-md relative">
         <div className="rounded-2xl overflow-hidden shadow-2xl border border-[#1d3a66] bg-[#0e2547]">
           {/* شعار ICON — نفس تصميم السايدبار */}
-<div className="bg-[#0b1f3c]">
-  <div className="pt-6 pb-4 flex justify-center">
-    <img
-      src={logo}
-      alt="ICON Consulting Engineering"
-      className="h-24 w-auto object-contain"
-    />
-  </div>
-  <div style={{ height: '4px', backgroundColor: '#e5e32a' }} />
-</div>
-
+          <div className="bg-[#0b1f3c]">
+            <div className="pt-6 pb-4 flex justify-center">
+              <img
+                src={logo}
+                alt="ICON Consulting Engineering"
+                className="h-24 w-auto object-contain"
+              />
+            </div>
+            <div style={{ height: '4px', backgroundColor: '#e5e32a' }} />
+          </div>
 
           {/* الفورم — نفس الوظائف بالكامل */}
           <div className="p-8">
