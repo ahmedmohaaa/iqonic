@@ -12,31 +12,34 @@ const Login = () => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const [error, setError] = useState('');
 
-  const onSubmit = async (data) => {
-    setError('');
-    try {
-      // 1. Fetch tokens (Access & Refresh)
-      const tokenResponse = await login(data);
-      const { access, refresh } = tokenResponse.data;
+const onSubmit = async (data) => {
+  setError('');
 
-      // 2. Fetch current user with the Access Token
-      const userResponse = await getCurrentUser(access);
-      const userData = userResponse.data;
+  try {
+    const tokenResponse = await login(data);
+    const { access, refresh } = tokenResponse.data;
 
-      // 3. Save into Context + LocalStorage
-      authLogin({ access, refresh }, userData);
+    const userResponse = await getCurrentUser(access);
+    const userData = userResponse.data;
 
-      // 4. Redirect to dashboard
-      navigate('/dashboard');
-    } catch (err) {
-      if (err.response && err.response.status === 401) {
-        setError('Invalid username or password.');
-      } else {
-        setError('Connection error. Please make sure the backend is running.');
-      }
+    authLogin({ access, refresh }, userData);
+
+    navigate('/dashboard');
+  } catch (err) {
+    console.log('========== AUTH ERROR ==========');
+    console.log('URL:', err.config?.url);
+    console.log('METHOD:', err.config?.method);
+    console.log('STATUS:', err.response?.status);
+    console.log('DATA:', err.response?.data);
+    console.log('================================');
+
+    if (err.response?.status === 401) {
+      setError('401');
+    } else {
+      setError('Connection error.');
     }
-  };
-
+  }
+};
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#0b1f3c]">
       {/* خلفية محيطة بنفس ستايل السايدبار والنافبار */}
@@ -90,7 +93,7 @@ const Login = () => {
                     type="text"
                     {...register('username', { required: 'Username is required' })}
                     className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#0b1f3c] border border-[#1d3a66] text-white placeholder-gray-500 outline-none focus:border-[#e5e32a] focus:ring-2 focus:ring-[#e5e32a]/20 transition"
-                    placeholder="e.g. nasser.tabouni"
+                    placeholder="e.g. nasser.tatouni"
                   />
                 </div>
                 {errors.username && (
