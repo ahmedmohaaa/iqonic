@@ -3,10 +3,11 @@ import {
   getMyTasks,
   getMyInternalReviews, // if needed for tabs later
   getMyChangeOrders,    // if needed for tabs later
-  selfAssignTask
+  selfAssignTask,
+  deleteTask            // ✅ جديد: دالة حذف المهمة
 } from '../../api/services/tasks';
 import { Link, useNavigate } from 'react-router-dom';
-import { GitBranch, CheckSquare, FileText, UserPlus, AlertCircle, Loader, CornerDownRight, Layers, Flag, Filter, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { GitBranch, CheckSquare, FileText, UserPlus, AlertCircle, Loader, CornerDownRight, Layers, Flag, Filter, Search, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { showChangeOrderInMyTasks } from './taskPermissions';
 import { useAuth } from '../../context/AuthContext';
 import TaskStatusModal from './components/TaskStatusModal';
@@ -99,7 +100,8 @@ const TaskCard = ({
   onUpdateStatus,
   onRequestReplacement,
   onSelfAssign,
-  onOpenDetails
+  onOpenDetails,
+  onDelete          // ✅ جديد: دالة الحذف
 }) => {
   const category = getTaskCategory(task);
   const assignedToId = getAssignedToId(task);
@@ -110,6 +112,14 @@ const TaskCard = ({
   const tm = TYPE_META[task.task_type] || TYPE_META.MAIN_DESIGN;
   const sm = STATUS_META[task.status] || STATUS_META.UNCHARTED;
   const pct = Math.max(0, Math.min(100, Number(task.progress_percentage) || 0));
+
+  // ✅ صلاحية الحذف: المهمة ليست APPROVED/COMPLETED (صفحة My Tasks تعرض مهامك فقط)
+  const canDeleteTask =
+    task.status !== 'APPROVED' &&
+    task.status !== 'COMPLETED' &&
+    typeof onDelete === 'function';
+
+  const canUpdateTask = showChangeOrderInMyTasks(currentUser, task);
 
   return (
     <div
@@ -234,13 +244,31 @@ const TaskCard = ({
             </>
           )}
 
-          {showChangeOrderInMyTasks(currentUser, task) && (
-            <Link
-              to={`/tasks/${task.id}/edit`}
-              className="flex-1 inline-flex items-center justify-center gap-1 bg-violet-50 text-violet-700 hover:bg-violet-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
-            >
-              <GitBranch size={14} /> update
-            </Link>
+          {/* ✅ زر Update + زر Delete جنباً إلى جنب - كل واحد نصف المساحة */}
+          {(canUpdateTask || canDeleteTask) && (
+            <div className={`w-full grid gap-2 ${canUpdateTask && canDeleteTask ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {canUpdateTask && (
+                <Link
+                  to={`/tasks/${task.id}/edit`}
+                  className="inline-flex items-center justify-center gap-1 bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                >
+                  <GitBranch size={14} /> update
+                </Link>
+              )}
+              
+              {canDeleteTask && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(task);
+                  }}
+                  className="inline-flex items-center justify-center gap-1 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                >
+                  <Trash2 size={14} /> Delete
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -325,6 +353,32 @@ const MyTasks = () => {
     if (window.confirm('Are you sure you want to self-assign this task?')) {
       await selfAssignTask(taskId);
       fetchTasks(currentPage);
+    }
+  };
+
+  // ✅ جديد: دالة الحذف مع تأكيد + استدعاء الباك-إند
+  const handleDeleteTask = async (task) => {
+    const taskTitle = task.title || task.discipline_name || `Task #${task.id}`;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this task?\n\n"${taskTitle}"\n\nThis action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteTask(task.id);
+      // ✅ إذا كانت المهمة الأخيرة في الصفحة والحالية > 1، ارجع صفحة
+      if (tasks.length === 1 && currentPage > 1) {
+        fetchTasks(currentPage - 1);
+      } else {
+        fetchTasks(currentPage);
+      }
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.error ||
+        'Failed to delete the task. Please try again.';
+      alert(msg);
     }
   };
 
@@ -469,6 +523,7 @@ const MyTasks = () => {
                   }}
                   onSelfAssign={handleSelfAssign}
                   onOpenDetails={() => navigate(`/tasks/${task.id}`)}
+                  onDelete={handleDeleteTask}
                 />
               );
 
