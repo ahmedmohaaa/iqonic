@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { updateProject, getProjectDetails } from '../../api/services/projects';
+import { updateProject, getProjectDetails, deleteProject } from '../../api/services/projects';
 import { getClients } from '../../api/services/clients';
 import {
   getContractors, createContractor,
 } from '../../api/services/contractors';
 import {
   Building2, HardHat, Lock, Plus, UserPlus, Check,
-  AlertTriangle, Calendar, Ruler, FileSignature, Search, Edit
+  AlertTriangle, Calendar, Ruler, FileSignature, Search, Edit, Trash2
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
@@ -152,6 +152,81 @@ export default function EditProject() {
     if (value === '' || value === undefined) return null;
     return value;
   };
+
+const handleDelete = async () => {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete this project?\n\n"${f.name || f.project_no}"\n\nThis action cannot be undone and will remove all associated tasks and data.`
+  );
+  if (!confirmed) return;
+
+  setBusy(true);
+  setError('');
+  
+  try {
+    // ✅ طباعة معلومات الطلب قبل إرساله
+    console.log('🗑️ Deleting project:', {
+      id,
+      name: f.name,
+      project_no: f.project_no
+    });
+    
+    const response = await deleteProject(id);
+    console.log('✅ Delete successful:', response);
+    
+    navigate('/projects');
+  } catch (err) {
+    // ✅ طباعة كل تفاصيل الخطأ
+    console.error('❌ Delete error FULL:', {
+      error: err,
+      message: err?.message,
+      response: err?.response,
+      responseData: err?.response?.data,
+      status: err?.response?.status,
+      request: err?.request ? 'Request was sent' : 'No request sent',
+      config: err?.config ? {
+        url: err.config.url,
+        method: err.config.method,
+        baseURL: err.config.baseURL
+      } : 'No config'
+    });
+    
+    let errorMessage = 'Unable to delete the project.';
+    
+    if (err.response) {
+      // الخادم رد بخطأ HTTP
+      const status = err.response.status;
+      const data = err.response.data;
+      
+      console.log('📡 Server responded with:', { status, data });
+      
+      if (status === 404) {
+        errorMessage = 'Project not found or delete endpoint is incorrect.';
+      } else if (status === 403) {
+        errorMessage = 'You do not have permission to delete this project.';
+      } else if (status === 400) {
+        errorMessage = data?.detail || data?.message || 'Invalid request.';
+      } else if (data?.detail) {
+        errorMessage = data.detail;
+      } else if (data?.message) {
+        errorMessage = data.message;
+      } else {
+        errorMessage = `Server error: ${status}`;
+      }
+    } else if (err.request) {
+      // الطلب وصل لكن لا رد من السيرفر
+      console.log('📡 Request sent but no response:', err.request);
+      errorMessage = 'No response from server. Please check:\n1. Server is running\n2. Network connection\n3. CORS settings\n4. API endpoint exists';
+    } else {
+      // خطأ في إعداد الطلب نفسه
+      console.log('⚠️ Request setup error:', err.message);
+      errorMessage = err.message || 'An unexpected error occurred.';
+    }
+    
+    setError(errorMessage);
+  } finally {
+    setBusy(false);
+  }
+};
 
   const submit = async (e) => {
     e.preventDefault();
@@ -322,7 +397,7 @@ export default function EditProject() {
                 <option value="NEW_PERMIT">New Permit</option>
                 <option value="MODIFICATION_PERMIT">Modification Permit</option>
                 <option value="COMPLETION_CERTIFICATE">Completion Certificate</option>
-                <option value="MAINTENANCE_DEMOLITION">Maintenance and Demolition</option>
+                <option value="MAINTENANCE_DEMOLATION">Maintenance and Demolition</option>
               </select>
             </Field>
 
@@ -445,7 +520,11 @@ export default function EditProject() {
           </section>
         )}
 
+        {/* ✅ تم إضافة زر الحذف هنا مع دفعه لليسار باستخدام margin-right: auto */}
         <div className="cp-foot cp-rv">
+          <button type="button" className="cp-delete" onClick={handleDelete} disabled={busy}>
+            <Trash2 size={16} /> Delete Project
+          </button>
           <button type="button" className="cp-ghost" onClick={() => navigate(-1)}>Cancel</button>
           <button type="submit" disabled={busy} className="cp-save">
             {busy ? 'Updating…' : <><Edit size={16} /> Update Project</>}
@@ -660,7 +739,7 @@ export const CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+
   padding: 20px 0;
 }
 
-.cp-foot{ display:flex; justify-content:flex-end; gap:12px; }
+.cp-foot{ display:flex; justify-content:flex-end; gap:12px; align-items: center; }
 .cp-ghost{ border:1px solid #cbd5e1; background:#ffffff; color:#334155; border-radius:11px;
   padding:11px 22px; font-family:inherit; font-weight:600; cursor:pointer; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.03); }
 .cp-ghost:hover{ color:var(--paper); border-color:#94a3b8; background:#f8fafc; }
@@ -669,7 +748,15 @@ export const CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+
 .cp-save:hover{ filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 4px 6px rgba(5,150,105,.3); }
 .cp-save:disabled{ opacity:.6; cursor:not-allowed; transform:none; filter:grayscale(0.5); box-shadow:none; }
 
+/* ✅ Delete Button Styles */
+.cp-delete{ display:inline-flex; align-items:center; gap:8px; border:1px solid rgba(220,38,38,.3); background:rgba(220,38,38,.05); color:var(--rose);
+  border-radius:11px; padding:11px 22px; font-family:inherit; font-weight:600; font-size:14px; cursor:pointer; transition:.2s; margin-right:auto; }
+.cp-delete:hover{ background:var(--rose); color:#ffffff; border-color:var(--rose); box-shadow:0 4px 6px rgba(220,38,38,.2); transform:translateY(-1px); }
+.cp-delete:disabled{ opacity:.6; cursor:not-allowed; transform:none; filter:grayscale(0.5); box-shadow:none; }
+
 .cp-spin{ width:40px; height:40px; border:3px solid #e2e8f0; border-top-color:var(--sky); border-radius:50%;
   animation:cp-spin 1s linear infinite; margin:0 auto; }
 @keyframes cp-spin{ to{ transform:rotate(360deg); } }
 `;
+
+
