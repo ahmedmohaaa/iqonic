@@ -41,3 +41,7 @@ export const getProjects = (params) =>
 export const getLifecycleAnalytics = (id) => apiClient.get('lifecycle/analytics/', { 
   params: { project_id: id } 
 });
+
+
+// ✅ تعديل دالة deleteProject
+export const deleteProject = (id) => apiClient.delete(`projects/${id}/delete/`);
