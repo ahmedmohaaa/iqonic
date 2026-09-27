@@ -479,16 +479,16 @@ const AllTasks = () => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={!pagination.previous}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition shadow-sm"
                 >
-                  Previous
+                  ← Previous
                 </button>
                 <button
                   onClick={() => setCurrentPage(prev => prev + 1)}
                   disabled={!pagination.next}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-100"
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition shadow-sm"
                 >
-                  Next
+                  Next →
                 </button>
               </div>
             </div>
