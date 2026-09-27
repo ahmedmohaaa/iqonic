@@ -238,7 +238,7 @@ const CSS = `
 .skm-tab{ display:inline-flex; align-items:center; gap:6px; padding:9px 13px; background:none; border:none; border-bottom:2px solid transparent; color:#64748b; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:.2s; }
 .skm-tab em{ font-style:normal; font-family:'JetBrains Mono'; font-size:10px; background:rgba(255,255,255,.06); padding:1px 6px; border-radius:99px; }
 .skm-tab:hover{ color:#334155; }
-.skm-tab.on{ color:#fff; border-bottom-color:#0284c7; } .skm-tab.on em{ background:rgba(92,198,239,.2); color:#0284c7; }
+.skm-tab.on{ color:#0284c7; border-bottom-color:#0284c7; } .skm-tab.on em{ background:rgba(92,198,239,.2); color:#0284c7; }
 .skm-body{ padding:16px 24px 24px; }
 .skm-empty{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:36px; color:#94a3b8; text-align:center; border:1px dashed #e2e8f0; border-radius:13px; }
 .skm-empty p{ margin:0; font-size:12.5px; }
@@ -261,3 +261,5 @@ const CSS = `
 .skm-badge.t-emerald{ background:rgba(63,178,134,.16); color:#059669; } .skm-badge.t-sky{ background:rgba(92,198,239,.16); color:#0284c7; }
 .skm-badge.t-amber{ background:rgba(230,171,76,.16); color:#d97706; } .skm-badge.t-rose{ background:rgba(227,112,126,.16); color:#dc2626; } .skm-badge.t-slate{ background:rgba(255,255,255,.08); color:#475569; }
 `;
+
+
