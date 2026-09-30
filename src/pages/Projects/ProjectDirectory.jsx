@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getGlobalFilterProjects } from '../../api/services/projects';
 import GlobalFilterBar from '../../components/GlobalFilterBar';
 import { Link } from 'react-router-dom';
-import { Calendar, AlertCircle, Plus, Clock, Flag, Edit, Eye,FileText } from 'lucide-react';
+import { Calendar, AlertCircle, Plus, Clock, Flag, Edit, Eye, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const ProjectDirectory = () => {
@@ -11,6 +11,10 @@ const ProjectDirectory = () => {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // ✅ جديد: حالة Pagination
+  const [pagination, setPagination] = useState({ count: 0, next: null, previous: null });
+  const pageSize = 20;
 
   const roleString = String(user?.role || user?.groups?.[0] || user?.user_type || '').toUpperCase();
 
@@ -31,9 +35,22 @@ const ProjectDirectory = () => {
       .then((res) => {
         if (cancelled) return;
         const data = res?.data;
-        setProjects(data?.results ?? data ?? []);
+        
+        // ✅ استخراج البيانات والـ pagination من response
+        const results = data?.results ?? data ?? [];
+        const count = data?.count ?? results.length;
+        const next = data?.next ?? null;
+        const previous = data?.previous ?? null;
+        
+        setProjects(results);
+        setPagination({ count, next, previous });
       })
-      .catch(() => { if (!cancelled) setProjects([]); })
+      .catch(() => { 
+        if (!cancelled) {
+          setProjects([]);
+          setPagination({ count: 0, next: null, previous: null });
+        }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [paramsKey]);
@@ -54,7 +71,25 @@ const ProjectDirectory = () => {
     });
   };
 
+  // ✅ دوال التنقل بين الصفحات
+  const goToNextPage = () => {
+    if (pagination.next) {
+      setCurrentPage(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
+  const goToPrevPage = () => {
+    if (pagination.previous) {
+      setCurrentPage(prev => Math.max(1, prev - 1));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // ✅ حساب معلومات الـ Pagination
+  const startItem = pagination.count > 0 ? ((currentPage - 1) * pageSize) + 1 : 0;
+  const endItem = Math.min(currentPage * pageSize, pagination.count);
+  const totalPages = Math.ceil(pagination.count / pageSize);
 
   const isSecretary = roleString.includes('SECRETARY') || roleString.includes('سكرتير');
   const sortedProjects = getSortedProjects(projects);
@@ -89,113 +124,147 @@ const ProjectDirectory = () => {
           No projects found matching the filters.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedProjects.map((project) => (
-            <div
-              key={project.id}
-              className="bg-white rounded-lg shadow shadow-lg transition flex flex-col border-t-4 border-primary hover:shadow-xl"
-            >
-              <Link to={`/projects/${project.id}`} className="p-5 block grow">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-bold text-lg text-gray-800">{project.name}</h3>
-                    <p className="text-sm text-gray-500">{project.project_no}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      project.is_active
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {project.is_active ? 'Active' : 'Closed'}
-                  </span>
-                </div>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p>
-                    <span className="font-semibold">Client:</span>{' '}
-                    {project.client_name}
-                  </p>
-    
-
-
-
-
-
-
-                                    <p>
-                    <span className="font-semibold">Scope:</span> {project.scope}
-                  </p>
-                  {/* ✅ نوع الطلب (من Serializer مباشرة) */}
-                  {project.application_type && (
-                    <p className="flex items-center gap-1.5 text-xs text-gray-600">
-                      <FileText size={12} className="text-violet-500" />
-                      <span className="font-semibold">{project.application_type_display}</span>
-                    </p>
-                  )}
-
-
-
-
-
-
-
-                  
-                  <div className="flex items-center text-gray-500">
-                    <Calendar size={14} className="mr-1" />
-                    <span>Start: {project.start_date || 'TBD'}</span>
-                  </div>
-                </div>
-                {project.priority && project.is_active && (
-                  <div
-                    className={`mt-3 flex items-center text-sm font-semibold ${
-                      project.priority.toUpperCase() === 'URGENT'
-                        ? 'text-red-600'
-                        : project.priority.toUpperCase() === 'HIGH'
-                        ? 'text-orange-500'
-                        : project.priority.toUpperCase() === 'MEDIUM'
-                        ? 'text-yellow-600'
-                        : 'text-blue-500'
-                    }`}
-                  >
-                    <AlertCircle size={16} className="mr-1" />{' '}
-                    {project.priority} Priority
-                  </div>
-                )}
-              </Link>
-              <div className="border-t border-gray-100 p-3 bg-gray-50 flex flex-col gap-2 rounded-b-lg">
-                <Link
-                  to={`/projects/${project.id}`}
-                  className="flex justify-center items-center gap-1 px-3 py-2 text-xs font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded transition w-full"
-                >
-                  <Eye size={14} /> Project Details
-                </Link>
-                <div className="flex justify-between gap-2 pt-1 border-t border-gray-200">
-                  <Link
-                    to={`/projects/${project.id}/timeline`}
-                    className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition"
-                  >
-                    <Clock size={14} /> Timeline
-                  </Link>
-                  <Link
-                    to={`/projects/${project.id}/priority`}
-                    className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 rounded transition"
-                  >
-                    <Flag size={14} /> Priority
-                  </Link>
-                  {isSecretary && (
-                    <Link
-                      to={`/projects/${project.id}/edit`}
-                      className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 rounded transition"
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortedProjects.map((project) => (
+              <div
+                key={project.id}
+                className="bg-white rounded-lg shadow shadow-lg transition flex flex-col border-t-4 border-primary hover:shadow-xl"
+              >
+                <Link to={`/projects/${project.id}`} className="p-5 block grow">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-800">{project.name}</h3>
+                      <p className="text-sm text-gray-500">{project.project_no}</p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        project.is_active
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
                     >
-                      <Edit size={14} /> Edit
-                    </Link>
+                      {project.is_active ? 'Active' : 'Closed'}
+                    </span>
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <p>
+                      <span className="font-semibold">Client:</span>{' '}
+                      {project.client_name}
+                    </p>
+
+                    <p>
+                      <span className="font-semibold">Scope:</span> {project.scope}
+                    </p>
+                    {/* ✅ نوع الطلب (من Serializer مباشرة) */}
+                    {project.application_type && (
+                      <p className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <FileText size={12} className="text-violet-500" />
+                        <span className="font-semibold">{project.application_type_display}</span>
+                      </p>
+                    )}
+
+                    <div className="flex items-center text-gray-500">
+                      <Calendar size={14} className="mr-1" />
+                      <span>Start: {project.start_date || 'TBD'}</span>
+                    </div>
+                  </div>
+                  {project.priority && project.is_active && (
+                    <div
+                      className={`mt-3 flex items-center text-sm font-semibold ${
+                        project.priority.toUpperCase() === 'URGENT'
+                          ? 'text-red-600'
+                          : project.priority.toUpperCase() === 'HIGH'
+                          ? 'text-orange-500'
+                          : project.priority.toUpperCase() === 'MEDIUM'
+                          ? 'text-yellow-600'
+                          : 'text-blue-500'
+                      }`}
+                    >
+                      <AlertCircle size={16} className="mr-1" />{' '}
+                      {project.priority} Priority
+                    </div>
                   )}
+                </Link>
+                <div className="border-t border-gray-100 p-3 bg-gray-50 flex flex-col gap-2 rounded-b-lg">
+                  <Link
+                    to={`/projects/${project.id}`}
+                    className="flex justify-center items-center gap-1 px-3 py-2 text-xs font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded transition w-full"
+                  >
+                    <Eye size={14} /> Project Details
+                  </Link>
+                  <div className="flex justify-between gap-2 pt-1 border-t border-gray-200">
+                    <Link
+                      to={`/projects/${project.id}/timeline`}
+                      className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition"
+                    >
+                      <Clock size={14} /> Timeline
+                    </Link>
+                    <Link
+                      to={`/projects/${project.id}/priority`}
+                      className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 rounded transition"
+                    >
+                      <Flag size={14} /> Priority
+                    </Link>
+                    {isSecretary && (
+                      <Link
+                        to={`/projects/${project.id}/edit`}
+                        className="flex flex-1 justify-center items-center gap-1 px-2 py-1.5 text-xs font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 rounded transition"
+                      >
+                        <Edit size={14} /> Edit
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* ✅ Pagination Controls */}
+          {pagination.count > pageSize && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 mt-6 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                Showing <span className="font-semibold text-gray-900">{startItem}</span> to{' '}
+                <span className="font-semibold text-gray-900">{endItem}</span> of{' '}
+                <span className="font-semibold text-gray-900">{pagination.count}</span> projects
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={goToPrevPage}
+                  disabled={!pagination.previous}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    pagination.previous
+                      ? 'bg-white border border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 shadow-sm'
+                      : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                  }`}
+                >
+                  <ChevronLeft size={16} />
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1 text-sm text-gray-600 px-3">
+                  <span className="font-semibold text-gray-900">{currentPage}</span>
+                  <span>/</span>
+                  <span>{totalPages}</span>
+                </div>
+
+                <button
+                  onClick={goToNextPage}
+                  disabled={!pagination.next}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    pagination.next
+                      ? 'bg-white border border-gray-300 text-gray-700 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 shadow-sm'
+                      : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
