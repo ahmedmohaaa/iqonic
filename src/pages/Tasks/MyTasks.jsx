@@ -427,7 +427,7 @@ const MyTasks = () => {
             <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Search by task name..."
+              placeholder="Search tasks, projects, app #..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
@@ -491,10 +491,29 @@ const MyTasks = () => {
             <div className="text-center py-12 text-gray-500">No tasks found in this section.</div>
           ) : (
             (() => {
-              // ✅ فلترة المهام بناءً على شريط البحث (البحث بالاسم أو التخصص)
+              // ✅ فلترة المهام بناءً على شريط البحث — بحث شامل
               const filteredTasks = tasks.filter(t => {
-                const name = (t.title || t.discipline_name || '').toLowerCase();
-                return name.includes(searchQuery.toLowerCase());
+                if (!searchQuery) return true; // لا يوجد بحث → عرض الكل
+                
+                const q = searchQuery.toLowerCase().trim();
+                if (!q) return true;
+                
+                // ✅ تجميع كل الحقول القابلة للبحث
+                const searchableFields = [
+                  t.title || '',
+                  t.discipline_name || '',
+                  t.project_no || '',
+                  t.project_name || '',
+                  t.application_no || '',
+                  t.parent_project_no || '',          // للـ Change Orders
+                  t.parent_project_name || '',        // للـ Change Orders
+                  t.description || '',
+                ];
+                
+                // ✅ البحث: هل أي حقل يحتوي على النص المبحوث عنه؟
+                return searchableFields.some(field =>
+                  String(field).toLowerCase().includes(q)
+                );
               });
 
               if (filteredTasks.length === 0 && searchQuery) {
