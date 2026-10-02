@@ -133,7 +133,9 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     { path: '/projects/active', label: 'Active Projects', icon: PlayCircle, roles: ['ALL'] },
     { path: '/projects/closed', label: 'Closed Projects', icon: Archive, roles: ['ALL'] },
     { path: '/projects/pending', label: 'Pending Projects', icon: Clock, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM'] },
-{
+    { path: '/disciplines', label: 'disciplines', icon: Clock, roles: ['SECRETARY'] },
+
+    {
   path: '/supervision/projects',
   label: 'Supervision Projects',
   icon: Building2,
