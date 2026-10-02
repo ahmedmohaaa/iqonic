@@ -327,6 +327,12 @@ export default function ProjectDetails() {
   const pct = stages.length ? Math.round((done / stages.length) * 100) : 0;
   const isDesign = p.scope !== 'SUPERVISION';
 
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ NEW: التحقق من وجود مراحل DC2 و TENDER في المشروع
+  // ═══════════════════════════════════════════════════════════
+  const hasDC2 = (p.lifecycle_stages || []).some(s => s.stage_name === 'DC2');
+  const hasTender = (p.lifecycle_stages || []).some(s => s.stage_name === 'TENDER');
+
   /* ── Actions ──────────────────────────────────────────── */
   // ✅ حالات الـ Structural (قائمة اختيار — مصدر واحد)
   const STRUCT_OPTIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
@@ -446,8 +452,13 @@ export default function ProjectDetails() {
                 <div className="pd-flags">
                   <FlagCard label="DC1" accent="sky" state={dc1State} pct={dc1Pct}
                     sub={`${dc1.completed || 0}/${dc1.total || 0} tasks`} />
-                  <FlagCard label="DC2" accent="violet" state={dc2State} pct={dc2Pct}
-                    sub={`${dc2.completed || 0}/${dc2.total || 0} tasks`} />
+                  
+                  {/* ✅ NEW: عرض DC2 فقط إذا كانت المرحلة موجودة في المشروع */}
+                  {hasDC2 && (
+                    <FlagCard label="DC2" accent="violet" state={dc2State} pct={dc2Pct}
+                      sub={`${dc2.completed || 0}/${dc2.total || 0} tasks`} />
+                  )}
+                  
                   <FlagCard label="Structural" accent="amber" state={structState} icon={<Hammer size={15} />}
                     interactive={P.canEditStruct} options={STRUCT_OPTIONS} onSelect={setStructStatus}
                     hold={structState === 'ON_HOLD'} holdInfo={struct}
@@ -493,7 +504,8 @@ export default function ProjectDetails() {
             </Block>
 
             {/* Tendering */}
-            {p.scope !== 'SUPERVISION' && (
+            {/* ✅ NEW: عرض Tendering فقط إذا كانت مرحلة TENDER موجودة في المشروع */}
+            {p.scope !== 'SUPERVISION' && hasTender && (
               <Block rv tag="TENDERING" title="Tendering"
                 action={P.canEditTender ? <span className="pd-editable">Edited by Nisreen</span> : <span className="pd-readonly">Read-only</span>}>
                 <Tendering t={p.tendering} canEdit={P.canEditTender} onChanged={load} pid={id} />
@@ -580,7 +592,10 @@ export default function ProjectDetails() {
           {isDesign && (
             <aside className="pd-float">
               <FloatBtn label="DC1" accent="sky" state={dc1State} pct={dc1Pct} />
-              <FloatBtn label="DC2" accent="violet" state={dc2State} pct={dc2Pct} />
+              {/* ✅ NEW: عرض DC2 FloatBtn فقط إذا كانت المرحلة موجودة */}
+              {hasDC2 && (
+                <FloatBtn label="DC2" accent="violet" state={dc2State} pct={dc2Pct} />
+              )}
             </aside>
           )}
         </div>
