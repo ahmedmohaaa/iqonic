@@ -124,7 +124,9 @@ const CreateTask = () => {
   );
 
   const [supervisionReviewProjects, setSupervisionReviewProjects] = useState([]);
-
+  // ✅ NEW: بيانات الـ Stages والـ Disciplines المختارة للمشروع
+  const [selectedDisciplinesByStage, setSelectedDisciplinesByStage] = useState({});
+  const [hasSelections, setHasSelections] = useState(false);
   // ✅ حالات البحث لقوائم المشاريع
   const [supervisionProjectSearch, setSupervisionProjectSearch] = useState('');
   const [mainProjectSearch, setMainProjectSearch] = useState('');
@@ -311,12 +313,15 @@ const CreateTask = () => {
       setTypedProjects([]);
       setFilteredEngineers([]);
       setCanAssignOthers(false);
+      setSelectedDisciplinesByStage({});
+      setHasSelections(false);
       return;
     }
 
     const params = { task_type: taskType };
 
-    if ((isSupervision || isInternal) && selectedProject) {
+    // ✅ NEW: إرسال project_id لجميع الأنواع (ليس فقط الإشراف)
+    if (selectedProject) {
       params.project_id = selectedProject;
     }
 
@@ -327,6 +332,10 @@ const CreateTask = () => {
         setTypedProjects(res.data.projects || []);
         setFilteredEngineers(res.data.engineers || []);
         setCanAssignOthers(Boolean(res.data.can_assign_others));
+        
+        // ✅ NEW: حفظ بيانات الـ Stages والـ Disciplines المختارة
+        setSelectedDisciplinesByStage(res.data.selected_disciplines || {});
+        setHasSelections(Boolean(res.data.has_selections));
 
         if (res.data.allowed_task_types) {
           setAllowedTaskTypes(res.data.allowed_task_types);
@@ -340,6 +349,8 @@ const CreateTask = () => {
         setTypedProjects([]);
         setFilteredEngineers([]);
         setCanAssignOthers(false);
+        setSelectedDisciplinesByStage({});
+        setHasSelections(false);
       })
       .finally(() => setOptionsLoading(false));
   }, [taskType, selectedProject, isMain, isSupervision, isInternal, setValue]);
@@ -375,6 +386,13 @@ const CreateTask = () => {
       return;
     }
 
+    // ✅ NEW: استخدام البيانات من selectedDisciplinesByStage إذا كانت متاحة
+    if (hasSelections && selectedDisciplinesByStage[selectedStage]) {
+      setDisciplines(selectedDisciplinesByStage[selectedStage]);
+      return;
+    }
+
+    // مشروع قديم أو بدون اختيارات: جلب من API
     getDisciplineItems({ stage: selectedStage })
       .then((res) => {
         const responseData = res?.data || res;
@@ -382,7 +400,7 @@ const CreateTask = () => {
         setDisciplines(Array.isArray(items) ? items : []);
       })
       .catch(() => setDisciplines([]));
-  }, [selectedStage, isInternal, isSupervision]);
+  }, [selectedStage, isInternal, isSupervision, hasSelections, selectedDisciplinesByStage]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -908,10 +926,32 @@ const CreateTask = () => {
                       className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none transition"
                     >
                       <option value="">— Select Stage —</option>
-                      <option value="CONCEPT">Concept Design</option>
-                      <option value="DC1">DC1</option>
-                      <option value="DC2">DC2</option>
-                      <option value="TENDER">Tender Documents</option>
+                      
+                      {/* ✅ NEW: عرض فقط الـ stages المتاحة حسب اختيارات المشروع */}
+                      {hasSelections ? (
+                        // مشروع جديد: عرض فقط الـ stages المختارة
+                        Object.keys(selectedDisciplinesByStage).map((stageKey) => {
+                          const stageLabels = {
+                            CONCEPT: 'Concept Design',
+                            DC1: 'DC1',
+                            DC2: 'DC2',
+                            TENDER: 'Tender Documents',
+                          };
+                          return (
+                            <option key={stageKey} value={stageKey}>
+                              {stageLabels[stageKey] || stageKey}
+                            </option>
+                          );
+                        })
+                      ) : (
+                        // مشروع قديم: عرض كل الـ stages
+                        <>
+                          <option value="CONCEPT">Concept Design</option>
+                          <option value="DC1">DC1</option>
+                          <option value="DC2">DC2</option>
+                          <option value="TENDER">Tender Documents</option>
+                        </>
+                      )}
 
                       {isMain && (
                         <option value="OTHER">Other</option>
@@ -1254,3 +1294,21 @@ const CreateTask = () => {
 };
 
 export default CreateTask;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
