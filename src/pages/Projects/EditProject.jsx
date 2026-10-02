@@ -11,6 +11,11 @@ import {
   AlertTriangle, Calendar, Ruler, FileSignature, Search, Edit, Trash2
 } from 'lucide-react';
 
+// ✅ NEW: استيراد المكونات الجديدة
+import FloatingAddButton from '../../components/CreateProject/FloatingAddButton';
+import StageDisciplineModal from '../../components/CreateProject/StageDisciplineModal';
+import { getProjectStageDisciplines } from '../../api/services/disciplines';
+
 /* ═══════════════════════════════════════════════════════════
    منطق القسم:
    - المدراء يرون كل الأقسام (DESIGN, SUPERVISION, BOTH)
@@ -33,6 +38,9 @@ export default function EditProject() {
   const isSecretary = roleString.includes('SECRETARY') || roleString.includes('سكرتير');
   const isDesignDept = deptString.includes('DESIGN') || deptString.includes('تصميم');
   const isSupDept = deptString.includes('SUP') || deptString.includes('إشراف');
+  
+  // ✅ NEW: تحديد إذا كان المستخدم سكرتيرة تصميم (لإظهار الـ FAB)
+  const isDesignSecretary = isSecretary && isDesignDept;
 
   // تحديد الخيارات المتاحة بناءً على المستخدم
   const availableScopes = useMemo(() => {
@@ -53,6 +61,10 @@ export default function EditProject() {
   
   // ✅ حالة البحث في المقاولين
   const [contractorSearch, setContractorSearch] = useState('');
+  
+  // ✅ NEW: حالة اختيارات الـ Stages والـ Disciplines
+  const [stageDisciplines, setStageDisciplines] = useState([]);
+  const [showDisciplineModal, setShowDisciplineModal] = useState(false);
 
   // وضع المقاول: existing | new
   const [contractorMode, setContractorMode] = useState('existing');
@@ -79,6 +91,20 @@ export default function EditProject() {
   };
   const setNC = (k) => (e) =>
     setF((p) => ({ ...p, newContractor: { ...p.newContractor, [k]: e.target.value } }));
+
+  // ✅ NEW: دوال إدارة الـ Modal
+  const handleOpenDisciplineModal = () => {
+    setShowDisciplineModal(true);
+  };
+
+  const handleCloseDisciplineModal = () => {
+    setShowDisciplineModal(false);
+  };
+
+  const handleSaveDisciplines = (selection) => {
+    setStageDisciplines(selection);
+    setShowDisciplineModal(false);
+  };
 
   // ✅ ترتيب المقاولين: المتطابقون مع البحث يظهر أولاً (Smart Sort)
   const sortedContractors = useMemo(() => {
@@ -136,6 +162,36 @@ export default function EditProject() {
           commencement_status: p.commencement_status || 'PENDING_AUTHORITY',
           newContractor: { name: '', contact_person: '', phone: '', email: '' },
         });
+        
+        // ═══════════════════════════════════════════════════════════
+        //  ✅ NEW: جلب الاختيارات الحالية للمشروع
+        // ═══════════════════════════════════════════════════════════
+        getProjectStageDisciplines(id)
+          .then((res) => {
+            const data = res.data || {};
+            const stages = data.stages || {};
+            
+            // تحويل البيانات من الشكل المنظم حسب الـ Stage إلى الشكل المطلوب
+            // [{stage, discipline_item_id}, ...]
+            const selections = [];
+            Object.entries(stages).forEach(([stageKey, items]) => {
+              (items || []).forEach((item) => {
+                if (item.is_active) {
+                  selections.push({
+                    stage: stageKey,
+                    discipline_item_id: item.discipline_item?.id || item.discipline_item_id,
+                  });
+                }
+              });
+            });
+            
+            setStageDisciplines(selections);
+          })
+          .catch((err) => {
+            console.error('Failed to load stage disciplines:', err);
+            // في حال الفشل: نترك القائمة فارغة (المشاريع القديمة)
+            setStageDisciplines([]);
+          });
       })
       .catch((err) => {
         setError('تعذّر تحميل المشروع.');
@@ -294,6 +350,11 @@ const handleDelete = async () => {
           commencement_status: f.commencement_status,
           internal_design_review_required: f.internal_design_review_required,
         }),
+        
+        // ═══════════════════════════════════════════════════════════
+        //  ✅ NEW: إرسال اختيارات الـ Stages والـ Disciplines
+        // ═══════════════════════════════════════════════════════════
+        stage_disciplines: stageDisciplines,
       };
 
       console.log('📤 Payload sent to backend:', payload);  // ✅ للتصحيح
@@ -367,6 +428,47 @@ const handleDelete = async () => {
           <DeptCard tone="amber" Icon={HardHat} label="Supervision" active={showSup} hint="Contractor · Design Company · Commencement · Internal Review" />
         </div>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          ✅ NEW: ملخص الاختيارات الحالية (يظهر لسكرتيرة التصميم فقط)
+          ═══════════════════════════════════════════════════════════ */}
+      {isDesignSecretary && showDesign && stageDisciplines.length > 0 && (
+        <div className="cp-rv" style={{
+          marginTop: '16px',
+          padding: '12px 16px',
+          background: 'rgba(2, 132, 199, 0.05)',
+          border: '1px solid rgba(2, 132, 199, 0.3)',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#0284c7' }}>
+            ✓ {stageDisciplines.length} discipline(s) configured
+          </span>
+          <span style={{ fontSize: '12px', color: '#64748b' }}>
+            Stages: {[...new Set(stageDisciplines.map(i => i.stage))].join(', ')}
+          </span>
+          <button
+            type="button"
+            onClick={handleOpenDisciplineModal}
+            style={{
+              marginLeft: 'auto',
+              padding: '4px 10px',
+              fontSize: '11px',
+              fontWeight: 600,
+              background: '#0284c7',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Edit
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="cp-err cp-rv"><AlertTriangle size={16} /> {error}</div>
@@ -531,6 +633,28 @@ const handleDelete = async () => {
           </button>
         </div>
       </form>
+
+      {/* ═══════════════════════════════════════════════════════════
+          ✅ NEW: Floating Action Button (FAB) — لسكرتيرة التصميم فقط
+          ═══════════════════════════════════════════════════════════ */}
+      {isDesignSecretary && showDesign && (
+        <FloatingAddButton
+          onClick={handleOpenDisciplineModal}
+          selectedCount={stageDisciplines.length}
+          disabled={busy}
+        />
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          ✅ NEW: Stage & Discipline Selection Modal
+          ═══════════════════════════════════════════════════════════ */}
+      <StageDisciplineModal
+        isOpen={showDisciplineModal}
+        onClose={handleCloseDisciplineModal}
+        selectedItems={stageDisciplines}
+        onSave={handleSaveDisciplines}
+        projectId={id}
+      />
     </div>
   );
 }
@@ -758,5 +882,3 @@ export const CSS = `@import url('https://fonts.googleapis.com/css2?family=Space+
   animation:cp-spin 1s linear infinite; margin:0 auto; }
 @keyframes cp-spin{ to{ transform:rotate(360deg); } }
 `;
-
-
