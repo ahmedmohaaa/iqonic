@@ -45,163 +45,180 @@ import ExportConsole from './pages/Admin/ExportConsole';
 import InvoiceConsole from './pages/Financials/InvoiceConsole';
 import ChatCenter from './pages/Chat/ChatCenter';
 import ReviewDirectory from './pages/InternalReview/ReviewDirectory';
-import EditTask from './pages/Tasks/EditTask';  // غيّر المسار حسب مجلدك
-import MySupervisionProjects from './pages/Supervision/MySupervisionProjects';  // غيّر المسار حسب مجلدك
+import EditTask from './pages/Tasks/EditTask';
+import MySupervisionProjects from './pages/Supervision/MySupervisionProjects';
+import DisciplineManagement from './pages/DisciplineManagement';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* ✅ Route خارج MainLayout - صفحة تسجيل الدخول فقط */}
           <Route path="/login" element={<Login />} />
           
+          {/* ✅ كل الصفحات الأخرى داخل MainLayout (نافبار + سايدبار) */}
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/projects" element={<ProjectDirectory />} />
-            {/* سيتم إضافة باقي المسارات هنا */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            
+            {/* ═══ Discipline Management ═══ */}
+            <Route path="/disciplines" element={<DisciplineManagement />} />
+            <Route path="/desciplines" element={<Navigate to="/disciplines" replace />} />
+            <Route path="/descipline" element={<Navigate to="/disciplines" replace />} />
+            <Route path="/discipline" element={<Navigate to="/disciplines" replace />} />
+            
+            {/* ═══ Projects ═══ */}
+            <Route path="/projects" element={<ProjectDirectory />} />
             <Route path="/projects/:id" element={<ProjectDetails />} />
             <Route path="/projects/create" element={<CreateProject />} />
+            <Route path="/projects/:id/edit" element={<EditProject />} />
+            <Route path="/projects/closed" element={<ClosedProjects />} />
+            <Route path="/projects/pending" element={<PendingProjects />} />
+            <Route path="/projects/active" element={<ActiveProjects />} />
+            <Route path="/projects/:id/change-order" element={<CreateChangeOrder />} />
+            <Route path="/projects/:id/timeline" element={<TimelineView />} />
+            <Route path="/projects/:id/priority" element={<PriorityEdit />} />
+            <Route path="/projects/:id/action-requests" element={<ActionRequests />} />
+            <Route path="/projects/:id/internal-design-review" element={<InternalDesignReview />} />
+            
+            {/* ═══ Tasks ═══ */}
             <Route path="/tasks" element={<MyTasks />} />
+            <Route path="/tasks/all" element={<AllTasks />} />
+            <Route path="/tasks/create" element={<CreateTask />} />
+            <Route path="/tasks/:id" element={<TaskDetails />} />
+            <Route path="/tasks/:id/edit" element={<EditTask />} />
+            
+            {/* ═══ Replacements ═══ */}
+            <Route path="/replacements" element={<ReplacementManagement />} />
+            
+            {/* ═══ Financials ═══ */}
             <Route 
-  path="/replacements" 
-  element={
-      <ReplacementManagement />
-  } 
-/>
-<Route 
-  path="/financials" 
-  element={
-    <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
-      <GlobalFinancialDashboard />
-    </ProtectedRoute>
-  } 
-/>
-<Route 
-  path="/client-directory" 
-  element={
-    <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT', 'SECRETARY' ]}>
-      <ClientDirectory />
-    </ProtectedRoute>
-  } 
-/>
-
-<Route 
-  path="/audit-logs" 
-  element={
-    <ProtectedRoute allowedRoles={['GM', 'AGM','SUP_MGR','DESIGN_MGR']}>
-      <AuditLogs />
-    </ProtectedRoute>
-  } 
-/>
-
-<Route 
-  path="/staff-kpi" 
-  element={
-    <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR']}>
-      <StaffKPI />
-    </ProtectedRoute>
-  } 
-/>
-<Route 
-  path="/supervision-team" 
-  element={
-    <ProtectedRoute allowedRoles={['SUP_MGR', 'PM', 'GM', 'AGM']}>
-      <SupervisionTeamManagement />
-    </ProtectedRoute>
-  } 
-/>
-  <Route path="/profile" element={<ProfilePage />} />
-  <Route path="/profile/settings" element={<AccountSettings />} />
-  <Route path="/profile/change-password" element={<ChangePassword />} />
- <Route path="/projects/:id/edit" element={<EditProject />} />
-  <Route path="/projects/closed" element={<ClosedProjects />} />
-  <Route path="/projects/pending" element={<PendingProjects />} />
-  <Route path="/projects/:id/change-order" element={<CreateChangeOrder />} />
-  <Route path="/projects/:id/timeline" element={<TimelineView />} />
-  <Route path="/projects/:id/priority" element={<PriorityEdit />} />
-  <Route path="/tasks/all" element={<AllTasks />} />
-  <Route path="/tasks/create" element={<CreateTask />} />
-  <Route path="/tasks/:id" element={<TaskDetails />} />
-  <Route path="/supervision/projects" element={<SupervisionDirectory />} />
-  <Route path="/projects/:id/action-requests" element={<ActionRequests />} />
-  <Route path="/projects/:id/internal-design-review" element={<InternalDesignReview />} />
-  <Route 
-    path="/financials/report" 
-    element={
-      <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
-        <FinancialReport />
-      </ProtectedRoute>
-    } 
-  />
-  <Route 
-    path="/financials/invoices/:id" 
-    element={
-      <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
-        <InvoiceDetails />
-      </ProtectedRoute>
-    } 
-  />
-  <Route path="/contractors" element={<ContractorsDirectory />} />
-  <Route path="/contractors/:id" element={<ContractorDetails />} />
-  <Route 
-    path="/admin/staff" 
-    element={
-      <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM']}>
-        <StaffManagement />
-      </ProtectedRoute>
-    } 
-  />
-  <Route 
-    path="/admin/users" 
-    element={
-      <ProtectedRoute allowedRoles={['GM', 'AGM']}>
-        <UserManagement />
-      </ProtectedRoute>
-    } 
-  />
-  <Route 
-    path="/admin/reports" 
-    element={
-      <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
-        <ReportsAnalytics />
-      </ProtectedRoute>
-    } 
-  />
-  <Route 
-    path="/supervision/external-logs" 
-    element={
-      <ProtectedRoute allowedRoles={['SUP_MGR', 'GM' ,'AGM','DESIGN_MGR']}>
-        <ExternalLogs />
-      </ProtectedRoute>
-          } 
-  />
-<Route path="/projects/active" element={<ActiveProjects />} />
-<Route path="/reports" element={
-  <ProtectedRoute allowedRoles={['GM','AGM','DESIGN_MGR','SUP_MGR','ACCOUNTANT']}>
-    <ReportsCenter />
-  </ProtectedRoute>
-} />
-<Route path="/reports/export" element={
-  <ProtectedRoute allowedRoles={['GM','AGM','DESIGN_MGR','SUP_MGR','ACCOUNTANT']}>
-    <ExportConsole />
-  </ProtectedRoute>
-} />
-<Route path="/financials/vault" element={
-  <ProtectedRoute allowedRoles={['GM','AGM','ACCOUNTANT']}>
-    <InvoiceConsole />
-  </ProtectedRoute>
-} />
-<Route path="/chat" element={<ChatCenter />} />
-
-
-<Route path='/review-directory' element={<ReviewDirectory/>}/>
-
-<Route path="/tasks/:id/edit" element={<EditTask />} />
-<Route path="/my-supervision-projects" element={<MySupervisionProjects />} />
-
-
-
+              path="/financials" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
+                  <GlobalFinancialDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/financials/report" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
+                  <FinancialReport />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/financials/invoices/:id" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
+                  <InvoiceDetails />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/financials/vault" element={
+              <ProtectedRoute allowedRoles={['GM','AGM','ACCOUNTANT']}>
+                <InvoiceConsole />
+              </ProtectedRoute>
+            } />
+            
+            {/* ═══ Client Directory ═══ */}
+            <Route 
+              path="/client-directory" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT', 'SECRETARY']}>
+                  <ClientDirectory />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* ═══ Audit & Reports ═══ */}
+            <Route 
+              path="/audit-logs" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM','SUP_MGR','DESIGN_MGR']}>
+                  <AuditLogs />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/reports" element={
+              <ProtectedRoute allowedRoles={['GM','AGM','DESIGN_MGR','SUP_MGR','ACCOUNTANT']}>
+                <ReportsCenter />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports/export" element={
+              <ProtectedRoute allowedRoles={['GM','AGM','DESIGN_MGR','SUP_MGR','ACCOUNTANT']}>
+                <ExportConsole />
+              </ProtectedRoute>
+            } />
+            <Route 
+              path="/admin/reports" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
+                  <ReportsAnalytics />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* ═══ Staff & KPI ═══ */}
+            <Route 
+              path="/staff-kpi" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR']}>
+                  <StaffKPI />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/supervision-team" 
+              element={
+                <ProtectedRoute allowedRoles={['SUP_MGR', 'PM', 'GM', 'AGM']}>
+                  <SupervisionTeamManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/staff" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM']}>
+                  <StaffManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                <ProtectedRoute allowedRoles={['GM', 'AGM']}>
+                  <UserManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* ═══ Profile ═══ */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/settings" element={<AccountSettings />} />
+            <Route path="/profile/change-password" element={<ChangePassword />} />
+            
+            {/* ═══ Supervision ═══ */}
+            <Route path="/supervision/projects" element={<SupervisionDirectory />} />
+            <Route path="/my-supervision-projects" element={<MySupervisionProjects />} />
+            <Route 
+              path="/supervision/external-logs" 
+              element={
+                <ProtectedRoute allowedRoles={['SUP_MGR', 'GM' ,'AGM','DESIGN_MGR']}>
+                  <ExternalLogs />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/review-directory" element={<ReviewDirectory/>}/>
+            
+            {/* ═══ Contractors ═══ */}
+            <Route path="/contractors" element={<ContractorsDirectory />} />
+            <Route path="/contractors/:id" element={<ContractorDetails />} />
+            
+            {/* ═══ Chat ═══ */}
+            <Route path="/chat" element={<ChatCenter />} />
           </Route>
         </Routes>
       </BrowserRouter>
@@ -210,5 +227,3 @@ function App() {
 }
 
 export default App;
-
- 
