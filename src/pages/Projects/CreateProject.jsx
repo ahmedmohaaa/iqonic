@@ -11,6 +11,10 @@ import {
   AlertTriangle, Calendar, Ruler, FileSignature, Search
 } from 'lucide-react';
 
+// ✅ NEW: استيراد المكونات الجديدة
+import FloatingAddButton from '../../components/CreateProject/FloatingAddButton';
+import StageDisciplineModal from '../../components/CreateProject/StageDisciplineModal';
+
 /* ═══════════════════════════════════════════════════════════
    منطق القسم:
    - المدراء يرون كل الأقسام (DESIGN, SUPERVISION, BOTH)
@@ -32,6 +36,9 @@ export default function CreateProject() {
   const isSecretary = roleString.includes('SECRETARY') || roleString.includes('سكرتير');
   const isDesignDept = deptString.includes('DESIGN') || deptString.includes('تصميم');
   const isSupDept = deptString.includes('SUP') || deptString.includes('إشراف');
+  
+  // ✅ NEW: تحديد إذا كان المستخدم سكرتيرة تصميم (لإظهار الـ FAB)
+  const isDesignSecretary = isSecretary && isDesignDept;
 
   // تحديد الخيارات المتاحة بناءً على المستخدم
   const availableScopes = useMemo(() => {
@@ -55,6 +62,10 @@ export default function CreateProject() {
   
   // ✅ حالة البحث في المقاولين
   const [contractorSearch, setContractorSearch] = useState('');
+  
+  // ✅ NEW: حالة اختيارات الـ Stages والـ Disciplines
+  const [stageDisciplines, setStageDisciplines] = useState([]);
+  const [showDisciplineModal, setShowDisciplineModal] = useState(false);
 
   // وضع المقاول: existing | new
   const [contractorMode, setContractorMode] = useState('existing');
@@ -81,6 +92,20 @@ export default function CreateProject() {
   };
   const setNC = (k) => (e) =>
     setF((p) => ({ ...p, newContractor: { ...p.newContractor, [k]: e.target.value } }));
+
+  // ✅ NEW: دوال إدارة الـ Modal
+  const handleOpenDisciplineModal = () => {
+    setShowDisciplineModal(true);
+  };
+
+  const handleCloseDisciplineModal = () => {
+    setShowDisciplineModal(false);
+  };
+
+  const handleSaveDisciplines = (selection) => {
+    setStageDisciplines(selection);
+    setShowDisciplineModal(false);
+  };
 
   // ✅ ترتيب المقاولين: المتطابقون مع البحث يظهر أولاً (Smart Sort)
   const sortedContractors = useMemo(() => {
@@ -141,6 +166,8 @@ export default function CreateProject() {
         permit_status: f.permit_status,
         application_type: f.application_type || null,
         // ═════════════════════
+        // ✅ NEW: إرسال اختيارات الـ Stages والـ Disciplines
+        stage_disciplines: stageDisciplines,
         // ✅ المقاول لمشاريع الإشراف فقط
         ...(showSup && contractorIds.length > 0 && { contractors: contractorIds }),
         ...(showSup && {
@@ -203,6 +230,45 @@ export default function CreateProject() {
           <DeptCard tone="amber" Icon={HardHat} label="Supervision" active={showSup} hint="Contractor · Design Company · Commencement · Internal Review" />
         </div>
       </div>
+
+      {/* ✅ NEW: ملخص الاختيارات الحالية (يظهر لسكرتيرة التصميم فقط) */}
+      {isDesignSecretary && showDesign && stageDisciplines.length > 0 && (
+        <div className="cp-rv" style={{
+          marginTop: '16px',
+          padding: '12px 16px',
+          background: 'rgba(2, 132, 199, 0.05)',
+          border: '1px solid rgba(2, 132, 199, 0.3)',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#0284c7' }}>
+            ✓ {stageDisciplines.length} discipline(s) configured
+          </span>
+          <span style={{ fontSize: '12px', color: '#64748b' }}>
+            Stages: {[...new Set(stageDisciplines.map(i => i.stage))].join(', ')}
+          </span>
+          <button
+            type="button"
+            onClick={handleOpenDisciplineModal}
+            style={{
+              marginLeft: 'auto',
+              padding: '4px 10px',
+              fontSize: '11px',
+              fontWeight: 600,
+              background: '#0284c7',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Edit
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="cp-err cp-rv"><AlertTriangle size={16} /> {error}</div>
@@ -363,6 +429,27 @@ export default function CreateProject() {
           </button>
         </div>
       </form>
+
+      {/* ═══════════════════════════════════════════════════════════
+          ✅ NEW: Floating Action Button (FAB) — لسكرتيرة التصميم فقط
+          ═══════════════════════════════════════════════════════════ */}
+      {isDesignSecretary && showDesign && (
+        <FloatingAddButton
+          onClick={handleOpenDisciplineModal}
+          selectedCount={stageDisciplines.length}
+          disabled={busy}
+        />
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          ✅ NEW: Stage & Discipline Selection Modal
+          ═══════════════════════════════════════════════════════════ */}
+      <StageDisciplineModal
+        isOpen={showDisciplineModal}
+        onClose={handleCloseDisciplineModal}
+        selectedItems={stageDisciplines}
+        onSave={handleSaveDisciplines}
+      />
     </div>
   );
 }
