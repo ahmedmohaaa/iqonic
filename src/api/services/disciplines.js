@@ -49,14 +49,10 @@ export const deleteDisciplineItem = (id) => {
  * خيارات الأقسام المتاحة
  */
 export const DEPARTMENT_OPTIONS = [
-  { value: 'ARCH', label: 'Architecture (معماري)' },
-  { value: 'STRUCT', label: 'Structure (إنشائي)' },
-  { value: 'MECH', label: 'Mechanical (ميكانيكا)' },
-  { value: 'ELEC', label: 'Electrical (كهرباء)' },
-  { value: 'LAND', label: 'Landscape (لاندسكيب)' },
-  { value: 'INFRA', label: 'Infrastructure (بنية تحتية)' },
-  { value: 'PM', label: 'Project Management' },
-  { value: 'QS', label: 'Quantity Surveying' },
+  { value: 'ARCH', label: 'Architecture ' },
+  { value: 'STRUCT', label: 'Structure ' },
+  { value: 'MECH', label: 'Mechanical ' },
+  { value: 'ELEC', label: 'Electrical ' },
 ];
 
 /**
@@ -64,10 +60,10 @@ export const DEPARTMENT_OPTIONS = [
  */
 export const STAGE_OPTIONS = [
   { value: 'CONCEPT', label: 'Concept Design' },
-  { value: 'DC1', label: 'DC1 (Design Criteria 1)' },
-  { value: 'DC2', label: 'DC2 (Design Criteria 2)' },
+  { value: 'DC1', label: 'DC1' },
+  { value: 'DC2', label: 'DC2' },
   { value: 'TENDER', label: 'Tender Documents' },
-  { value: 'OTHER', label: 'Other (أخرى)' },
+  { value: 'OTHER', label: 'Other' },
 ];
 
 
@@ -111,3 +107,5 @@ export const bulkDeactivateStageDisciplines = (projectId, itemIds) => {
     data: { item_ids: itemIds } 
   });
 };
+
+
