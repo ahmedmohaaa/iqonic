@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   PauseCircle,
   Search,
+  Building2,
 } from 'lucide-react';
 
 const TYPE_META = {
@@ -75,6 +76,16 @@ const INTERNAL_REVIEW_STAGES = [
   { value: 'OTHER', label: 'Other' },
 ];
 
+// ═══════════════════════════════════════════════════════════
+//  ✅ NEW: خيارات الأقسام الأربعة (فلتر للـ Disciplines)
+// ═══════════════════════════════════════════════════════════
+const DEPARTMENT_OPTIONS = [
+  { value: 'ELEC', label: 'Electrical' },
+  { value: 'MECH', label: 'Mechanical' },
+  { value: 'STRUCT', label: 'Structural' },
+  { value: 'ARCH', label: 'Architectural' },
+];
+
 const EXTRA_ASSIGN = {
   'mohammad.mostafa': ['vicky.jr', 'mohammad.alqadi', 'ahmad.alqadi', 'mohammad.mostafa'],
 };
@@ -103,6 +114,7 @@ const CreateTask = () => {
       hold_reason: '',
       hold_date: '',
       end_date: '',
+      department: '',
     },
   });
 
@@ -149,6 +161,9 @@ const CreateTask = () => {
   const holdDateValue = watch('hold_date');
   const startDateValue = watch('start_date');
   const durationDaysValue = watch('duration_days');
+  
+  // ✅ NEW: watch حقل القسم (Department)
+  const selectedDepartment = watch('department');
 
   // ✅ حقول المراقبة للإغلاق المتبادل (Option B)
   const selectedSupervisionProject = watch('supervision_project');
@@ -221,11 +236,13 @@ const CreateTask = () => {
   const shouldSelfAssign =
     isMain || isSupervision || isInternal ? !canAssignOthers : isEngineerOrDraftsman;
 
+  // ✅ MODIFIED: showDiscipline يعتمد الآن على المشروع + Stage + Department
   const showDiscipline =
     !isSupervision &&
     !isInternal &&
     Boolean(selectedStage) &&
-    selectedStage !== 'OTHER';
+    selectedStage !== 'OTHER' &&
+    Boolean(selectedDepartment);
 
   useEffect(() => {
     Promise.all([
@@ -253,6 +270,7 @@ const CreateTask = () => {
     setValue('project', '');
     setValue('assigned_to', '');
     setValue('stage', '');
+    setValue('department', '');
     setValue('discipline', '');
     setValue('internal_review_stage', '');
     setValue('work_type', '');
@@ -291,8 +309,9 @@ const CreateTask = () => {
     if (selectedSupervisionProject || selectedOptionBReviewStage) {
       if (selectedProject) setValue('project', '');
       if (selectedStage) setValue('stage', '');
+      if (selectedDepartment) setValue('department', '');
     }
-  }, [selectedSupervisionProject, selectedOptionBReviewStage, isMain, selectedProject, selectedStage, setValue]);
+  }, [selectedSupervisionProject, selectedOptionBReviewStage, isMain, selectedProject, selectedStage, selectedDepartment, setValue]);
 
   useEffect(() => {
     if (!showDiscipline) {
@@ -304,9 +323,19 @@ const CreateTask = () => {
   useEffect(() => {
     if (selectedStage === 'OTHER') {
       setValue('discipline', '');
+      setValue('department', '');
       setDisciplines([]);
     }
   }, [selectedStage, setValue]);
+
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ NEW: إعادة تعيين Department و Discipline عند تغيير Project أو Stage
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    setValue('department', '');
+    setValue('discipline', '');
+    setDisciplines([]);
+  }, [selectedProject, selectedStage, setValue]);
 
   useEffect(() => {
     if (!isMain && !isSupervision && !isInternal) {
@@ -375,6 +404,9 @@ const CreateTask = () => {
     }
   }, [isSupervision, isOnHold, holdDateValue, setValue]);
 
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ MODIFIED: جلب الـ Disciplines مع فلترة حسب Stage + Department
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     setDisciplines([]);
 
@@ -385,22 +417,31 @@ const CreateTask = () => {
     if (!selectedStage || selectedStage === 'OTHER') {
       return;
     }
-
-    // ✅ NEW: استخدام البيانات من selectedDisciplinesByStage إذا كانت متاحة
-    if (hasSelections && selectedDisciplinesByStage[selectedStage]) {
-      setDisciplines(selectedDisciplinesByStage[selectedStage]);
+    
+    // ✅ NEW: لا نجلب Disciplines إلا بعد اختيار القسم
+    if (!selectedDepartment) {
       return;
     }
 
-    // مشروع قديم أو بدون اختيارات: جلب من API
-    getDisciplineItems({ stage: selectedStage })
+    // ✅ NEW: استخدام البيانات من selectedDisciplinesByStage إذا كانت متاحة + فلترة حسب القسم
+    if (hasSelections && selectedDisciplinesByStage[selectedStage]) {
+      const allStageDisciplines = selectedDisciplinesByStage[selectedStage];
+      const filtered = allStageDisciplines.filter(
+        (d) => d.department === selectedDepartment
+      );
+      setDisciplines(filtered);
+      return;
+    }
+
+    // مشروع قديم أو بدون اختيارات: جلب من API مع فلتر القسم
+    getDisciplineItems({ stage: selectedStage, department: selectedDepartment })
       .then((res) => {
         const responseData = res?.data || res;
         const items = responseData?.results || responseData;
         setDisciplines(Array.isArray(items) ? items : []);
       })
       .catch(() => setDisciplines([]));
-  }, [selectedStage, isInternal, isSupervision, hasSelections, selectedDisciplinesByStage]);
+  }, [selectedStage, selectedDepartment, isInternal, isSupervision, hasSelections, selectedDisciplinesByStage]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -435,6 +476,7 @@ const CreateTask = () => {
 
     if (isSupervision) {
       delete payload.stage;
+      delete payload.department;
       delete payload.discipline;
       delete payload.internal_review_stage;
       delete payload.work_type;
@@ -456,6 +498,7 @@ const CreateTask = () => {
 
       delete payload.internal_review_stage;
       delete payload.stage;
+      delete payload.department;
       delete payload.discipline;
 
       payload.internal_review_stage_name = reviewStageName || 'OTHER';
@@ -464,12 +507,14 @@ const CreateTask = () => {
     // ✅ مهام Other: تُحفظ بدون Stage وبدون Discipline نهائياً
     if (isMain && payload.stage === 'OTHER') {
       delete payload.stage;
+      delete payload.department;
       delete payload.discipline;
     }
 
     // ✅ لا ترسل null/فارغ أبدًا — الغياب الكامل هو الـ "اختياري" الصحيح
     if (!payload.project) delete payload.project;
     if (!payload.stage) delete payload.stage;
+    if (!payload.department) delete payload.department;
     if (!payload.supervision_project) delete payload.supervision_project;
     if (!payload.review_stage) delete payload.review_stage;
     if (!payload.end_date) delete payload.end_date;
@@ -973,6 +1018,37 @@ const CreateTask = () => {
                 </div>
               </div>
 
+              {/* ═══════════════════════════════════════════════════════════
+                  ✅ NEW: Department Filter (Electrical / Mechanical / Structural / Architectural)
+                  ═══════════════════════════════════════════════════════════ */}
+              {!isInternal && !isCO && selectedStage && selectedStage !== 'OTHER' && (
+                <div className="ct-rise">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                    <Building2 size={15} className="text-violet-500" />
+                    Department * <span className="text-xs font-normal text-gray-500">(filters disciplines)</span>
+                  </label>
+                  <select
+                    {...register('department', { required: !isInternal && !isCO && selectedStage && selectedStage !== 'OTHER' })}
+                    className="w-full border border-violet-300 bg-violet-50/30 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none transition"
+                  >
+                    <option value="">— Select Department —</option>
+                    {DEPARTMENT_OPTIONS.map((dept) => (
+                      <option key={dept.value} value={dept.value}>
+                        {dept.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.department && (
+                    <span className="text-rose-500 text-xs">Required</span>
+                  )}
+                  {selectedDepartment && (
+                    <p className="mt-1.5 text-violet-600 text-xs inline-flex items-center gap-1">
+                      <Sparkles size={12} /> Only {DEPARTMENT_OPTIONS.find(d => d.value === selectedDepartment)?.label} disciplines will be shown.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Title + Work Type */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
@@ -1052,13 +1128,22 @@ const CreateTask = () => {
                         ))
                       ) : (
                         <option value="" disabled>
-                          No disciplines found
+                          {selectedDepartment
+                            ? `No ${DEPARTMENT_OPTIONS.find(d => d.value === selectedDepartment)?.label || ''} disciplines found for this stage`
+                            : 'No disciplines found'}
                         </option>
                       )}
                     </select>
 
                     {errors.discipline && (
                       <span className="text-rose-500 text-xs">Required</span>
+                    )}
+                    
+                    {/* ✅ NEW: Helpful hint showing active filters */}
+                    {selectedStage && selectedDepartment && disciplines.length > 0 && (
+                      <p className="mt-1.5 text-sky-600 text-xs inline-flex items-center gap-1">
+                        <Sparkles size={12} /> Showing {disciplines.length} {DEPARTMENT_OPTIONS.find(d => d.value === selectedDepartment)?.label} discipline(s) for {selectedStage}.
+                      </p>
                     )}
                   </div>
                 ) : (
@@ -1294,21 +1379,3 @@ const CreateTask = () => {
 };
 
 export default CreateTask;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
