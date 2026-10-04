@@ -21,6 +21,7 @@ import {
   Search,
   Plus,
   Minus,
+  Building2,
 } from 'lucide-react';
 
 const TYPE_META = {
@@ -40,22 +41,6 @@ const TYPE_META = {
     tx: 'text-emerald-700',
     dot: 'bg-emerald-500',
   },
- /* CHANGE_ORDER: {
-    label: 'Change Order',
-    Icon: GitBranch,
-    ring: 'ring-violet-500',
-    bg: 'bg-violet-50',
-    tx: 'text-violet-700',
-    dot: 'bg-violet-500',
-  },
-  INTERNAL_REVIEW: {
-    label: 'Internal Review',
-    Icon: FileText,
-    ring: 'ring-teal-500',
-    bg: 'bg-teal-50',
-    tx: 'text-teal-700',
-    dot: 'bg-teal-500',
-  },*/
 };
 
 const SUBMIT_TONE = {
@@ -75,6 +60,23 @@ const INTERNAL_REVIEW_STAGES = [
   { value: 'IFC_PACKAGE', label: 'IFC Package' },
   { value: 'OTHER', label: 'Other' },
 ];
+
+const DEPARTMENT_OPTIONS = [
+  { value: 'ELEC', label: 'Electrical' },
+  { value: 'MECH', label: 'Mechanical' },
+  { value: 'STRUCT', label: 'Structural' },
+  { value: 'ARCH', label: 'Architectural' },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  ✅ NEW: أسماء المراحل للعرض في الـ dropdown
+// ═══════════════════════════════════════════════════════════
+const PROJECT_STAGE_LABELS = {
+  CONCEPT: 'Concept Design',
+  DC1: 'DC1',
+  DC2: 'DC2',
+  TENDER: 'Tender Documents',
+};
 
 const EXTRA_ASSIGN = {
   'mohammad.mostafa': ['vicky.jr', 'mohammad.alqadi', 'ahmad.alqadi', 'mohammad.mostafa'],
@@ -106,6 +108,9 @@ const EditTask = () => {
       hold_reason: '',
       hold_date: '',
       end_date: '',
+      department: '',
+      work_type: '',
+      discipline: '',
     },
   });
 
@@ -122,11 +127,16 @@ const EditTask = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // ✅ الإصلاح الجذري: علم يحمي من التفريغ أثناء التحميل الأولي
   const initialDataLoaded = useRef(false);
   const originalTaskData = useRef(null);
+  const isUserInteraction = useRef(false);
 
-  // ✅ حالة إظهار/إخفاء حقول Design Review Project + Review Stage
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ NEW: بيانات الـ Stages والـ Disciplines المختارة للمشروع
+  // ═══════════════════════════════════════════════════════════
+  const [selectedDisciplinesByStage, setSelectedDisciplinesByStage] = useState({});
+  const [hasSelections, setHasSelections] = useState(false);
+
   const [showOptionB, setShowOptionB] = useState(false);
 
   const [allowedTaskTypes, setAllowedTaskTypes] = useState(
@@ -153,6 +163,7 @@ const EditTask = () => {
   const holdDateValue = watch('hold_date');
   const startDateValue = watch('start_date');
   const durationDaysValue = watch('duration_days');
+  const selectedDepartment = watch('department');
 
   const selectedSupervisionProject = watch('supervision_project');
   const selectedOptionBReviewStage = watch('review_stage');
@@ -212,6 +223,7 @@ const EditTask = () => {
   const shouldSelfAssign =
     isMain || isSupervision || isInternal ? !canAssignOthers : isEngineerOrDraftsman;
 
+  // ✅ showDiscipline يعتمد على Stage فقط
   const showDiscipline =
     !isSupervision &&
     !isInternal &&
@@ -219,7 +231,7 @@ const EditTask = () => {
     selectedStage !== 'OTHER';
 
   // ═══════════════════════════════════════════════════════════
-  // ✅ الإصلاح الجذري: جلب البيانات الأساسية + بيانات المهمة
+  // ✅ الإصلاح النهائي: التحكم الكامل في التحميل الأولي
   // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     let cancelled = false;
@@ -238,6 +250,8 @@ const EditTask = () => {
         const coData = coRes?.data?.results || coRes?.data || [];
         const taskData = taskRes?.data || taskRes;
 
+        console.log('🔍 EditTask - Raw taskData:', taskData);
+
         setBaseProjects(Array.isArray(projData) ? projData : []);
         setLegacyEngineers(Array.isArray(usersData) ? usersData : []);
         setChangeOrders(Array.isArray(coData) ? coData : []);
@@ -249,6 +263,8 @@ const EditTask = () => {
           'Report': 'REPORT', '3D rendering': 'RENDERING_3D',
           '3D Rendering': 'RENDERING_3D', 'presentation': 'PRESENTATION',
           'Presentation': 'PRESENTATION', 'printing': 'PRINTING', 'Printing': 'PRINTING',
+          'File Opening': 'FILE_OPENING', 'file_opening': 'FILE_OPENING',
+          'Coordinated Package': 'COORDINATED_PACKAGE', 'coordinated_package': 'COORDINATED_PACKAGE',
         };
 
         let reviewStageVal = '';
@@ -262,43 +278,40 @@ const EditTask = () => {
             reviewStageVal = taskData.internal_review_stage_name;
         }
 
-        // ✅ حفظ البيانات الأصلية لاستخدامها في تحميل الخيارات
         originalTaskData.current = taskData;
 
-        const resetData = {
-          ...taskData,
-          work_type: LEGACY_WORK_TYPE[taskData.work_type] || taskData.work_type || '',
-          project: taskData.project_id || taskData.project,
-          assigned_to: taskData.assigned_to_id || taskData.assigned_to,
-          discipline: taskData.discipline_id || taskData.discipline,
-          internal_review_stage: reviewStageVal,
-          start_date: taskData.start_date || '',
-          hold_date: taskData.hold_date || '',
-          end_date: taskData.end_date || '',
-        };
+        // ═══════════════════════════════════════════════════════════
+        // ✅ FIX #1: استخراج disciplineId و disciplineDepartment معاً
+        // ═══════════════════════════════════════════════════════════
+        let disciplineId = '';
+        let disciplineDepartment = '';
 
-        // ✅ إذا كانت المهمة من النوع MAIN_DESIGN ولديها review_stage، فهي Option B
-        const hasExistingOptionB = taskData.task_type === 'MAIN_DESIGN' && reviewStageVal;
-        
-        if (hasExistingOptionB) {
-            resetData.supervision_project = resetData.project;
-            resetData.review_stage = reviewStageVal;
-            resetData.project = '';
-            resetData.stage = '';
+        if (taskData.discipline) {
+          if (typeof taskData.discipline === 'object') {
+            disciplineId = taskData.discipline.id || taskData.discipline.value || '';
+            disciplineDepartment = taskData.discipline.department || '';
+          } else {
+            disciplineId = taskData.discipline;
+          }
+        } else if (taskData.discipline_id) {
+          disciplineId = taskData.discipline_id;
         }
-        
-        reset(resetData);
-        
-        // ✅ فتح قسم Option B تلقائياً إذا كانت المهمة تحتوي على بيانات موجودة
-        setShowOptionB(hasExistingOptionB);
-        
-        // ✅ تحميل الخيارات (projects/engineers) بناءً على بيانات المهمة الأصلية
+
+        console.log('🔍 EditTask - Extracted:', { disciplineId, disciplineDepartment, stage: taskData.stage });
+
         const taskTypeForOptions = taskData.task_type || 'MAIN_DESIGN';
         const projectIdForOptions = taskData.project_id || taskData.project;
         
+        // ═══════════════════════════════════════════════════════════
+        // ✅ FIX #2: جلب getTaskFormOptions أولاً (لحصول على selected_disciplines)
+        // ═══════════════════════════════════════════════════════════
+        let hasSelectionsData = false;
+        let selectedDisciplinesData = {};
+        
         try {
           const params = { task_type: taskTypeForOptions };
-          if ((taskTypeForOptions === 'SUPERVISION' || taskTypeForOptions === 'INTERNAL_REVIEW') && projectIdForOptions) {
+          // ✅ إرسال project_id لجميع الأنواع (ليس فقط الإشراف)
+          if (projectIdForOptions) {
             params.project_id = projectIdForOptions;
           }
           
@@ -313,21 +326,124 @@ const EditTask = () => {
             setAllowedTaskTypes(optionsRes.data.allowed_task_types);
           }
           
-          // ✅ تحميل التخصصات (Disciplines) إذا كانت المهمة لها stage
-          if (taskData.stage && taskData.stage !== 'OTHER' && 
-              taskTypeForOptions !== 'SUPERVISION' && taskTypeForOptions !== 'INTERNAL_REVIEW') {
-            const discRes = await getDisciplineItems({ stage: taskData.stage });
-            if (cancelled) return;
-            const responseData = discRes?.data || discRes;
-            const items = responseData?.results || responseData;
-            setDisciplines(Array.isArray(items) ? items : []);
-          }
+          // ✅ NEW: حفظ بيانات الـ Stages والـ Disciplines المختارة للمشروع
+          selectedDisciplinesData = optionsRes.data.selected_disciplines || {};
+          hasSelectionsData = Boolean(optionsRes.data.has_selections);
+          setSelectedDisciplinesByStage(selectedDisciplinesData);
+          setHasSelections(hasSelectionsData);
+          
+          console.log('🔍 EditTask - hasSelections:', hasSelectionsData);
+          console.log('🔍 EditTask - selectedDisciplinesByStage:', selectedDisciplinesData);
         } catch (optErr) {
           console.error('Failed to load options:', optErr);
         }
         
-        // ✅ بعد اكتمال كل شيء: تعيين initialDataLoaded
+        // ═══════════════════════════════════════════════════════════
+        // ✅ FIX #3: تحميل الـ Disciplines باستخدام selectedDisciplinesByStage
+        // ═══════════════════════════════════════════════════════════
+        let filteredDiscList = [];
+        
+        if (taskData.stage && taskData.stage !== 'OTHER' && 
+            taskTypeForOptions !== 'SUPERVISION' && taskTypeForOptions !== 'INTERNAL_REVIEW') {
+          
+          if (hasSelectionsData && selectedDisciplinesData[taskData.stage]) {
+            // ✅ مشروع جديد: استخدام الـ disciplines المختارة للمشروع
+            const stageDisciplines = selectedDisciplinesData[taskData.stage];
+            
+            console.log('🔍 EditTask - Stage disciplines count:', stageDisciplines.length);
+            
+            // إذا لم نجد department من taskData.discipline، نبحث عنه في stageDisciplines
+            if (disciplineId && !disciplineDepartment) {
+              const currentDisc = stageDisciplines.find(
+                d => String(d.id) === String(disciplineId)
+              );
+              if (currentDisc && currentDisc.department) {
+                disciplineDepartment = currentDisc.department;
+                console.log('🔍 EditTask - Found department from stageDisciplines:', disciplineDepartment);
+              }
+            }
+            
+            // ✅ تصفية محلية حسب الـ department
+            if (disciplineDepartment) {
+              filteredDiscList = stageDisciplines.filter(d => d.department === disciplineDepartment);
+            } else {
+              filteredDiscList = stageDisciplines;
+            }
+            
+            console.log('🔍 EditTask - Filtered disciplines (from selections):', filteredDiscList.length);
+          } else {
+            // ✅ مشروع قديم: جلب من API
+            try {
+              const discRes = await getDisciplineItems({ stage: taskData.stage });
+              if (cancelled) return;
+              
+              const items = discRes?.data?.results || discRes?.data || [];
+              const discList = Array.isArray(items) ? items : [];
+              
+              console.log('🔍 EditTask - All disciplines for stage (API):', discList.length);
+              
+              if (disciplineId && discList.length > 0 && !disciplineDepartment) {
+                const currentDisc = discList.find(
+                  d => String(d.id) === String(disciplineId)
+                );
+                if (currentDisc && currentDisc.department) {
+                  disciplineDepartment = currentDisc.department;
+                  console.log('🔍 EditTask - Found department from API discList:', disciplineDepartment);
+                }
+              }
+              
+              if (disciplineDepartment) {
+                filteredDiscList = discList.filter(d => d.department === disciplineDepartment);
+              } else {
+                filteredDiscList = discList;
+              }
+              
+              console.log('🔍 EditTask - Filtered disciplines (from API):', filteredDiscList.length);
+            } catch (err) {
+              console.error('Failed to load disciplines:', err);
+            }
+          }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ✅ FIX #4: تضمين department في resetData مباشرة!
+        // ═══════════════════════════════════════════════════════════
+        const resetData = {
+          ...taskData,
+          work_type: LEGACY_WORK_TYPE[taskData.work_type] || taskData.work_type || '',
+          project: taskData.project_id || taskData.project || '',
+          assigned_to: taskData.assigned_to_id || taskData.assigned_to || '',
+          discipline: disciplineId,
+          department: disciplineDepartment,
+          internal_review_stage: reviewStageVal,
+          start_date: taskData.start_date || '',
+          hold_date: taskData.hold_date || '',
+          end_date: taskData.end_date || '',
+        };
+
+        const hasExistingOptionB = taskData.task_type === 'MAIN_DESIGN' && reviewStageVal;
+        
+        if (hasExistingOptionB) {
+            resetData.supervision_project = resetData.project;
+            resetData.review_stage = reviewStageVal;
+            resetData.project = '';
+            resetData.stage = '';
+        }
+        
+        console.log('🔍 EditTask - resetData:', resetData);
+        
+        reset(resetData);
+        setDisciplines(filteredDiscList);
+        
+        console.log('🔍 EditTask - After reset, disciplines count:', filteredDiscList.length);
+        
+        setShowOptionB(hasExistingOptionB);
+        
+        // ✅ تفعيل التفاعل بعد اكتمال كل شيء
         initialDataLoaded.current = true;
+        setTimeout(() => {
+          isUserInteraction.current = true;
+        }, 200);
         setLoading(false);
       })
       .catch((err) => {
@@ -338,28 +454,23 @@ const EditTask = () => {
       });
       
     return () => { cancelled = true; };
-  }, [id, reset]);
+  }, [id, reset, setValue]);
 
-  // ═══════════════════════════════════════════════════════════
-  // ✅ عند تغيير task_type يدوياً (بعد التحميل الأولي فقط)
-  // ═══════════════════════════════════════════════════════════
   const previousTaskType = useRef(taskType);
   
   useEffect(() => {
-    // ✅ تخطي إذا لم يكتمل التحميل الأولي بعد
     if (!initialDataLoaded.current) {
       previousTaskType.current = taskType;
       return;
     }
     
-    // ✅ تخطي إذا لم يتغير task_type فعلياً
     if (previousTaskType.current === taskType) return;
     previousTaskType.current = taskType;
     
-    // ✅ تفريغ الحقول عند التغيير اليدوي لـ task_type
     setValue('project', '');
     setValue('assigned_to', '');
     setValue('stage', '');
+    setValue('department', '');
     setValue('discipline', '');
     setValue('internal_review_stage', '');
     setValue('work_type', '');
@@ -372,10 +483,12 @@ const EditTask = () => {
     setValue('supervision_project', '');
     setValue('review_stage', '');
     setDisciplines([]);
+    // ✅ NEW: إعادة تعيين بيانات الـ selections
+    setSelectedDisciplinesByStage({});
+    setHasSelections(false);
     setSupervisionProjectSearch('');
     setMainProjectSearch('');
     setOptionBProjectSearch('');
-    // ✅ إغلاق قسم Option B عند تغيير النوع
     setShowOptionB(false);
   }, [taskType, setValue]);
 
@@ -392,32 +505,48 @@ const EditTask = () => {
     if (selectedSupervisionProject || selectedOptionBReviewStage) {
       if (selectedProject) setValue('project', '');
       if (selectedStage) setValue('stage', '');
+      if (selectedDepartment) setValue('department', '');
     }
-  }, [selectedSupervisionProject, selectedOptionBReviewStage, isMain, selectedProject, selectedStage, setValue]);
+  }, [selectedSupervisionProject, selectedOptionBReviewStage, isMain, selectedProject, selectedStage, selectedDepartment, setValue]);
 
   useEffect(() => {
-    if (!showDiscipline) {
+    if (isSupervision || isInternal) {
       unregister('discipline');
+      unregister('department');
+      unregister('work_type');
     }
-  }, [showDiscipline, unregister]);
+  }, [isSupervision, isInternal, unregister]);
 
   // ═══════════════════════════════════════════════════════════
-  // ✅ تحميل الخيارات عند تغيير task_type أو project يدوياً (بعد التحميل الأولي فقط)
+  // ✅ إعادة تعيين Department و Discipline عند تغيير Project أو Stage
   // ═══════════════════════════════════════════════════════════
   useEffect(() => {
-    // ✅ تخطي أثناء التحميل الأولي (تم التحميل بالفعل في الـ useEffect الرئيسي)
+    if (!initialDataLoaded.current) return;
+    if (!isUserInteraction.current) return;
+    
+    setValue('department', '');
+    setValue('discipline', '');
+    setDisciplines([]);
+  }, [selectedProject, selectedStage, setValue]);
+
+  // ═══════════════════════════════════════════════════════════
+  // ✅ NEW: جلب الخيارات + selected_disciplines عند تغيير Project أو TaskType
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
     if (!initialDataLoaded.current) return;
     
     if (!isMain && !isSupervision && !isInternal) {
       setTypedProjects([]);
       setFilteredEngineers([]);
       setCanAssignOthers(false);
+      setSelectedDisciplinesByStage({});
+      setHasSelections(false);
       return;
     }
 
     const params = { task_type: taskType };
-
-    if ((isSupervision || isInternal) && selectedProject) {
+    // ✅ إرسال project_id لجميع الأنواع (ليس فقط الإشراف)
+    if (selectedProject) {
       params.project_id = selectedProject;
     }
 
@@ -435,17 +564,25 @@ const EditTask = () => {
             setValue('task_type', res.data.allowed_task_types[0]);
           }
         }
+        
+        // ✅ NEW: حفظ بيانات الـ Stages والـ Disciplines المختارة للمشروع الجديد
+        setSelectedDisciplinesByStage(res.data.selected_disciplines || {});
+        setHasSelections(Boolean(res.data.has_selections));
+        
+        console.log('🔍 EditTask - Project changed. hasSelections:', Boolean(res.data.has_selections));
+        console.log('🔍 EditTask - selectedDisciplinesByStage:', res.data.selected_disciplines);
       })
       .catch(() => {
         setTypedProjects([]);
         setFilteredEngineers([]);
         setCanAssignOthers(false);
+        setSelectedDisciplinesByStage({});
+        setHasSelections(false);
       })
       .finally(() => setOptionsLoading(false));
   }, [taskType, selectedProject, isMain, isSupervision, isInternal, setValue]);
 
   useEffect(() => {
-    // ✅ تخطي أثناء التحميل الأولي
     if (!initialDataLoaded.current) return;
     
     if (shouldSelfAssign && user?.id) {
@@ -456,7 +593,6 @@ const EditTask = () => {
   }, [shouldSelfAssign, showAssignSelect, user?.id, isMain, isSupervision, setValue]);
 
   useEffect(() => {
-    // ✅ تخطي أثناء التحميل الأولي
     if (!initialDataLoaded.current) return;
     
     if ((isSupervision || isInternal) && canAssignOthers) {
@@ -471,24 +607,40 @@ const EditTask = () => {
   }, [isSupervision, isOnHold, holdDateValue, setValue]);
 
   // ═══════════════════════════════════════════════════════════
-  // ✅ تحميل التخصصات عند تغيير Stage يدوياً (بعد التحميل الأولي فقط)
+  // ✅ MODIFIED: جلب الـ disciplines عند تغيير Stage/Department
+  //    يستخدم selectedDisciplinesByStage محلياً إذا كان متاحاً
   // ═══════════════════════════════════════════════════════════
   useEffect(() => {
-    // ✅ تخطي أثناء التحميل الأولي (تم التحميل بالفعل في الـ useEffect الرئيسي)
     if (!initialDataLoaded.current) return;
+    if (!isUserInteraction.current) return;
     
     setDisciplines([]);
     if (isSupervision || isInternal) return;
     if (!selectedStage || selectedStage === 'OTHER') return;
+    if (!selectedDepartment) return;
 
-    getDisciplineItems({ stage: selectedStage })
+    console.log('🔍 EditTask - Fetching disciplines for:', { selectedStage, selectedDepartment });
+
+    // ✅ NEW: إذا كان المشروع يحتوي على اختيارات، استخدمها محلياً
+    if (hasSelections && selectedDisciplinesByStage[selectedStage]) {
+      const stageDisciplines = selectedDisciplinesByStage[selectedStage];
+      const filtered = stageDisciplines.filter(d => d.department === selectedDepartment);
+      console.log('🔍 EditTask - Filtered from selections:', filtered.length);
+      setDisciplines(filtered);
+      return;
+    }
+
+    // ✅ مشروع قديم: جلب من API
+    getDisciplineItems({ stage: selectedStage, department: selectedDepartment })
       .then((res) => {
         const responseData = res?.data || res;
         const items = responseData?.results || responseData;
-        setDisciplines(Array.isArray(items) ? items : []);
+        const discList = Array.isArray(items) ? items : [];
+        console.log('🔍 EditTask - Fetched disciplines from API:', discList.length);
+        setDisciplines(discList);
       })
       .catch(() => setDisciplines([]));
-  }, [selectedStage, isInternal, isSupervision]);
+  }, [selectedStage, selectedDepartment, isInternal, isSupervision, hasSelections, selectedDisciplinesByStage]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -513,6 +665,7 @@ const EditTask = () => {
 
     if (isSupervision) {
       delete payload.stage;
+      delete payload.department;
       delete payload.discipline;
       delete payload.internal_review_stage;
       delete payload.work_type;
@@ -531,17 +684,23 @@ const EditTask = () => {
       const reviewStageName = payload.internal_review_stage;
       delete payload.internal_review_stage;
       delete payload.stage;
+      delete payload.department;
       delete payload.discipline;
+      delete payload.work_type;
       payload.internal_review_stage_name = reviewStageName || 'OTHER';
     }
 
     if (isMain && payload.stage === 'OTHER') {
       delete payload.stage;
+      delete payload.department;
       delete payload.discipline;
     }
 
     if (!payload.project) delete payload.project;
     if (!payload.stage) delete payload.stage;
+    if (!payload.department) delete payload.department;
+    if (!payload.discipline) delete payload.discipline;
+    if (!payload.work_type) delete payload.work_type;
     if (!payload.supervision_project) delete payload.supervision_project;
     if (!payload.review_stage) delete payload.review_stage;
     if (!payload.end_date) delete payload.end_date;
@@ -549,6 +708,8 @@ const EditTask = () => {
     if (!showAssignSelect && user?.id) {
       payload.assigned_to = user.id;
     }
+
+    console.log('📤 EditTask final payload:', payload);
 
     try {
       await updateTask(id, payload);
@@ -562,7 +723,7 @@ const EditTask = () => {
         'Failed to update task. Please check your inputs.';
 
       setError(backendError);
-      console.error(err.response?.data);
+      console.error('❌ EditTask error:', err.response?.data);
     }
   };
 
@@ -612,6 +773,17 @@ const EditTask = () => {
         }
         .ct-type:hover{
           transform:translateY(-3px);
+        }
+        .ct-hidden-field{
+          position:absolute;
+          width:1px;
+          height:1px;
+          padding:0;
+          margin:-1px;
+          overflow:hidden;
+          clip:rect(0,0,0,0);
+          white-space:nowrap;
+          border:0;
         }
       `}</style>
 
@@ -990,15 +1162,36 @@ const EditTask = () => {
                       className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none transition"
                     >
                       <option value="">— Select Stage —</option>
-                      <option value="CONCEPT">Concept Design</option>
-                      <option value="DC1">DC1</option>
-                      <option value="DC2">DC2</option>
-                      <option value="TENDER">Tender Documents</option>
+                      
+                      {/* ✅ NEW: فلترة الـ stages بناءً على المشروع المختار */}
+                      {hasSelections ? (
+                        // مشروع جديد: عرض فقط الـ stages المختارة للمشروع
+                        Object.keys(selectedDisciplinesByStage).map((stageKey) => (
+                          <option key={stageKey} value={stageKey}>
+                            {PROJECT_STAGE_LABELS[stageKey] || stageKey}
+                          </option>
+                        ))
+                      ) : (
+                        // مشروع قديم: عرض كل الـ stages
+                        <>
+                          <option value="CONCEPT">Concept Design</option>
+                          <option value="DC1">DC1</option>
+                          <option value="DC2">DC2</option>
+                          <option value="TENDER">Tender Documents</option>
+                        </>
+                      )}
 
                       {isMain && (
                         <option value="OTHER">Other</option>
                       )}
                     </select>
+                  )}
+
+                  {/* ✅ NEW: توضيح أن الـ stages معتمدة على اختيارات المشروع */}
+                  {hasSelections && !isInternal && (
+                    <p className="mt-1.5 text-sky-600 text-xs inline-flex items-center gap-1">
+                      <Sparkles size={12} /> Showing only stages configured for this project.
+                    </p>
                   )}
 
                   {((isInternal && errors.internal_review_stage) ||
@@ -1007,6 +1200,35 @@ const EditTask = () => {
                   )}
                 </div>
               </div>
+
+              {/* Department Filter */}
+              {!isInternal && !isCO && selectedStage && selectedStage !== 'OTHER' && (
+                <div className="ct-rise">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                    <Building2 size={15} className="text-violet-500" />
+                    Department * <span className="text-xs font-normal text-gray-500">(filters disciplines)</span>
+                  </label>
+                  <select
+                    {...register('department', { required: !isInternal && !isCO && selectedStage && selectedStage !== 'OTHER' })}
+                    className="w-full border border-violet-300 bg-violet-50/30 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none transition"
+                  >
+                    <option value="">— Select Department —</option>
+                    {DEPARTMENT_OPTIONS.map((dept) => (
+                      <option key={dept.value} value={dept.value}>
+                        {dept.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.department && (
+                    <span className="text-rose-500 text-xs">Required</span>
+                  )}
+                  {selectedDepartment && (
+                    <p className="mt-1.5 text-violet-600 text-xs inline-flex items-center gap-1">
+                      <Sparkles size={12} /> Only {DEPARTMENT_OPTIONS.find(d => d.value === selectedDepartment)?.label} disciplines will be shown.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
@@ -1039,6 +1261,8 @@ const EditTask = () => {
                     <option value="RENDERING_3D">3D Rendering</option>
                     <option value="PRESENTATION">Presentation</option>
                     <option value="PRINTING">Printing</option>
+                    <option value="FILE_OPENING">File Opening</option>
+                    <option value="COORDINATED_PACKAGE">Coordinated Package</option>
                   </select>
                 </div>
               </div>
@@ -1057,15 +1281,16 @@ const EditTask = () => {
                 </div>
               )}
 
+              {/* Discipline + Assignee */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {showDiscipline ? (
-                  <div>
+                {!isSupervision && !isInternal && (
+                  <div className={showDiscipline ? '' : 'ct-hidden-field'}>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                       Discipline *
                     </label>
 
                     <select
-                      {...register('discipline', { required: true })}
+                      {...register('discipline', { required: showDiscipline })}
                       className="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white focus:ring-2 focus:ring-sky-300 outline-none transition"
                     >
                       <option value="">— Select Discipline —</option>
@@ -1081,7 +1306,9 @@ const EditTask = () => {
                         ))
                       ) : (
                         <option value="" disabled>
-                          No disciplines found
+                          {selectedDepartment
+                            ? `No ${DEPARTMENT_OPTIONS.find(d => d.value === selectedDepartment)?.label || ''} disciplines found for this stage`
+                            : 'Select a department first'}
                         </option>
                       )}
                     </select>
@@ -1089,8 +1316,16 @@ const EditTask = () => {
                     {errors.discipline && (
                       <span className="text-rose-500 text-xs">Required</span>
                     )}
+                    
+                    {selectedStage && selectedDepartment && disciplines.length > 0 && (
+                      <p className="mt-1.5 text-sky-600 text-xs inline-flex items-center gap-1">
+                        <Sparkles size={12} /> Showing {disciplines.length} {DEPARTMENT_OPTIONS.find(d => d.value === selectedDepartment)?.label} discipline(s) for {selectedStage}.
+                      </p>
+                    )}
                   </div>
-                ) : (
+                )}
+
+                {!isSupervision && !isInternal && !showDiscipline && (
                   <div className="hidden md:block" />
                 )}
 
@@ -1205,7 +1440,6 @@ const EditTask = () => {
                 }`}
               />
 
-              {/* ✅ زر +/- لإظهار/إخفاء حقول Design Review Project + Review Stage */}
               {isMain && (
                 <div className="mt-3">
                   <button
@@ -1216,7 +1450,6 @@ const EditTask = () => {
                       const willShow = !showOptionB;
                       setShowOptionB(willShow);
 
-                      // ✅ عند الإخفاء: نفرّغ الحقول حتى لا تُرسل بيانات غير مطلوبة
                       if (!willShow) {
                         setValue('supervision_project', '');
                         setValue('review_stage', '');
@@ -1238,7 +1471,6 @@ const EditTask = () => {
                 </div>
               )}
 
-              {/* ✅ حقول Design Review Project + Review Stage (تظهر فقط عند تفعيل showOptionB) */}
               {isMain && showOptionB && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
                   <div>
