@@ -1121,9 +1121,6 @@ const CreateTask = () => {
                         disciplines.map((discipline) => (
                           <option key={discipline.id} value={discipline.id}>
                             {discipline.name}
-                            {discipline.department_display
-                              ? ` - ${discipline.department_display}`
-                              : ''}
                           </option>
                         ))
                       ) : (
