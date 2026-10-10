@@ -63,6 +63,11 @@ export default function CreateProject() {
   // ✅ حالة البحث في المقاولين
   const [contractorSearch, setContractorSearch] = useState('');
   
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ NEW: حالة البحث في العملاء
+  // ═══════════════════════════════════════════════════════════
+  const [clientSearch, setClientSearch] = useState('');
+  
   // ✅ NEW: حالة اختيارات الـ Stages والـ Disciplines
   const [stageDisciplines, setStageDisciplines] = useState([]);
   const [showDisciplineModal, setShowDisciplineModal] = useState(false);
@@ -115,6 +120,19 @@ export default function CreateProject() {
     const unmatched = contractors.filter(c => !c.name.toLowerCase().includes(lowerSearch));
     return [...matched, ...unmatched];
   }, [contractors, contractorSearch]);
+
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ FIX: فلترة حقيقية للعملاء (إخفاء غير المطابقين)
+  // ═══════════════════════════════════════════════════════════
+  const filteredClients = useMemo(() => {
+    if (!clientSearch) return clients;
+    const lowerSearch = clientSearch.toLowerCase();
+    return clients.filter(c => 
+      (c.name || '').toLowerCase().includes(lowerSearch) ||
+      (c.phone || '').toLowerCase().includes(lowerSearch) ||
+      (c.email || '').toLowerCase().includes(lowerSearch)
+    );
+  }, [clients, clientSearch]);
 
   useEffect(() => {
     Promise.all([getClients(), getContractors()])
@@ -284,12 +302,38 @@ export default function CreateProject() {
             </Field>
             <Field label="Project Name *"><input required value={f.name} onChange={set('name')} /></Field>
             <Field label="Project Number *"><input required value={f.project_no} onChange={set('project_no')} /></Field>
+            
+            {/* ═══════════════════════════════════════════════════════════
+                ✅ FIXED: Client Field with Real Search (Filter + Hide)
+                ═══════════════════════════════════════════════════════════ */}
             <Field label="Client *">
+              {/* ✅ شريط البحث فوق قائمة العملاء */}
+              <div className="cp-search-wrap" style={{ marginBottom: '8px' }}>
+                <Search size={16} className="cp-search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Search clients by name, phone, or email..." 
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="cp-search-input"
+                />
+              </div>
+              
+              {/* ✅ قائمة العملاء مع فلترة حقيقية (إخفاء غير المطابقين) */}
               <select required value={f.client} onChange={set('client')}>
                 <option value="">— Select —</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {filteredClients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.phone ? ` · ${c.phone}` : ''}
+                  </option>
+                ))}
+                {clientSearch && filteredClients.length === 0 && (
+                  <option value="" disabled>No clients found</option>
+                )}
               </select>
             </Field>
+            
             <Field label="Location"><input value={f.location} onChange={set('location')} /></Field>
             <Field label="Start Date"><input type="date" value={f.start_date} onChange={set('start_date')} /></Field>
             <Field label="Duration (Days)"><input type="number" value={f.duration_days} onChange={set('duration_days')} /></Field>
