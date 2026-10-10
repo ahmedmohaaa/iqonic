@@ -23,22 +23,9 @@ const FloatingAddButton = ({
 
   return (
     <div className="fixed bottom-6 right-6 z-40">
-      {/* شارة العدد */}
-      {selectedCount > 0 && (
-        <div
-          className={`
-            absolute -top-2 -right-2 z-50
-            flex items-center justify-center
-            w-6 h-6 rounded-full
-            bg-blue-600 text-white text-xs font-bold
-            shadow-md
-            transition-all duration-300
-            ${isHovered ? 'scale-110' : 'scale-100'}
-          `}
-        >
-          {selectedCount > 99 ? '99+' : selectedCount}
-        </div>
-      )}
+      {/* ═══════════════════════════════════════════════════════════
+          ✅ تم حذف شارة الرقم (Count Badge) نهائياً من هنا
+          ═══════════════════════════════════════════════════════════ */}
 
       {/* الزر الرئيسي */}
       <button
