@@ -77,13 +77,17 @@ const INTERNAL_REVIEW_STAGES = [
 ];
 
 // ═══════════════════════════════════════════════════════════
-//  ✅ NEW: خيارات الأقسام الأربعة (فلتر للـ Disciplines)
+//  ✅ UPDATED: خيارات الأقسام السبعة (4 قديمة + 3 جديدة)
 // ═══════════════════════════════════════════════════════════
 const DEPARTMENT_OPTIONS = [
   { value: 'ELEC', label: 'Electrical' },
   { value: 'MECH', label: 'Mechanical' },
   { value: 'STRUCT', label: 'Structural' },
   { value: 'ARCH', label: 'Architectural' },
+  // ✅ NEW: 3 departments جديدة
+  { value: 'SUSTAIN', label: 'Sustainability' },
+  { value: 'MGMNT', label: 'Management' },
+  { value: 'PLANNING', label: 'Planning / Cost Estimate' },
 ];
 
 const EXTRA_ASSIGN = {
@@ -972,7 +976,7 @@ const CreateTask = () => {
                     >
                       <option value="">— Select Stage —</option>
                       
-                      {/* ✅ NEW: عرض فقط الـ stages المتاحة حسب اختيارات المشروع */}
+                      {/* ✅ UPDATED: عرض فقط الـ stages المتاحة حسب اختيارات المشروع */}
                       {hasSelections ? (
                         // مشروع جديد: عرض فقط الـ stages المختارة
                         Object.keys(selectedDisciplinesByStage).map((stageKey) => {
@@ -981,6 +985,8 @@ const CreateTask = () => {
                             DC1: 'DC1',
                             DC2: 'DC2',
                             TENDER: 'Tender Documents',
+                            // ✅ NEW: مرحلة IFC
+                            IFC: 'IFC Package',
                           };
                           return (
                             <option key={stageKey} value={stageKey}>
@@ -995,6 +1001,8 @@ const CreateTask = () => {
                           <option value="DC1">DC1</option>
                           <option value="DC2">DC2</option>
                           <option value="TENDER">Tender Documents</option>
+                          {/* ✅ NEW: مرحلة IFC */}
+                          <option value="IFC">IFC Package</option>
                         </>
                       )}
 
@@ -1019,7 +1027,7 @@ const CreateTask = () => {
               </div>
 
               {/* ═══════════════════════════════════════════════════════════
-                  ✅ NEW: Department Filter (Electrical / Mechanical / Structural / Architectural)
+                  ✅ UPDATED: Department Filter (7 departments now)
                   ═══════════════════════════════════════════════════════════ */}
               {!isInternal && !isCO && selectedStage && selectedStage !== 'OTHER' && (
                 <div className="ct-rise">
