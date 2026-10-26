@@ -16,6 +16,8 @@ const STAGE_LABELS = {
   DC1: 'DC1 (Design Criteria 1)',
   DC2: 'DC2 (Design Criteria 2)',
   TENDER: 'Tender Documents',
+  // ✅ NEW: مرحلة IFC
+  IFC: 'IFC Package',
 };
 
 const STAGE_COLORS = {
@@ -23,6 +25,8 @@ const STAGE_COLORS = {
   DC1: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', accent: 'bg-blue-500' },
   DC2: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', accent: 'bg-amber-500' },
   TENDER: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', accent: 'bg-emerald-500' },
+  // ✅ NEW: مرحلة IFC
+  IFC: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', accent: 'bg-rose-500' },
 };
 
 const DEPARTMENT_LABELS = {
@@ -30,6 +34,10 @@ const DEPARTMENT_LABELS = {
   ELEC: 'Electrical',
   MECH: 'Mechanical',
   STRUCT: 'Structural',
+  // ✅ NEW: 3 departments جديدة
+  SUSTAIN: 'Sustainability',
+  MGMNT: 'Management',
+  PLANNING: 'Planning / Cost Estimate',
 };
 
 const CheckboxTree = ({
@@ -52,7 +60,8 @@ const CheckboxTree = ({
   }, {});
 
   // ترتيب الـ Stages بالترتيب المنطقي
-  const stageOrder = ['CONCEPT', 'DC1', 'DC2', 'TENDER'];
+  // ✅ NEW: إضافة IFC
+  const stageOrder = ['CONCEPT', 'DC1', 'DC2', 'TENDER', 'IFC'];
   const sortedStages = stageOrder.filter(stage => groupedByStage[stage]?.length > 0);
 
   // ═══════════════════════════════════════════════════════════
