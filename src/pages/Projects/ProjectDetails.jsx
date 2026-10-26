@@ -120,10 +120,13 @@ function CompletedTasksSection({ tasks, user, onReload }) {
   const [selectedTask, setSelectedTask] = useState(null);
   // The update button is hidden from everyone (not needed)
   const canEdit = false;
+  // ✅ UPDATED: إضافة TENDER و IFC لقائمة المهام
   const stages = [
     { key: 'CONCEPT', label: 'Concept Design' },
     { key: 'DC1',     label: 'DC1' },
     { key: 'DC2',     label: 'DC2' },
+    { key: 'TENDER',  label: 'Tender' },
+    { key: 'IFC',     label: 'IFC Package' },
   ];
   const deptMeta = {
     ARCH:   { label: 'Architectural', color: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200' },
@@ -754,9 +757,10 @@ function StatusRow({ label, v }) {
 
 function LifecycleRibbon({ stages, canEdit, onReload, projectId }) {
   const [busy, setBusy] = useState(null);
+  // ✅ UPDATED: إضافة IFC للـ Short labels
   const SHORT = {
     OFFER: 'RFQ', CONTRACT_SUBMITTED: 'Contract Sub.', CONTRACT_SIGNED: 'Contract Signed',
-    CONCEPT: 'Concept', DC1: 'DC1', DC2: 'DC2', TENDER: 'Tender',
+    CONCEPT: 'Concept', DC1: 'DC1', DC2: 'DC2', TENDER: 'Tender', IFC: 'IFC',
     COLLECTION: 'Collection', CLOSED: 'Closed', DESIGN_PHASE: 'Design',
   };
   const firstPending = (stages.find((s) => s.status !== 'ACHIEVED' && s.status !== 'APPROVED') || {}).sequence_order;
