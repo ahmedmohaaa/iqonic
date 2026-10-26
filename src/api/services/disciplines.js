@@ -47,22 +47,30 @@ export const deleteDisciplineItem = (id) => {
 
 /**
  * خيارات الأقسام المتاحة
+ * ✅ UPDATED: 4 قديمة + 3 جديدة
  */
 export const DEPARTMENT_OPTIONS = [
   { value: 'ARCH', label: 'Architecture ' },
   { value: 'STRUCT', label: 'Structure ' },
   { value: 'MECH', label: 'Mechanical ' },
   { value: 'ELEC', label: 'Electrical ' },
+  // ✅ NEW: 3 departments جديدة
+  { value: 'SUSTAIN', label: 'Sustainability' },
+  { value: 'MGMNT', label: 'Management' },
+  { value: 'PLANNING', label: 'Planning / Cost Estimate' },
 ];
 
 /**
  * خيارات المراحل المتاحة
+ * ✅ UPDATED: إضافة مرحلة IFC
  */
 export const STAGE_OPTIONS = [
   { value: 'CONCEPT', label: 'Concept Design' },
   { value: 'DC1', label: 'DC1' },
   { value: 'DC2', label: 'DC2' },
   { value: 'TENDER', label: 'Tender Documents' },
+  // ✅ NEW: مرحلة IFC
+  { value: 'IFC', label: 'IFC Package' },
   { value: 'OTHER', label: 'Other' },
 ];
 
@@ -107,5 +115,3 @@ export const bulkDeactivateStageDisciplines = (projectId, itemIds) => {
     data: { item_ids: itemIds } 
   });
 };
-
-
