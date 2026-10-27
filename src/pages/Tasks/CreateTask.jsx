@@ -72,7 +72,7 @@ const INTERNAL_REVIEW_STAGES = [
   { value: 'CONCEPT_DESIGN', label: 'Concept Design' },
   { value: 'SCHEMATIC_DESIGN', label: 'Schematic Design' },
   { value: 'DETAILED_DESIGN', label: 'Detailed Design' },
-  { value: 'IFC_PACKAGE', label: 'IFC Package' },
+  { value: 'IFC_PACKAGE', label: 'IFC' },
   { value: 'OTHER', label: 'Other' },
 ];
 
@@ -986,7 +986,7 @@ const CreateTask = () => {
                             DC2: 'DC2',
                             TENDER: 'Tender Documents',
                             // ✅ NEW: مرحلة IFC
-                            IFC: 'IFC Package',
+                            IFC: 'IFC',
                           };
                           return (
                             <option key={stageKey} value={stageKey}>
@@ -1002,7 +1002,7 @@ const CreateTask = () => {
                           <option value="DC2">DC2</option>
                           <option value="TENDER">Tender Documents</option>
                           {/* ✅ NEW: مرحلة IFC */}
-                          <option value="IFC">IFC Package</option>
+                          <option value="IFC">IFC </option>
                         </>
                       )}
 
@@ -1384,3 +1384,4 @@ const CreateTask = () => {
 };
 
 export default CreateTask;
+
