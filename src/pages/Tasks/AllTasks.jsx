@@ -243,6 +243,8 @@ const AllTasks = () => {
                 <option value="DC1">DC1</option>
                 <option value="DC2">DC2</option>
                 <option value="TENDER">Tender</option>
+                {/* ✅ NEW: مرحلة IFC */}
+                <option value="IFC">IFC </option>
                 <option value="OTHER">Other</option>
               </select>
             </div>
@@ -270,6 +272,10 @@ const AllTasks = () => {
                 <option value="ELEC">Electrical</option>
                 <option value="STRUCT">Structural</option>
                 <option value="ARCH">Architectural</option>
+                {/* ✅ NEW: 3 departments جديدة */}
+                <option value="SUSTAIN">Sustainability</option>
+                <option value="MGMNT">Management</option>
+                <option value="PLANNING">Planning / Cost Estimate</option>
               </select>
             </div>
             <div className="md:col-span-2 flex items-end">
@@ -500,3 +506,6 @@ const AllTasks = () => {
 };
 
 export default AllTasks;
+
+
+
