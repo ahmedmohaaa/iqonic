@@ -98,11 +98,11 @@ export default function InvoiceFilesPanel({ invoiceId, invoiceTitle }) {
       <header className="ifp__head">
         <div>
           <span className="ifp__kicker">INVOICE ARCHIVE · {invoiceTitle ?? `#${invoiceId}`}</span>
-          <h2 className="ifp__title">خزانة المستندات</h2>
+          <h2 className="ifp__title">Document Archive</h2>
         </div>
         <div className="ifp__count">
           <span className="ifp__count-num">{files.length}</span>
-          <span className="ifp__count-lbl">ملف محفوظ{pdfCount ? ` · ${pdfCount} PDF` : ''}</span>
+          <span className="ifp__count-lbl">File(s) saved{pdfCount ? ` · ${pdfCount} PDF` : ''}</span>
         </div>
       </header>
 
@@ -126,10 +126,10 @@ export default function InvoiceFilesPanel({ invoiceId, invoiceTitle }) {
           />
           <span className="ifp__drop-orb"><UploadCloud size={22} /></span>
           <div className="ifp__drop-text">
-            <strong>اسحب الملفات هنا</strong>
-            <span>أو انقر للاختيار · PDF · صور · Excel</span>
+            <strong>Drag files here</strong>
+            <span>Or click to select · PDF · Images · Excel</span>
           </div>
-          <span className="ifp__drop-cta"><Paperclip size={15} /> إرفاق</span>
+          <span className="ifp__drop-cta"><Paperclip size={15} /> Attach</span>
         </div>
       )}
 
@@ -143,12 +143,12 @@ export default function InvoiceFilesPanel({ invoiceId, invoiceTitle }) {
                 <div className="ifp__up-row">
                   <span className="ifp__up-name">{u.name}</span>
                   <span className="ifp__up-pct">
-                    {u.status === 'done' ? 'تم' : u.status === 'error' ? 'فشل' : `${u.progress}%`}
+                    {u.status === 'done' ? 'Done' : u.status === 'error' ? 'Failed' : `${u.progress}%`}
                   </span>
                 </div>
                 <div className="ifp__up-bar"><span style={{ width: `${u.progress}%` }} /></div>
               </div>
-              <button className="ifp__up-x" onClick={() => dismissUpload(u.uid)} aria-label="إزالة"><X size={14} /></button>
+              <button className="ifp__up-x" onClick={() => dismissUpload(u.uid)} aria-label="Remove"><X size={14} /></button>
             </li>
           ))}
         </ul>
@@ -158,7 +158,7 @@ export default function InvoiceFilesPanel({ invoiceId, invoiceTitle }) {
       {loaded && files.length === 0 && uploads.length === 0 && (
         <div className="ifp__empty">
           <Archive size={26} />
-          <p>لا مستندات مرفقة بعد{canUpload ? ' — ارفع أول نسخة من الفاتورة.' : '.'}</p>
+          <p>No documents attached yet{canUpload ? ' — Upload the first version of the invoice.' : '.'}</p>
         </div>
       )}
 
@@ -181,7 +181,7 @@ export default function InvoiceFilesPanel({ invoiceId, invoiceTitle }) {
                   href={f.file}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="فتح / تحميل"
+                  title="Open / Download"
                 >
                   <ExternalLink size={15} />
                 </a>
@@ -323,3 +323,4 @@ const CSS = `
 }
 .ifp__file-open:hover{ color:var(--ink); background:var(--sky); transform:translateY(-2px); }
 `;
+
