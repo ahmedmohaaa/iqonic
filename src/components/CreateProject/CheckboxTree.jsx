@@ -17,7 +17,7 @@ const STAGE_LABELS = {
   DC2: 'DC2 (Design Criteria 2)',
   TENDER: 'Tender Documents',
   // ✅ NEW: مرحلة IFC
-  IFC: 'IFC Package',
+  IFC: 'IFC',
 };
 
 const STAGE_COLORS = {
