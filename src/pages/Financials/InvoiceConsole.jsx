@@ -12,12 +12,12 @@ import {
    ═══════════════════════════════════════════════════════════ */
 
 const STATUS_META = {
-  DRAFT:          { tone: 'slate',   label: 'مسوّدة' },
-  ISSUED:         { tone: 'sky',     label: 'مُصدَرة' },
-  PARTIALLY_PAID: { tone: 'amber',   label: 'مدفوعة جزئياً' },
-  PAID:           { tone: 'emerald', label: 'مسدّدة' },
-  OVERDUE:        { tone: 'rose',    label: 'متأخرة' },
-  CANCELLED:      { tone: 'slate',   label: 'ملغاة' },
+  DRAFT:          { tone: 'slate',   label: 'draft' },
+  ISSUED:         { tone: 'sky',     label: 'issued' },
+  PARTIALLY_PAID: { tone: 'amber',   label: 'partially paid' },
+  PAID:           { tone: 'emerald', label: 'paid' },
+  OVERDUE:        { tone: 'rose',    label: 'overdue' },
+  CANCELLED:      { tone: 'slate',   label: 'cancelled' },
 };
 
 const today = new Date();
@@ -101,10 +101,10 @@ export default function InvoiceConsole({ projectId }) {
       {/* الرأس */}
       <header className="ic-head ic-reveal">
         <div>
-          <span className="ic-kicker">FINANCIAL VAULT · خزنة الفواتير</span>
-          <h1 className="ic-title">لوحة التحصيل</h1>
+          <span className="ic-kicker">FINANCIAL VAULT · financial vault</span>
+          <h1 className="ic-title">Collection Dashboard</h1>
           <p className="ic-sub">
-            {projectId ? 'فواتير المشروع المحدّد' : 'كل فواتير المكتب — مُصدَرة، محصّلة، ومعلّقة'}
+            {projectId ? 'Project Invoices' : 'All Office Invoices — Issued, Collected, and On Hold'}
           </p>
         </div>
         <div className="ic-head-stat">
@@ -118,30 +118,30 @@ export default function InvoiceConsole({ projectId }) {
         <div className="ic-kpi ic-kpi--wide t-sky">
           <Receipt size={18} />
           <div>
-            <span className="ic-kpi-l">إجمالي المفوتر</span>
-            <span className="ic-kpi-v"><Money value={totalInvoiced} /> <i>ر.ق</i></span>
+            <span className="ic-kpi-l">Total Invoiced</span>
+            <span className="ic-kpi-v"><Money value={totalInvoiced} /> <i>QAR</i></span>
           </div>
         </div>
         <div className="ic-kpi t-emerald">
           <CheckCircle2 size={18} />
           <div>
-            <span className="ic-kpi-l">المحصّل</span>
-            <span className="ic-kpi-v"><Money value={totalCollected} /></span>
+            <span className="ic-kpi-l">Collected</span>
+            <span className="ic-kpi-v"><Money value={totalCollected} /> <i>QAR</i></span>
           </div>
         </div>
         <div className="ic-kpi t-amber">
           <Wallet size={18} />
           <div>
-            <span className="ic-kpi-l">المعلّق</span>
-            <span className="ic-kpi-v"><Money value={totalOutstanding} /></span>
+            <span className="ic-kpi-l">Outstanding</span>
+            <span className="ic-kpi-v"><Money value={totalOutstanding} /> <i>QAR</i></span>
           </div>
         </div>
         <div className={`ic-kpi t-rose ${overdueList.length ? 'pulse-card' : ''}`}>
           <AlertOctagon size={18} />
           <div>
-            <span className="ic-kpi-l">متأخر</span>
-            <span className="ic-kpi-v"><Money value={overdueAmount} /></span>
-            <span className="ic-kpi-foot">{overdueList.length} فاتورة</span>
+            <span className="ic-kpi-l">Overdue</span>
+            <span className="ic-kpi-v"><Money value={overdueAmount} /> <i>QAR</i></span>
+            <span className="ic-kpi-foot">{overdueList.length} Invoices</span>
           </div>
         </div>
       </section>
@@ -149,7 +149,7 @@ export default function InvoiceConsole({ projectId }) {
       {/* شريط التحصيل الكلي */}
       <section className="ic-bar-wrap ic-reveal">
         <div className="ic-bar-head">
-          <span>التحصيل مقابل المفوتر</span>
+          <span>Collection vs Invoiced</span>
           <span className="ic-bar-frac"><Money value={totalCollected} /> / <Money value={totalInvoiced} /></span>
         </div>
         <div className="ic-bar">
@@ -160,9 +160,9 @@ export default function InvoiceConsole({ projectId }) {
       {/* قائمة الفواتير */}
       <section className="ic-list">
         {loading ? (
-          <div className="ic-empty">جارٍ تحميل الخزنة…</div>
+          <div className="ic-empty">Loading financial vault…</div>
         ) : invoices.length === 0 ? (
-          <div className="ic-empty"><Receipt size={30} /> لا فواتير بعد.</div>
+          <div className="ic-empty"><Receipt size={30} /> No invoices yet.</div>
         ) : (
           invoices.map((inv, idx) => {
             const meta = STATUS_META[inv.status] || STATUS_META.DRAFT;
@@ -185,7 +185,7 @@ export default function InvoiceConsole({ projectId }) {
 
                   <div className="ic-row-amt">
                     <span className="ic-row-amt-v"><Money value={inv.total_amount} /></span>
-                    <span className="ic-row-amt-l">ر.ق</span>
+                    <span className="ic-row-amt-l">R</span>
                   </div>
 
                   <div className="ic-row-prog">
@@ -194,7 +194,7 @@ export default function InvoiceConsole({ projectId }) {
                   </div>
 
                   {overdue > 0 ? (
-                    <span className="ic-overdue-chip"><span className="ic-pulse-dot" /> متأخر بـ {overdue} يوم</span>
+                    <span className="ic-overdue-chip"><span className="ic-pulse-dot" /> Overdue by {overdue} days</span>
                   ) : (
                     <span className={`ic-status t-${meta.tone}`}>{meta.label}</span>
                   )}
@@ -206,16 +206,16 @@ export default function InvoiceConsole({ projectId }) {
                 <div className={`ic-detail ${open ? 'open' : ''}`}>
                   <div className="ic-detail-grid">
                     <div className="ic-meta-cell">
-                      <Calendar size={13} /> إصدار <b>{inv.issue_date || '—'}</b>
+                      <Calendar size={13} /> Issue <b>{inv.issue_date || '—'}</b>
                     </div>
                     <div className="ic-meta-cell">
-                      <Calendar size={13} /> استحقاق <b className={overdue ? 'rose' : ''}>{inv.due_date || '—'}</b>
+                      <Calendar size={13} /> Due <b className={overdue ? 'rose' : ''}>{inv.due_date || '—'}</b>
                     </div>
                     <div className="ic-meta-cell">
-                      محصّل <b className="emerald"><Money value={inv.collected_amount} /></b>
+                      Collected <b className="emerald"><Money value={inv.collected_amount} /></b>
                     </div>
                     <div className="ic-meta-cell">
-                      متبقٍّ <b className="amber"><Money value={inv.outstanding_amount} /></b>
+                      Outstanding <b className="amber"><Money value={inv.outstanding_amount} /></b>
                     </div>
                   </div>
 
@@ -280,7 +280,7 @@ function DetailTabs({ invoice, canAct, onChanged }) {
       {tab === 'payments' && (
         <div className="ic-tab-body">
           {payments.length === 0
-            ? <p className="ic-muted">لا دفعات مسجّلة.</p>
+            ? <p className="ic-muted">No payments recorded.</p>
             : payments.map((p, i) => (
               <div key={i} className="ic-pay-row">
                 <span className="ic-pay-dot" />
@@ -291,7 +291,7 @@ function DetailTabs({ invoice, canAct, onChanged }) {
             ))}
           {canAct && (
             <button className="ic-add-pay" onClick={() => setPayOpen(true)}>
-              <Plus size={14} /> تسجيل دفعة
+              <Plus size={14} /> Register Payment
             </button>
           )}
           {payOpen && (
@@ -307,7 +307,7 @@ function DetailTabs({ invoice, canAct, onChanged }) {
       {tab === 'files' && (
         <div className="ic-tab-body">
           {files.length === 0
-            ? <p className="ic-muted">لا ملفات مرفقة.</p>
+            ? <p className="ic-muted">No files attached.</p>
             : files.map((f, i) => (
               <a key={i} href={f.file} target="_blank" rel="noreferrer" className="ic-file-row">
                 <Paperclip size={13} />
@@ -319,7 +319,7 @@ function DetailTabs({ invoice, canAct, onChanged }) {
             <>
               <input ref={fileRef} type="file" hidden onChange={upload} />
               <button className="ic-add-pay" onClick={() => fileRef.current?.click()} disabled={busy}>
-                <Upload size={14} /> {busy ? 'جارٍ الرفع…' : 'إرفاق PDF'}
+                <Upload size={14} /> {busy ? 'Uploading…' : 'Attach PDF'}
               </button>
             </>
           )}
@@ -343,9 +343,9 @@ function PayInline({ invoice, onCancel, onDone }) {
   };
   return (
     <form onSubmit={submit} className="ic-pay-form">
-      <input type="number" step="0.01" max={remaining} placeholder={`الحدّ ${remaining}`}
+      <input type="number" step="0.01" max={remaining} placeholder={`Maximum ${remaining}`}
         value={amt} onChange={(e) => setAmt(e.target.value)} required />
-      <button disabled={busy} type="submit">حفظ</button>
+      <button disabled={busy} type="submit">Save</button>
       <button type="button" onClick={onCancel}><X size={14} /></button>
     </form>
   );
@@ -358,7 +358,7 @@ function PayModal({ invoice, onClose, onDone }) {
     <div className="ic-mask" onClick={onClose}>
       <div className="ic-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ic-modal-h">
-          <span>تسجيل دفعة — {invoice.title}</span>
+          <span>Register Payment — {invoice.title}</span>
           <button onClick={onClose}><X size={18} /></button>
         </div>
         <PayInline invoice={invoice} onCancel={onClose} onDone={onDone} />
@@ -504,3 +504,4 @@ const CSS = `
 .ic-modal-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-weight:600; }
 .ic-modal-h button{ background:none; border:none; color:var(--muted); cursor:pointer; }
 `;
+
