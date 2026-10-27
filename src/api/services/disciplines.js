@@ -70,7 +70,7 @@ export const STAGE_OPTIONS = [
   { value: 'DC2', label: 'DC2' },
   { value: 'TENDER', label: 'Tender Documents' },
   // ✅ NEW: مرحلة IFC
-  { value: 'IFC', label: 'IFC Package' },
+  { value: 'IFC', label: 'IFC' },
   { value: 'OTHER', label: 'Other' },
 ];
 
