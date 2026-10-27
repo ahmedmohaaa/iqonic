@@ -12,18 +12,18 @@ import {
    غرفة خزنة المحاسب — لوحة مالية حيّة كاملة الأفعال
    ═══════════════════════════════════════════════════════════════ */
 const STATUS_META = {
-  DRAFT:          { tone: 'slate',   label: 'مسوّدة' },
-  ISSUED:         { tone: 'sky',     label: 'مُصدَرة' },
-  PARTIALLY_PAID: { tone: 'amber',   label: 'جزئية' },
-  PAID:           { tone: 'emerald', label: 'مسدّدة' },
-  OVERDUE:        { tone: 'rose',    label: 'متأخرة' },
-  CANCELLED:      { tone: 'slate',   label: 'ملغاة' },
+  DRAFT:          { tone: 'slate',   label: 'Draft' },
+  ISSUED:         { tone: 'sky',     label: 'Issued' },
+  PARTIALLY_PAID: { tone: 'amber',   label: 'Partially Paid' },
+  PAID:           { tone: 'emerald', label: 'Paid' },
+  OVERDUE:        { tone: 'rose',    label: 'Overdue' },
+  CANCELLED:      { tone: 'slate',   label: 'Cancelled' },
 };
 const MILESTONES = [
-  ['DOWN_PAYMENT', 'دفعة مقدمة / Advanced'],
-  ['DC1', 'دفعة DC1'],
-  ['DC2', 'دفعة DC2'],
-  ['TENDERING', 'دفعة المناقصة'],
+  ['DOWN_PAYMENT', 'Down Payment / Advanced'],
+  ['DC1', 'DC1 Payment'],
+  ['DC2', 'DC2 Payment'],
+  ['TENDERING', 'Tendering Payment'],
 ];
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
