@@ -72,21 +72,21 @@ export default function PaymentScheduleManager({ projectId: propId, contractValu
       <header className="psm-head reveal d1">
         <div>
           <span className="psm-kicker">CONTRACT · PAYMENT SCHEDULE</span>
-          <h1 className="psm-title">جدول الدفعات</h1>
-          <p className="psm-sub">تقسيم قيمة العقد إلى أقساط، وتتبع تحصيل كل قسط حتى الإقفال.</p>
+          <h1 className="psm-title">Payment Schedule</h1>
+          <p className="psm-sub">Splitting the contract value into installments, and tracking the collection of each installment until closure.</p>
         </div>
         <div className="psm-hero-num">
-          <span className="psm-hero-label">نسبة التحصيل</span>
+          <span className="psm-hero-label">Collection Rate</span>
           <span className="psm-hero-figure">{totals.pct.toFixed(0)}<i>%</i></span>
         </div>
       </header>
 
       {/* ── لوحة الملخص ──────────────────────────────── */}
       <section className="psm-summary reveal d2">
-        <Stat label="قيمة العقد" value={totals.contract} tone="ink" icon={<Coins size={16} />} />
-        <Stat label="المحصَّل" value={totals.collected} tone="emerald" icon={<CheckCircle2 size={16} />} />
-        <Stat label="المُصدَر" value={totals.invoiced} tone="sky" icon={<FileText size={16} />} />
-        <Stat label="المتبقي" value={totals.outstanding} tone="amber" icon={<TrendingUp size={16} />} />
+        <Stat label="Contract Value" value={totals.contract} tone="ink" icon={<Coins size={16} />} />
+        <Stat label="Collected" value={totals.collected} tone="emerald" icon={<CheckCircle2 size={16} />} />
+        <Stat label="Invoiced" value={totals.invoiced} tone="sky" icon={<FileText size={16} />} />
+        <Stat label="Outstanding" value={totals.outstanding} tone="amber" icon={<TrendingUp size={16} />} />
       </section>
 
       {/* ── شريط التقدّم الزمني ─────────────────────── */}
@@ -119,11 +119,11 @@ export default function PaymentScheduleManager({ projectId: propId, contractValu
       {/* ── بطاقات الأقساط ──────────────────────────── */}
       <section className="psm-grid">
         {loading ? (
-          <div className="psm-empty">جارٍ تحميل جدول الدفعات…</div>
+          <div className="psm-empty">Loading payment schedule…</div>
         ) : items.length === 0 ? (
           <div className="psm-empty">
             <Receipt size={26} />
-            <p>لا أقساط مسجّلة بعد. أضف القسط الأول لبدء تتبع التحصيل.</p>
+            <p>No installments registered yet. Add the first installment to start tracking collection.</p>
           </div>
         ) : (
           items.map((it, idx) => (
@@ -153,9 +153,9 @@ export default function PaymentScheduleManager({ projectId: propId, contractValu
               </div>
 
               <div className="psm-card-foot">
-                <span className="psm-card-hint">انقر الوسم لتدوير الحالة</span>
+                <span className="psm-card-hint">Click the badge to cycle the status</span>
                 <button className="psm-edit" onClick={() => openEdit(it)}>
-                  تعديل <ChevronRight size={13} />
+                  Edit <ChevronRight size={13} />
                 </button>
               </div>
             </article>
@@ -164,7 +164,7 @@ export default function PaymentScheduleManager({ projectId: propId, contractValu
 
         <button className="psm-add reveal d4" onClick={openNew}>
           <Plus size={20} />
-          <span>إضافة قسط</span>
+          <span>Add Installment</span>
         </button>
       </section>
 
@@ -176,7 +176,7 @@ export default function PaymentScheduleManager({ projectId: propId, contractValu
 }
 
 /* ── مكوّنات فرعية ──────────────────────────────────────── */
-const STATUS_AR = { PENDING: 'معلّق', INVOICED: 'مُصدَر', PAID: 'محصَّل' };
+const STATUS_AR = { PENDING: 'Pending', INVOICED: 'Invoiced', PAID: 'Paid' };
 
 function Stat({ label, value, tone, icon }) {
   return (
@@ -220,29 +220,29 @@ function PaymentModal({ item, onClose, onSave }) {
     <div className="psm-modal-mask" onClick={onClose}>
       <form className="psm-modal reveal d1" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="psm-modal-head">
-          <h3>{item ? 'تعديل القسط' : 'قسط جديد'}</h3>
+          <h3>{item ? 'Edit Installment' : 'New Installment'}</h3>
           <button type="button" className="psm-x" onClick={onClose}><X size={18} /></button>
         </div>
 
         <div className="psm-modal-grid">
           <label>
-            <span>رقم القسط</span>
+            <span>Installment Number</span>
             <input type="number" min="1" value={form.installment_number} onChange={set('installment_number')} required />
           </label>
           <label>
-            <span>المبلغ</span>
+            <span>Amount</span>
             <input type="number" min="0" step="0.01" value={form.amount} onChange={set('amount')} required />
           </label>
           <label>
-            <span>تاريخ الاستحقاق</span>
+            <span>Due Date</span>
             <input type="date" value={form.due_date} onChange={set('due_date')} required />
           </label>
           <label>
-            <span>الحالة</span>
+            <span>Status</span>
             <select value={form.status} onChange={set('status')}>
-              <option value="PENDING">معلّق</option>
-              <option value="INVOICED">مُصدَر</option>
-              <option value="PAID">محصَّل</option>
+              <option value="PENDING">Pending</option>
+              <option value="INVOICED">Invoiced</option>
+              <option value="PAID">Paid</option>
             </select>
           </label>
           <label className="psm-full">
@@ -252,8 +252,8 @@ function PaymentModal({ item, onClose, onSave }) {
         </div>
 
         <div className="psm-modal-foot">
-          <button type="button" className="psm-ghost" onClick={onClose}>إلغاء</button>
-          <button type="submit" className="psm-save" disabled={busy}>{busy ? 'جارٍ الحفظ…' : 'حفظ'}</button>
+          <button type="button" className="psm-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="psm-save" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
         </div>
       </form>
     </div>
