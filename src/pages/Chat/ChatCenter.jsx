@@ -6,6 +6,7 @@ import {
 import {
   MessageSquare, Send, Users, Hash, AtSign, Search, Plus, X, Paperclip,
   Megaphone, ArrowRight, Circle, CheckCheck, Clock, Building2, User as UserIcon,
+  Building, Briefcase, Crown, Globe
 } from 'lucide-react';
 
 const ROLE_TONE = {
@@ -13,7 +14,9 @@ const ROLE_TONE = {
   SENIOR_ENG: 'emerald', ENGINEER: 'sky', DRAFTSMAN: 'emerald',
   ACCOUNTANT: 'rose', SECRETARY: 'amber', DOC_CONTROLLER: 'slate',
 };
+
 const initials = (n) => (n || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
 const relTime = (iso) => {
   if (!iso) return '';
   const m = Math.floor((Date.now() - new Date(iso)) / 60000);
@@ -23,7 +26,48 @@ const relTime = (iso) => {
   if (h < 24) return `${h}س`;
   return new Date(iso).toLocaleDateString('ar-EG', { day: '2-digit', month: '2-digit' });
 };
+
 const fullTime = (iso) => new Date(iso).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+// ✅ NEW: خيارات المنشن السريعة (Quick Mentions)
+const QUICK_MENTIONS = [
+  {
+    key: 'all',
+    label: 'Everyone',
+    description: 'Notify all users in the system',
+    icon: Globe,
+    tone: 'purple',
+    keyword: '@all',
+    special: true,
+  },
+  {
+    key: 'design-team',
+    label: 'Design Department',
+    description: 'All design team members',
+    icon: Building,
+    tone: 'sky',
+    keyword: '@design-team',
+    special: true,
+  },
+  {
+    key: 'supervision-team',
+    label: 'Supervision Department',
+    description: 'All supervision team members',
+    icon: Briefcase,
+    tone: 'orange',
+    keyword: '@supervision-team',
+    special: true,
+  },
+  {
+    key: 'management',
+    label: 'Managers',
+    description: 'GM, AGM, Design Manager',
+    icon: Crown,
+    tone: 'amber',
+    keyword: '@management',
+    special: true,
+  },
+];
 
 export default function ChatCenter() {
   const { user } = useAuth();
@@ -32,47 +76,47 @@ export default function ChatCenter() {
   const [active, setActive] = useState(null);
   const [msgs, setMsgs] = useState([]);
   const [draft, setDraft] = useState('');
-  const [mentions, setMentions] = useState([]);      // [{id,name}]
+  const [mentions, setMentions] = useState([]);      // [{id,name} or {key,label,special}]
   const [mentionOpen, setMentionOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [userQuery, setUserQuery] = useState('');
   const [sending, setSending] = useState(false);
   const [mobileList, setMobileList] = useState(true);
+  const [mentionQuery, setMentionQuery] = useState(''); // ✅ NEW: بحث مستقل داخل المنشن
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
-const [convQuery, setConvQuery] = useState('');
+  const [convQuery, setConvQuery] = useState('');
 
+  // ✅ تصفير عداد الرسائل غير المقروءة فور فتح المحادثة
+  useEffect(() => {
+    if (!user?.id) return;
 
-// ✅ تصفير عداد الرسائل غير المقروءة فور فتح المحادثة
-// ✅ تصفير عداد الرسائل غير المقروءة عند فتح المحادثة، ومنع ظهور الرقم لرسالة أرسلتها أنت
-useEffect(() => {
-  if (!user?.id) return;
+    setConvs((prev) => {
+      let changed = false;
 
-  setConvs((prev) => {
-    let changed = false;
+      const next = prev.map((conv) => {
+        const isOpen = active?.id === conv.id;
+        const lastMessageIsMine =
+          conv.last_message?.sender_id === user.id ||
+          conv.last_message?.sender === user.id;
 
-    const next = prev.map((conv) => {
-      const isOpen = active?.id === conv.id;
+        if ((isOpen || lastMessageIsMine) && conv.unread_count > 0) {
+          changed = true;
+          return { ...conv, unread_count: 0 };
+        }
 
-      const lastMessageIsMine =
-        conv.last_message?.sender_id === user.id ||
-        conv.last_message?.sender === user.id;
+        return conv;
+      });
 
-      if ((isOpen || lastMessageIsMine) && conv.unread_count > 0) {
-        changed = true;
-        return { ...conv, unread_count: 0 };
-      }
-
-      return conv;
+      return changed ? next : prev;
     });
+  }, [convs, active?.id, user?.id]);
 
-    return changed ? next : prev;
-  });
-}, [convs, active?.id, user?.id]);
   /* ── تحميل المحادثات والمستخدمين ── */
   const loadConvs = useCallback(() => {
     getConversations().then((r) => setConvs(r.data.results || r.data || [])).catch(() => {});
   }, []);
+
   useEffect(() => {
     loadConvs();
     getUsers().then((r) => setUsers((r.data.results || r.data || []).filter((u) => u.id !== user?.id))).catch(() => {});
@@ -88,6 +132,7 @@ useEffect(() => {
       setMsgs([...list].reverse());
     }).catch(() => {});
   }, [active]);
+
   useEffect(() => {
     if (!active) { setMsgs([]); return; }
     loadMsgs();
@@ -95,17 +140,32 @@ useEffect(() => {
     return () => clearInterval(t);
   }, [active, loadMsgs]);
 
-  useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, [msgs]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [msgs]);
 
   /* ── فتح محادثة ── */
   const openConv = (c) => { setActive(c); setMobileList(false); };
+
   const startDirect = async (u) => {
-    try { const r = await openDirect(u.id); openConv(r.data); setNewOpen(false); setUserQuery(''); }
-    catch { alert('Unable to open the conversation.'); }
+    try {
+      const r = await openDirect(u.id);
+      openConv(r.data);
+      setNewOpen(false);
+      setUserQuery('');
+    } catch {
+      alert('Unable to open the conversation.');
+    }
   };
+
   const startGeneral = async () => {
-    try { const r = await openGeneral(); openConv(r.data); setNewOpen(false); }
-    catch { alert('Unable to open the general broadcast.'); }
+    try {
+      const r = await openGeneral();
+      openConv(r.data);
+      setNewOpen(false);
+    } catch {
+      alert('Unable to open the general broadcast.');
+    }
   };
 
   /* ── الإرسال ── */
@@ -114,47 +174,106 @@ useEffect(() => {
     if (!draft.trim() || !active || sending) return;
     setSending(true);
     try {
-      await sendMessage(active.id, { message: draft.trim(), mentions: mentions.map((m) => m.id) });
-      setDraft(''); setMentions([]); setMentionOpen(false);
-      loadMsgs(); loadConvs();
-    } catch { alert('Unable to send the message.'); }
-    finally { setSending(false); }
+      // ✅ NEW: فصل الـ mentions العادية عن الخاصة
+      const userIds = mentions.filter((m) => !m.special).map((m) => m.id);
+      const specialMentions = mentions.filter((m) => m.special).map((m) => m.key);
+
+      await sendMessage(active.id, {
+        message: draft.trim(),
+        mentions: userIds,
+        special_mentions: specialMentions, // ✅ NEW: يُرسل للباك-إند
+      });
+      setDraft('');
+      setMentions([]);
+      setMentionOpen(false);
+      loadMsgs();
+      loadConvs();
+    } catch {
+      alert('Unable to send the message.');
+    } finally {
+      setSending(false);
+    }
   };
 
-  /* ── المنبّه @ ── */
-  const addMention = (u) => {
-    if (!mentions.find((m) => m.id === u.id)) {
-      setMentions((p) => [...p, u]);
-      setDraft((d) => `${d}@${u.first_name || u.username} `);
+  /* ── إضافة منشن (عادي أو خاص) ── */
+  const addMention = (item) => {
+    // ✅ NEW: دعم كلا النوعين (user عادي أو quick mention)
+    const isDuplicate = item.special
+      ? mentions.find((m) => m.special && m.key === item.key)
+      : mentions.find((m) => m.id === item.id);
+
+    if (!isDuplicate) {
+      setMentions((p) => [...p, item]);
+      const mentionText = item.special ? item.keyword : `@${item.first_name || item.username}`;
+      setDraft((d) => `${d}${mentionText} `);
     }
     setMentionOpen(false);
     inputRef.current?.focus();
   };
 
+  // ✅ قائمة المستخدمين للبحث في المحادثات الجديدة (بدون حد 30)
   const filteredUsers = useMemo(() => {
     const q = userQuery.trim().toLowerCase();
     return users.filter((u) =>
-      !q || `${u.first_name} ${u.last_name} ${u.username}`.toLowerCase().includes(q)
-    ).slice(0, 30);
+      !q || `${u.first_name} ${u.last_name} ${u.username} ${u.department || ''} ${u.role || ''}`.toLowerCase().includes(q)
+    ).slice(0, 200); // ✅ رفع الحد إلى 200
   }, [users, userQuery]);
 
+  // ✅ NEW: فلترة ذكية للمention مع دعم Quick Mentions
   const mentionFiltered = useMemo(() => {
+    // استخراج الكلمة بعد آخر @
     const q = draft.split('@').pop()?.toLowerCase() || '';
-    return users.filter((u) =>
-      !mentions.find((m) => m.id === u.id) &&
-      `${u.first_name} ${u.last_name} ${u.username}`.toLowerCase().includes(q)
-    ).slice(0, 6);
+
+    // فلترة Quick Mentions
+    const quickFiltered = QUICK_MENTIONS.filter((qm) => {
+      if (mentions.find((m) => m.special && m.key === qm.key)) return false; // تم اختيارها
+      if (!q) return true;
+      return (
+        qm.label.toLowerCase().includes(q) ||
+        qm.keyword.toLowerCase().includes(q) ||
+        qm.description.toLowerCase().includes(q) ||
+        qm.key.toLowerCase().includes(q)
+      );
+    });
+
+    // فلترة المستخدمين (بدون حد 6!)
+    const userFiltered = users
+      .filter((u) => {
+        if (mentions.find((m) => !m.special && m.id === u.id)) return false;
+        if (!q) return true;
+        return `${u.first_name} ${u.last_name} ${u.username} ${u.department || ''} ${u.role || ''}`
+          .toLowerCase()
+          .includes(q);
+      });
+    // ✅ لا slice هنا — سنعرض كل النتائج
+
+    return {
+      quick: quickFiltered,
+      users: userFiltered,
+      total: quickFiltered.length + userFiltered.length,
+    };
   }, [users, draft, mentions]);
 
   const typeLabel = { DIRECT: 'Private conversation', GENERAL: 'General broadcast', PROJECT: 'Project room' };
-const filteredConvs = useMemo(() => {
-  const q = convQuery.trim().toLowerCase();
-  if (!q) return convs;
-  
-  return convs.filter((c) => 
-    c.display_name?.toLowerCase().includes(q)
-  );
-}, [convs, convQuery]);
+
+  const filteredConvs = useMemo(() => {
+    const q = convQuery.trim().toLowerCase();
+    if (!q) return convs;
+    return convs.filter((c) => c.display_name?.toLowerCase().includes(q));
+  }, [convs, convQuery]);
+
+  // ✅ NEW: إغلاق القائمة عند النقر خارجها
+  useEffect(() => {
+    if (!mentionOpen) return;
+    const handler = (e) => {
+      if (!e.target.closest('.cha-mention-wrap') && !e.target.closest('.cha-mention-pop')) {
+        setMentionOpen(false);
+      }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [mentionOpen]);
+
   return (
     <div className="cha" dir="rtl">
       <style>{CSS}</style>
@@ -170,23 +289,23 @@ const filteredConvs = useMemo(() => {
           </div>
         </div>
 
-<div className="cha-search">
-  <Search size={14} />
-  <input 
-    placeholder="Search conversations..." 
-    value={convQuery}
-    onChange={(e) => setConvQuery(e.target.value)}
-  />
-</div>
-<div className="cha-conv-list">
-  {convs.length === 0 && <p className="cha-empty-side">No conversations yet — start a new one.</p>}
-  {convs.length > 0 && filteredConvs.length === 0 && (
-    <p className="cha-empty-side">No matching conversations found.</p>
-  )}
-  
-  {filteredConvs.map((c) => {
-    const on = active?.id === c.id;
-    const lm = c.last_message;
+        <div className="cha-search">
+          <Search size={14} />
+          <input
+            placeholder="Search conversations..."
+            value={convQuery}
+            onChange={(e) => setConvQuery(e.target.value)}
+          />
+        </div>
+        <div className="cha-conv-list">
+          {convs.length === 0 && <p className="cha-empty-side">No conversations yet — start a new one.</p>}
+          {convs.length > 0 && filteredConvs.length === 0 && (
+            <p className="cha-empty-side">No matching conversations found.</p>
+          )}
+
+          {filteredConvs.map((c) => {
+            const on = active?.id === c.id;
+            const lm = c.last_message;
 
             return (
               <button key={c.id} className={`cha-conv ${on ? 'on' : ''}`} onClick={() => openConv(c)}>
@@ -228,13 +347,12 @@ const filteredConvs = useMemo(() => {
           <>
             {/* رأس المحادثة */}
             <header className="cha-head">
-{/* 👈 استبدل زر cha-back القديم بهذا السطر */}
-<button className="cha-back" title="إغلاق المحادثة والرجوع" onClick={() => { setActive(null); setMobileList(true); }}>
-  <ArrowRight size={18} />
-</button>              <Avatar name={active.display_name} tone={active.avatar_tone} size={42} />
+              <button className="cha-back" title="إغلاق المحادثة والرجوع" onClick={() => { setActive(null); setMobileList(true); }}>
+                <ArrowRight size={18} />
+              </button>
+              <Avatar name={active.display_name} tone={active.avatar_tone} size={42} />
               <div className="cha-head-txt">
                 <b>{active.display_name}</b>
-
               </div>
               <span className="cha-live"><span className="cha-live-dot" /> Live</span>
             </header>
@@ -251,11 +369,12 @@ const filteredConvs = useMemo(() => {
                     {!mine && !grouped && <Avatar name={m.sender_name} tone={ROLE_TONE[(users.find((u) => u.id === m.sender_id) || {}).role] || 'slate'} size={30} />}
                     {!mine && grouped && <span className="cha-row-spacer" />}
                     <div className="cha-bubble-wrap">
-{!mine && active.room_type !== 'DIRECT' && (
-  <span className="cha-sender">{m.sender_name}</span>
-)}
+                      {!mine && active.room_type !== 'DIRECT' && (
+                        <span className="cha-sender">{m.sender_name}</span>
+                      )}
                       <div className={`cha-bubble ${mine ? 'mine' : 'theirs'}`}>
-                        <p>{m.message}</p>
+                        {/* ✅ NEW: تمييز الـ @mentions داخل الرسالة */}
+                        <p>{renderMessageWithMentions(m.message)}</p>
                         {m.attachment && <a className="cha-attach" href={m.attachment} target="_blank" rel="noreferrer"><Paperclip size={12} /> مرفق</a>}
                       </div>
                       <span className="cha-time">{fullTime(m.created_at)}{mine && <CheckCheck size={11} />}</span>
@@ -269,29 +388,123 @@ const filteredConvs = useMemo(() => {
             <form className="cha-compose" onSubmit={send}>
               {mentions.length > 0 && (
                 <div className="cha-mentions">
-                  {mentions.map((m) => (
-                    <span key={m.id} className="cha-mention-chip">
-                      @{m.first_name || m.username}
-                      <button type="button" onClick={() => setMentions((p) => p.filter((x) => x.id !== m.id))}><X size={11} /></button>
-                    </span>
-                  ))}
+                  {mentions.map((m, idx) => {
+                    if (m.special) {
+                      // ✅ NEW: chip خاص للـ Quick Mentions
+                      const qm = QUICK_MENTIONS.find((q) => q.key === m.key);
+                      const Icon = qm?.icon || AtSign;
+                      const toneClass = `cha-mention-chip--${qm?.tone || 'sky'}`;
+                      return (
+                        <span key={`special-${m.key}`} className={`cha-mention-chip ${toneClass}`}>
+                          <Icon size={11} />
+                          {qm?.label || m.keyword}
+                          <button type="button" onClick={() => setMentions((p) => p.filter((x) => !(x.special && x.key === m.key)))}><X size={11} /></button>
+                        </span>
+                      );
+                    }
+                    return (
+                      <span key={m.id || idx} className="cha-mention-chip">
+                        @{m.first_name || m.username}
+                        <button type="button" onClick={() => setMentions((p) => p.filter((x) => x.id !== m.id))}><X size={11} /></button>
+                      </span>
+                    );
+                  })}
                 </div>
               )}
 
               <div className="cha-compose-row">
                 <div className="cha-mention-wrap">
-                  <button type="button" className="cha-ic" title="Mention a person @" onClick={() => setMentionOpen((o) => !o)}><AtSign size={16} /></button>
+                  <button
+                    type="button"
+                    className="cha-ic"
+                    title="Mention a person @"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMentionOpen((o) => !o);
+                    }}
+                  >
+                    <AtSign size={16} />
+                  </button>
+
+                  {/* ✅ NEW: قائمة المنشن المحدّثة — Quick Mentions + كل المستخدمين */}
                   {mentionOpen && (
-                    <div className="cha-mention-pop">
-                      <div className="cha-mention-search"><Search size={12} /><input autoFocus placeholder="search…" value={userQuery} onChange={(e) => setUserQuery(e.target.value)} /></div>
+                    <div className="cha-mention-pop" onClick={(e) => e.stopPropagation()}>
+                      <div className="cha-mention-search">
+                        <Search size={12} />
+                        <input
+                          autoFocus
+                          placeholder="Type to filter people or departments…"
+                          value={draft.split('@').pop() || ''}
+                          onChange={(e) => {
+                            // ✅ تحديث draft مباشرة عند الكتابة في البحث
+                            const beforeAt = draft.slice(0, draft.lastIndexOf('@'));
+                            setDraft(`${beforeAt}@${e.target.value}`);
+                          }}
+                        />
+                      </div>
+
                       <div className="cha-mention-list">
-                        {mentionFiltered.map((u) => (
-                          <button type="button" key={u.id} className="cha-mention-item" onClick={() => addMention(u)}>
-                            <Avatar name={`${u.first_name} ${u.last_name}`} tone={ROLE_TONE[u.role] || 'slate'} size={26} />
-                            <span><b>{u.first_name} {u.last_name}</b><em>{u.role_display || u.role}</em></span>
-                          </button>
-                        ))}
-                        {mentionFiltered.length === 0 && <p className="cha-empty-mini">No results found</p>}
+                        {/* ─── Quick Mentions Section ─── */}
+                        {mentionFiltered.quick.length > 0 && (
+                          <>
+                            <div className="cha-mention-section">
+                              <span className="cha-mention-section-title">
+                                <Megaphone size={10} /> Quick Mentions
+                              </span>
+                            </div>
+                            {mentionFiltered.quick.map((qm) => {
+                              const Icon = qm.icon;
+                              return (
+                                <button
+                                  type="button"
+                                  key={qm.key}
+                                  className={`cha-mention-item cha-mention-item--special cha-mention-item--${qm.tone}`}
+                                  onClick={() => addMention(qm)}
+                                >
+                                  <span className={`cha-mention-icon cha-mention-icon--${qm.tone}`}>
+                                    <Icon size={14} />
+                                  </span>
+                                  <span className="cha-mention-details">
+                                    <b>{qm.label}</b>
+                                    <em>{qm.description}</em>
+                                  </span>
+                                  <span className="cha-mention-keyword">{qm.keyword}</span>
+                                </button>
+                              );
+                            })}
+                          </>
+                        )}
+
+                        {/* ─── People Section ─── */}
+                        {mentionFiltered.users.length > 0 && (
+                          <>
+                            <div className="cha-mention-section">
+                              <span className="cha-mention-section-title">
+                                <Users size={10} /> People
+                                <span className="cha-mention-count">{mentionFiltered.users.length}</span>
+                              </span>
+                            </div>
+                            {mentionFiltered.users.map((u) => (
+                              <button
+                                type="button"
+                                key={u.id}
+                                className="cha-mention-item"
+                                onClick={() => addMention(u)}
+                              >
+                                <Avatar name={`${u.first_name} ${u.last_name}`} tone={ROLE_TONE[u.role] || 'slate'} size={26} />
+                                <span className="cha-mention-details">
+                                  <b>{u.first_name} {u.last_name}</b>
+                                  <em>{u.role_display || u.role}{u.department ? ` · ${u.department}` : ''}</em>
+                                </span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+
+                        {/* ─── Empty State ─── */}
+                        {mentionFiltered.total === 0 && (
+                          <p className="cha-empty-mini">No results found</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -300,10 +513,19 @@ const filteredConvs = useMemo(() => {
                 <input
                   ref={inputRef}
                   className="cha-input"
-                  placeholder={active.room_type === 'GENERAL' ? 'Write a broadcast to everyone…' : 'Write your message…'}
+                  placeholder={active.room_type === 'GENERAL' ? 'Write a broadcast to everyone…' : 'Write your message… (use @ to mention)'}
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) send(e); }}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    // ✅ فتح القائمة تلقائياً عند كتابة @
+                    if (e.target.value.includes('@') && !mentionOpen) {
+                      setMentionOpen(true);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) send(e);
+                    if (e.key === 'Escape') setMentionOpen(false);
+                  }}
                 />
                 <button type="submit" className="cha-send" disabled={!draft.trim() || sending}>
                   <Send size={16} />
@@ -340,9 +562,32 @@ const filteredConvs = useMemo(() => {
   );
 }
 
+// ✅ NEW: دالة تمييز الـ @mentions داخل الرسائل
+function renderMessageWithMentions(text) {
+  if (!text) return null;
+  const parts = text.split(/(@[\w.-]+|@all|@design-team|@supervision-team|@management)/g);
+  return parts.map((part, i) => {
+    if (!part.startsWith('@')) return <span key={i}>{part}</span>;
+
+    // تحديد نوع المنشن
+    let className = 'cha-msg-mention cha-msg-mention--user';
+    if (part === '@all') className = 'cha-msg-mention cha-msg-mention--all';
+    else if (part === '@design-team') className = 'cha-msg-mention cha-msg-mention--design';
+    else if (part === '@supervision-team') className = 'cha-msg-mention cha-msg-mention--supervision';
+    else if (part === '@management') className = 'cha-msg-mention cha-msg-mention--management';
+
+    return (
+      <span key={i} className={className}>
+        {part}
+      </span>
+    );
+  });
+}
+
 function Avatar({ name, tone = 'slate', size = 40 }) {
   return <span className={`cha-av cha-av--${tone}`} style={{ width: size, height: size, fontSize: size * 0.38 }}>{initials(name)}</span>;
 }
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
@@ -444,27 +689,201 @@ const CSS = `
 .cha-time{ display:flex; align-items:center; gap:4px; font-family:'JetBrains Mono'; font-size:9.5px; color:var(--mut); padding:0 4px; font-weight:600;}
 .cha-time svg{ color:var(--sky); }
 
+/* ✅ NEW: تمييز الـ @mentions داخل الرسائل */
+.cha-msg-mention{
+  display:inline-block;
+  padding:1px 7px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:12px;
+  margin:0 1px;
+  border:1px solid transparent;
+}
+.cha-msg-mention--user{
+  background:rgba(14,165,233,.15);
+  color:#0284c7;
+  border-color:rgba(14,165,233,.3);
+}
+.cha-bubble.mine .cha-msg-mention--user{
+  background:rgba(255,255,255,.25);
+  color:#ffffff;
+  border-color:rgba(255,255,255,.4);
+}
+.cha-msg-mention--all{
+  background:rgba(139,92,246,.18);
+  color:#7c3aed;
+  border-color:rgba(139,92,246,.35);
+}
+.cha-bubble.mine .cha-msg-mention--all{
+  background:rgba(255,255,255,.28);
+  color:#ffffff;
+  border-color:rgba(255,255,255,.5);
+}
+.cha-msg-mention--design{
+  background:rgba(14,165,233,.18);
+  color:#0369a1;
+  border-color:rgba(14,165,233,.35);
+}
+.cha-bubble.mine .cha-msg-mention--design{
+  background:rgba(255,255,255,.28);
+  color:#ffffff;
+  border-color:rgba(255,255,255,.5);
+}
+.cha-msg-mention--supervision{
+  background:rgba(249,115,22,.18);
+  color:#c2410c;
+  border-color:rgba(249,115,22,.35);
+}
+.cha-bubble.mine .cha-msg-mention--supervision{
+  background:rgba(255,255,255,.28);
+  color:#ffffff;
+  border-color:rgba(255,255,255,.5);
+}
+.cha-msg-mention--management{
+  background:rgba(245,158,11,.18);
+  color:#b45309;
+  border-color:rgba(245,158,11,.35);
+}
+.cha-bubble.mine .cha-msg-mention--management{
+  background:rgba(255,255,255,.28);
+  color:#ffffff;
+  border-color:rgba(255,255,255,.5);
+}
+
 /* الإدخال */
 .cha-compose{ padding:10px clamp(12px,3vw,30px) 14px; border-top:1px solid var(--line); background:rgba(255,255,255,.95); backdrop-filter:blur(8px); flex:none; z-index:10; }
 .cha-mentions{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
 .cha-mention-chip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#0284c7; background:rgba(14,165,233,.1); border:1px solid rgba(14,165,233,.2); padding:3px 8px; border-radius:999px; }
 .cha-mention-chip button{ background:none; border:none; color:#0284c7; cursor:pointer; display:grid; place-items:center; }
+
+/* ✅ NEW: ألوان مختلفة للـ Quick Mentions chips */
+.cha-mention-chip--purple{ color:#7c3aed; background:rgba(139,92,246,.12); border-color:rgba(139,92,246,.3); }
+.cha-mention-chip--purple button{ color:#7c3aed; }
+.cha-mention-chip--sky{ color:#0369a1; background:rgba(14,165,233,.12); border-color:rgba(14,165,233,.3); }
+.cha-mention-chip--sky button{ color:#0369a1; }
+.cha-mention-chip--orange{ color:#c2410c; background:rgba(249,115,22,.12); border-color:rgba(249,115,22,.3); }
+.cha-mention-chip--orange button{ color:#c2410c; }
+.cha-mention-chip--amber{ color:#b45309; background:rgba(245,158,11,.12); border-color:rgba(245,158,11,.3); }
+.cha-mention-chip--amber button{ color:#b45309; }
+
 .cha-compose-row{ display:flex; align-items:center; gap:8px; background:var(--surf); border:1px solid var(--line); border-radius:13px; padding:5px 6px; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,.02); }
 .cha-compose-row:focus-within{ border-color:var(--sky); box-shadow:0 0 0 3px rgba(14,165,233,.1); }
 .cha-input{ flex:1; background:none; border:none; outline:none; color:var(--paper); font-family:inherit; font-size:14px; padding:6px; font-weight:500;}
 .cha-input::placeholder{ color:#94a3b8; }
 .cha-mention-wrap{ position:relative; }
-.cha-mention-pop{ position:absolute; bottom:calc(100% + 8px); inset-inline-start:0; width:min(260px, 80vw); background:var(--surf); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 12px 30px -10px rgba(0,0,0,.12); animation:chapop .16s ease; z-index:20; }
+
+/* ✅ NEW: قائمة منشن محسّنة — أطول وأكثر تنظيماً */
+.cha-mention-pop{
+  position:absolute;
+  bottom:calc(100% + 8px);
+  inset-inline-start:0;
+  width:min(340px, 90vw);
+  background:var(--surf);
+  border:1px solid var(--line);
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 12px 40px -10px rgba(0,0,0,.18);
+  animation:chapop .16s ease;
+  z-index:30;
+}
 @keyframes chapop{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
-.cha-mention-search{ display:flex; align-items:center; gap:7px; padding:8px 11px; border-bottom:1px solid var(--line); color:var(--mut); background:var(--surf2); }
+.cha-mention-search{ display:flex; align-items:center; gap:7px; padding:10px 12px; border-bottom:1px solid var(--line); color:var(--mut); background:var(--surf2); }
 .cha-mention-search input{ flex:1; background:none; border:none; outline:none; color:var(--paper); font-family:inherit; font-size:12.5px; font-weight:500;}
 .cha-mention-search input::placeholder{ color:#94a3b8; }
-.cha-mention-list{ max-height:200px; overflow-y:auto; padding:5px; }
-.cha-mention-item{ display:flex; align-items:center; gap:9px; width:100%; padding:7px 8px; border-radius:9px; background:none; border:none; cursor:pointer; text-align:start; transition:.15s; }
+
+/* ✅ NEW: ارتفاع أكبر + سكرول */
+.cha-mention-list{ max-height:420px; overflow-y:auto; padding:4px; }
+.cha-mention-list::-webkit-scrollbar{ width:6px; }
+.cha-mention-list::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:9px; }
+
+/* ✅ NEW: عناوين الأقسام */
+.cha-mention-section{
+  padding:6px 10px 4px;
+  margin-top:2px;
+}
+.cha-mention-section-title{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--mut);
+  padding:2px 0;
+}
+.cha-mention-count{
+  display:inline-grid;
+  place-items:center;
+  min-width:16px;
+  height:14px;
+  padding:0 4px;
+  border-radius:7px;
+  background:var(--line);
+  color:var(--mut);
+  font-family:'JetBrains Mono';
+  font-size:9px;
+  font-weight:700;
+  margin-inline-start:4px;
+}
+
+/* ✅ NEW: عناصر المنشن المحسّنة */
+.cha-mention-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:8px 9px;
+  border-radius:9px;
+  background:none;
+  border:none;
+  cursor:pointer;
+  text-align:start;
+  transition:.15s;
+}
 .cha-mention-item:hover{ background:rgba(14,165,233,.08); }
-.cha-mention-item span{ display:flex; flex-direction:column; }
-.cha-mention-item b{ font-size:12.5px; color:var(--paper); font-weight:700;} 
-.cha-mention-item em{ font-style:normal; font-size:10px; color:var(--mut); font-weight:600;}
+.cha-mention-details{ display:flex; flex-direction:column; flex:1; min-width:0; }
+.cha-mention-details b{ font-size:12.5px; color:var(--paper); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;} 
+.cha-mention-details em{ font-style:normal; font-size:10px; color:var(--mut); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+/* ✅ NEW: أيقونات Quick Mentions */
+.cha-mention-icon{
+  flex:none;
+  width:30px;
+  height:30px;
+  border-radius:9px;
+  display:grid;
+  place-items:center;
+  color:#ffffff;
+}
+.cha-mention-icon--purple{ background:linear-gradient(145deg,#a78bfa,#7c3aed); }
+.cha-mention-icon--sky{ background:linear-gradient(145deg,#38bdf8,#0284c7); }
+.cha-mention-icon--orange{ background:linear-gradient(145deg,#fb923c,#ea580c); }
+.cha-mention-icon--amber{ background:linear-gradient(145deg,#fbbf24,#d97706); }
+
+/* ✅ NEW: keyword بجانب العنصر */
+.cha-mention-keyword{
+  font-family:'JetBrains Mono';
+  font-size:9.5px;
+  font-weight:600;
+  color:var(--mut);
+  background:var(--surf2);
+  padding:2px 6px;
+  border-radius:5px;
+  border:1px solid var(--line);
+  flex:none;
+}
+
+.cha-mention-item--special{
+  background:linear-gradient(90deg, rgba(14,165,233,.03), transparent);
+}
+.cha-mention-item--special:hover{
+  background:linear-gradient(90deg, rgba(14,165,233,.1), rgba(14,165,233,.04));
+}
+.cha-mention-item--purple:hover{ background:linear-gradient(90deg, rgba(139,92,246,.12), rgba(139,92,246,.04)); }
+.cha-mention-item--orange:hover{ background:linear-gradient(90deg, rgba(249,115,22,.12), rgba(249,115,22,.04)); }
+.cha-mention-item--amber:hover{ background:linear-gradient(90deg, rgba(245,158,11,.12), rgba(245,158,11,.04)); }
+
 .cha-empty-mini{ text-align:center; color:var(--mut); font-size:11.5px; padding:14px; font-weight:500;}
 .cha-send{ width:38px; height:38px; border-radius:10px; display:grid; place-items:center; border:none; cursor:pointer; color:#ffffff; background:linear-gradient(120deg,var(--sky),#0284c7); transition:.2s; position:relative; overflow:hidden; flex:none; box-shadow:0 4px 12px -4px rgba(14,165,233,.5); }
 .cha-send:hover:not(:disabled){ transform:translateY(-1px) scale(1.04); }
@@ -485,7 +904,12 @@ const CSS = `
 .cha-new-search{ display:flex; align-items:center; gap:8px; margin:12px 16px 8px; padding:0 11px; background:var(--surf2); border:1px solid var(--line); border-radius:10px; color:var(--mut); }
 .cha-new-search input{ flex:1; background:none; border:none; outline:none; color:var(--paper); font-family:inherit; font-size:13px; padding:10px 0; font-weight:500;}
 .cha-new-search input::placeholder{ color:#94a3b8; }
-.cha-new-list{ overflow-y:auto; padding:4px 10px 14px; -webkit-overflow-scrolling:touch; }
+
+/* ✅ NEW: ارتفاع أكبر للقائمة الجديدة */
+.cha-new-list{ overflow-y:auto; padding:4px 10px 14px; -webkit-overflow-scrolling:touch; max-height:50vh; max-height:50dvh; }
+.cha-new-list::-webkit-scrollbar{ width:6px; }
+.cha-new-list::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:9px; }
+
 .cha-new-item{ display:flex; align-items:center; gap:11px; width:100%; padding:9px 10px; border-radius:11px; border:1px solid transparent; background:none; cursor:pointer; text-align:start; transition:.18s; }
 .cha-new-item:hover{ background:rgba(0,0,0,.03); border-color:var(--line); }
 .cha-new-txt{ flex:1; display:flex; flex-direction:column; }
@@ -542,6 +966,12 @@ const CSS = `
   .cha-noconv h2 { font-size: 19px; }
   .cha-noconv p { font-size: 12.5px; }
   .cha-new { width: 100%; max-height: 90dvh; border-radius: 16px; }
+  
+  /* ✅ NEW: قائمة المنشن على الهاتف */
+  .cha-mention-pop {
+    width: 100%;
+    max-width: 100%;
+    inset-inline-start: 0;
+  }
 }
 `;
-
