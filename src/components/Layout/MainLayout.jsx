@@ -133,7 +133,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     { path: '/projects/active', label: 'Active Projects', icon: PlayCircle, roles: ['ALL'] },
     { path: '/projects/closed', label: 'Closed Projects', icon: Archive, roles: ['ALL'] },
     { path: '/projects/pending', label: 'Pending Projects', icon: Clock, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM'] },
-    { path: '/disciplines', label: 'Disciplines', icon: Clock, roles: ['SECRETARY'] },
+    { path: '/disciplines', label: 'disciplines', icon: Clock, roles: ['SECRETARY'] },
 
     {
   path: '/supervision/projects',
@@ -145,7 +145,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 
 },
     { path: '/contractors', label: 'Contractors', icon: Building2, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT', 'SECRETARY'] },
-    { path: '/financials', label: 'Financials', icon: DollarSign, roles: ['GM', 'AGM', 'ACCOUNTANT'] },
+{ path: '/financials', label: 'Financials', icon: DollarSign, roles: ['GM', 'AGM', 'ACCOUNTANT'], allowManagementSecretary: true },
     { path: '/financials/report', label: 'Financial Report', icon: TrendingUp, roles: ['GM', 'AGM', 'ACCOUNTANT'] },
     { path: '/staff-kpi', label: 'Performance (KPI)', icon: Users, roles: ['GM', 'AGM', 'DESIGN_MGR'] },
     { path: '/client-directory', label: 'Client Directory', icon: Users, roles: ['GM', 'AGM', 'DESIGN_MGR', 'SUP_MGR', 'PM', 'ACCOUNTANT', 'SECRETARY'] },
@@ -175,10 +175,11 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 const filteredMenu = menuItems.filter(item => {
   const isFullAccess = item.fullAccessRoles?.includes(user?.role);
   const isAllowedUsername = item.allowedUsernames?.includes(user?.username);
+  // ✅ NEW: سكرتيرة الإدارة (لندا) — صلاحية خاصة للعناصر المالية
+  const isManagementSecretary = item.allowManagementSecretary && user?.role === 'SECRETARY' && user?.department === 'Management';
 
   const roleCheck = !item.roles || item.roles.includes('ALL') || item.roles.includes(user?.role);
-  const hasRole = roleCheck || isFullAccess || isAllowedUsername;
-
+  const hasRole = roleCheck || isFullAccess || isAllowedUsername || isManagementSecretary;
   let hasDepartment = true;
   if (isFullAccess || isAllowedUsername) {
     hasDepartment = true; // اليوزرنيمات الصريحة أو الإدارة بتتجاوز قيد القسم
