@@ -62,6 +62,11 @@ export default function EditProject() {
   // ✅ حالة البحث في المقاولين
   const [contractorSearch, setContractorSearch] = useState('');
   
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ NEW: حالة البحث في العملاء (مطابق لـ CreateProject)
+  // ═══════════════════════════════════════════════════════════
+  const [clientSearch, setClientSearch] = useState('');
+  
   // ✅ NEW: حالة اختيارات الـ Stages والـ Disciplines
   const [stageDisciplines, setStageDisciplines] = useState([]);
   const [showDisciplineModal, setShowDisciplineModal] = useState(false);
@@ -114,6 +119,19 @@ export default function EditProject() {
     const unmatched = contractors.filter(c => !c.name.toLowerCase().includes(lowerSearch));
     return [...matched, ...unmatched];
   }, [contractors, contractorSearch]);
+
+  // ═══════════════════════════════════════════════════════════
+  //  ✅ FIX: فلترة حقيقية للعملاء (إخفاء غير المطابقين) - مطابق لـ CreateProject
+  // ═══════════════════════════════════════════════════════════
+  const filteredClients = useMemo(() => {
+    if (!clientSearch) return clients;
+    const lowerSearch = clientSearch.toLowerCase();
+    return clients.filter(c => 
+      (c.name || '').toLowerCase().includes(lowerSearch) ||
+      (c.phone || '').toLowerCase().includes(lowerSearch) ||
+      (c.email || '').toLowerCase().includes(lowerSearch)
+    );
+  }, [clients, clientSearch]);
 
   // ═══ تحميل بيانات المشروع + القوائم ═══
   useEffect(() => {
@@ -432,7 +450,7 @@ const handleDelete = async () => {
       {/* ═══════════════════════════════════════════════════════════
           ✅ NEW: ملخص الاختيارات الحالية (يظهر لسكرتيرة التصميم فقط)
           ═══════════════════════════════════════════════════════════ */}
-      {isDesignSecretary && showDesign && stageDisciplines.length > 0 && (
+      {isDesignSecretary && showDesign && (
         <div className="cp-rv" style={{
           marginTop: '16px',
           padding: '12px 16px',
@@ -445,11 +463,15 @@ const handleDelete = async () => {
           flexWrap: 'wrap'
         }}>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#0284c7' }}>
-            ✓ {stageDisciplines.length} discipline(s) configured
+            {stageDisciplines.length > 0 
+              ? `✓ ${stageDisciplines.length} discipline(s) configured`
+              : '⚠️ No disciplines configured yet'}
           </span>
-          <span style={{ fontSize: '12px', color: '#64748b' }}>
-            Stages: {[...new Set(stageDisciplines.map(i => i.stage))].join(', ')}
-          </span>
+          {stageDisciplines.length > 0 && (
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              Stages: {[...new Set(stageDisciplines.map(i => i.stage))].join(', ')}
+            </span>
+          )}
           <button
             type="button"
             onClick={handleOpenDisciplineModal}
@@ -465,7 +487,7 @@ const handleDelete = async () => {
               cursor: 'pointer',
             }}
           >
-            Edit
+            {stageDisciplines.length > 0 ? 'Edit' : 'Configure'}
           </button>
         </div>
       )}
@@ -484,12 +506,38 @@ const handleDelete = async () => {
             </Field>
             <Field label="Project Name *"><input required value={f.name} onChange={set('name')} /></Field>
             <Field label="Project Number *"><input required value={f.project_no} onChange={set('project_no')} /></Field>
+            
+            {/* ═══════════════════════════════════════════════════════════
+                ✅ FIXED: Client Field with Real Search (Filter + Hide)
+                ═══════════════════════════════════════════════════════════ */}
             <Field label="Client *">
+              {/* ✅ شريط البحث فوق قائمة العملاء */}
+              <div className="cp-search-wrap" style={{ marginBottom: '8px' }}>
+                <Search size={16} className="cp-search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Search clients by name, phone, or email..." 
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="cp-search-input"
+                />
+              </div>
+              
+              {/* ✅ قائمة العملاء مع فلترة حقيقية (إخفاء غير المطابقين) */}
               <select required value={f.client} onChange={set('client')}>
                 <option value="">— Select —</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {filteredClients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.phone ? ` · ${c.phone}` : ''}
+                  </option>
+                ))}
+                {clientSearch && filteredClients.length === 0 && (
+                  <option value="" disabled>No clients found</option>
+                )}
               </select>
             </Field>
+            
             <Field label="Location"><input value={f.location} onChange={set('location')} /></Field>
             <Field label="Start Date"><input type="date" value={f.start_date} onChange={set('start_date')} /></Field>
             <Field label="Duration (Days)"><input type="number" value={f.duration_days} onChange={set('duration_days')} /></Field>
