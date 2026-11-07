@@ -96,7 +96,7 @@ function App() {
             <Route 
               path="/financials" 
               element={
-                <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']}>
+    <ProtectedRoute allowedRoles={['GM', 'AGM', 'ACCOUNTANT']} allowManagementSecretary={true}>
                   <GlobalFinancialDashboard />
                 </ProtectedRoute>
               } 
