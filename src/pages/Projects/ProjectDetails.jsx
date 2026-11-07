@@ -62,16 +62,42 @@ function usePerms(user, project) {
   const designMgrs = isMgmt || isDMgr;
   const isSupMgr = r === 'SUP_MGR' || r === 'PM';
   
+  // ✅ NEW: قائمة المهندسين المحددين الذين يرون النسب المالية فقط
+  const FINANCE_VIEW_ONLY_USERNAMES = [
+    'salah.ahmad',    // صلاح
+    'basel.shaat',    // باسل
+    'basem.taha',     // باسم
+    'israa.omran'     // إسراء
+  ];
+  
+  // ✅ من يرى بلوكات المالية والعقود؟
+  // - GM, AGM, ACCOUNTANT, Management Secretary: يرون كل شيء (أرقام كاملة)
+  // - DESIGN_MGR (فهمي): يرى النسب فقط
+  // - المهندسون المحددون (صلاح، باسل، باسم، إسراء): يرون النسب فقط
+  const canSeeFinanceBlock = 
+    isMgmt || 
+    isAcc || 
+    isManagementSecretary || 
+    isDMgr || 
+    FINANCE_VIEW_ONLY_USERNAMES.includes(u);
+  
+  // ✅ من يرى الأرقام الكاملة (ليس فقط النسب)؟
+  // فقط: ناصر (GM)، نسرين (AGM)، مصعب (ACCOUNTANT)، لندا (Management Secretary)
+  const canSeeFullNumbers = isMgmt || isAcc || isManagementSecretary;
+  
   return {
     canEditInfo: designMgrs || isManagementSecretary,
     canEditLifecycle: r === 'DESIGN_MGR' || r === 'AGM' || r === 'GM',
     canEditTender: r === 'AGM',
     canEditPriority: designMgrs,
-    canSeeContract: isMgmt || isAcc || isManagementSecretary,
-    canManageOffer: isManagementSecretary,
+    canSeeContract: canSeeFinanceBlock,  // ✅ نفس من يرى بلوك المالية
+    canManageOffer: isManagementSecretary || isMgmt || isAcc || isDMgr,
     canUploadContract: isManagementSecretary,
-    canSeeNumbers: isMgmt || isAcc || isDMgr || isSupMgr,
+    canSeeNumbers: canSeeFullNumbers,  // ✅ فقط المدراء والمحاسب وسكرتيرة الإدارة
     canAddInvoice: isMgmt || isAcc,
+    // ✅ NEW: من يرى بلوكات المالية والعقود؟
+    canSeeFinanceBlock: canSeeFinanceBlock,
+    canSeeFullNumbers: canSeeFullNumbers,
     /* ✅ التعديل 4: شعبان + إسراء (عدّل username إسراء حسب المسجل بالنظام) */
     canEditIFC: ['shaaban.karam', 'israa.omran'].includes(u) || isMgmt || isDMgr,
     canManageChangeOrder:
@@ -367,11 +393,25 @@ export default function ProjectDetails() {
   const submitPrio = () => {
     apiClient.patch(`projects/${id}/priority/`, prioForm).then(() => { setPrioOpen(false); load(); });
   };
-  const submitNote = () => {
-    if (!note.trim()) return;
-    apiClient.post(`projects/${id}/notes/add/`, { content: note, mention_all: note.includes('@all') })
-      .then(() => setNote('')).then(load);
+const submitNote = (payload) => {
+  // payload يأتي من NotesBlock بعد تحليل الـ mentions
+  const data = payload || {
+    content: note,
+    mention_all: note.includes('@all'),
+    mention_departments: [],
+    mention_roles: [],
   };
+  
+  apiClient.post(`projects/${id}/notes/add/`, data)
+    .then(() => {
+      setNote('');
+      load();
+    })
+    .catch(err => {
+      console.error('Failed to add note:', err);
+      alert('Failed to add note. Please try again.');
+    });
+};
   const uploadContract = () => {
     if (!contractFile) return;
     const fd = new FormData(); fd.append('contract_file', contractFile);
@@ -430,9 +470,7 @@ export default function ProjectDetails() {
           <Slab label="Location" v={p.location || '—'} />
           {/* ✅ التعديل 2: Slab للـ End Date */}
           <Slab label="End Date" v={p.end_date || '—'} mono />
-          {P.canSeeNumbers && (
-            <Slab accent label="Contract Value" v={<CountUp value={p.contract_value} dec={0} />} money />
-          )}
+
         </div>
 
         {/* ── Layout: content + floating buttons ─────────── */}
@@ -515,12 +553,13 @@ export default function ProjectDetails() {
               </Block>
             )}
 
-            {/* Financial status — figures for authorized, names+percentages for all */}
-            <Block rv tag="FINANCE" title="Financial Status"
-              action={P.canSeeNumbers ? <span className="pd-editable">Full figures</span> : <span className="pd-readonly">Percentages only</span>}>
-              <FinanceStrip invoices={p.invoices} seeNumbers={P.canSeeNumbers} />
-            </Block>
-            
+{/* ✅ Financial status — مخفي عن الجميع ما عدا المجموعة المحددة */}
+{P.canSeeFinanceBlock && (
+  <Block rv tag="FINANCE" title="Financial Status"
+    action={P.canSeeFullNumbers ? <span className="pd-editable">Full figures</span> : <span className="pd-readonly">Percentages only</span>}>
+    <FinanceStrip invoices={p.invoices} seeNumbers={P.canSeeFullNumbers} />
+  </Block>
+)}
             {p.scope !== 'SUPERVISION' && canViewFinancials() && <InvoiceConsole projectId={id} />}
 
             {canViewSupervisionFinance?.() && p.scope === 'SUPERVISION' && (
@@ -530,55 +569,57 @@ export default function ProjectDetails() {
               </Block>
             )}
 
-            {/* Offer + Contract */}
-            <Block rv tag="OFFER / CONTRACT" title="Offer & Contract Status">
-              <div className="pd-offer">
-                <div className="pd-srow">
-                  <span>Offer Status</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className={`pd-badge t-${meta(p.offer_status).c}`}>{meta(p.offer_status).t}</span>
-                    {P.canManageOffer && (
-                      <select
-                        className="pd-select"
-                        value={p.offer_status}
-                        onChange={(e) => patchOfferContract({ offer_status: e.target.value })}
-                        title="Offer status"
-                      >
-                        {OFFER_STAGES.map((s) => (
-                          <option key={s} value={s}>{meta(s).t}</option>
-                        ))}
-                      </select>
-                    )}
-                  </span>
-                </div>
-                <div className="pd-srow">
-                  <span>Contract Status</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className={`pd-badge t-${meta(p.contract_status).c}`}>{meta(p.contract_status).t}</span>
-                    {P.canManageOffer && (
-                      <select
-                        className="pd-select"
-                        value={p.contract_status}
-                        onChange={(e) => patchOfferContract({ contract_status: e.target.value })}
-                        title="Contract status"
-                      >
-                        {OFFER_STAGES.map((s) => (
-                          <option key={s} value={s}>{meta(s).t}</option>
-                        ))}
-                      </select>
-                    )}
-                  </span>
-                </div>
-              </div>
-              <ContractSlot
-                existingFile={p.contract_file}
-                canSee={P.canSeeContract}
-                canUpload={P.canUploadContract}
-                selectedFile={contractFile}
-                setFile={setContractFile}
-                onUpload={uploadContract}
-              />
-            </Block>
+{/* ✅ Offer + Contract — مخفي عن الجميع ما عدا المجموعة المحددة */}
+{P.canSeeFinanceBlock && (
+  <Block rv tag="OFFER / CONTRACT" title="Offer & Contract Status">
+    <div className="pd-offer">
+      <div className="pd-srow">
+        <span>Offer Status</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className={`pd-badge t-${meta(p.offer_status).c}`}>{meta(p.offer_status).t}</span>
+          {P.canManageOffer && (
+            <select
+              className="pd-select"
+              value={p.offer_status}
+              onChange={(e) => patchOfferContract({ offer_status: e.target.value })}
+              title="Offer status"
+            >
+              {OFFER_STAGES.map((s) => (
+                <option key={s} value={s}>{meta(s).t}</option>
+              ))}
+            </select>
+          )}
+        </span>
+      </div>
+      <div className="pd-srow">
+        <span>Contract Status</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className={`pd-badge t-${meta(p.contract_status).c}`}>{meta(p.contract_status).t}</span>
+          {P.canManageOffer && (
+            <select
+              className="pd-select"
+              value={p.contract_status}
+              onChange={(e) => patchOfferContract({ contract_status: e.target.value })}
+              title="Contract status"
+            >
+              {OFFER_STAGES.map((s) => (
+                <option key={s} value={s}>{meta(s).t}</option>
+              ))}
+            </select>
+          )}
+        </span>
+      </div>
+    </div>
+    <ContractSlot
+      existingFile={p.contract_file}
+      canSee={P.canSeeContract}
+      canUpload={P.canUploadContract}
+      selectedFile={contractFile}
+      setFile={setContractFile}
+      onUpload={uploadContract}
+    />
+  </Block>
+)}
 
             {/* Notes */}
             <Block rv tag="NOTES" title="Project Notes">
@@ -1028,8 +1069,365 @@ function ContractSlot({ existingFile, canSee, canUpload, selectedFile, setFile, 
   );
 }
 
-function NotesBlock({ notes, note, setNote, onAdd }) {
+// ═══════════════════════════════════════════════════════════
+// ✅ NEW: MentionInput — textarea ذكي مع autocomplete للـ @mentions
+// ═══════════════════════════════════════════════════════════
+// ✅ UPDATED: MentionInput — يدعم @all + @design-team + @username
+// ═══════════════════════════════════════════════════════════
+function MentionInput({ value, onChange, placeholder, rows = 2 }) {
+  const { user } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [cursorPos, setCursorPos] = useState(0);
+  const [mentionableUsers, setMentionableUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const textareaRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // ✅ جلب كل المستخدمين مرة واحدة عند فتح المكون
+  useEffect(() => {
+    let cancelled = false;
+    const loadUsers = async () => {
+      try {
+        setLoadingUsers(true);
+        const res = await apiClient.get('/users/mentionable/');
+        if (!cancelled) {
+          // ✅ الباك-إند الجديد يُرجع {count, users}
+          const data = res.data || {};
+          const users = data.users || data || [];
+          setMentionableUsers(users.filter(u => u.username !== user?.username));
+        }
+      } catch (err) {
+        console.error('Failed to load mentionable users:', err);
+      } finally {
+        if (!cancelled) setLoadingUsers(false);
+      }
+    };
+    loadUsers();
+    return () => { cancelled = true; };
+  }, [user?.username]);
+
+  // ✅ قائمة الخيارات الثابتة (أقسام + @all)
+  const FIXED_OPTIONS = [
+    { key: '@all', label: 'Everyone', description: 'Notify all users', icon: '🌐', type: 'all' },
+    { key: '@design-team', label: 'Design Department', description: 'All design team members', icon: '🎨', type: 'department', value: 'Design' },
+    { key: '@supervision-team', label: 'Supervision Department', description: 'All supervision team members', icon: '👷', type: 'department', value: 'Supervision' },
+    { key: '@management', label: 'Managers', description: 'GM, AGM, Design Manager', icon: '👔', type: 'role', value: ['GM', 'AGM', 'DESIGN_MGR'] },
+  ];
+
+  // ✅ دمج الخيارات الثابتة مع المستخدمين
+  const userOptions = mentionableUsers.map(u => ({
+    key: `@${u.username}`,
+    label: u.full_name || u.username,
+    description: `@${u.username}${u.role ? ` · ${u.role}` : ''}${u.department ? ` · ${u.department}` : ''}`,
+    icon: '👤',
+    type: 'user',
+    value: u.username,
+    username: u.username,
+    full_name: u.full_name,
+  }));
+
+  const allOptions = [...FIXED_OPTIONS, ...userOptions];
+
+  // ✅ فلترة الخيارات حسب ما يكتبه المستخدم بعد @
+  // ✅ إزالة حد الـ 12 — الآن يعرض كل النتائج المطابقة
+  const filteredOptions = allOptions.filter(opt => {
+    if (!filter) return true;
+    const lowerFilter = filter.toLowerCase();
+    return (
+      opt.key.toLowerCase().includes(`@${lowerFilter}`) ||
+      opt.label.toLowerCase().includes(lowerFilter) ||
+      (opt.username && opt.username.toLowerCase().includes(lowerFilter)) ||
+      (opt.full_name && opt.full_name.toLowerCase().includes(lowerFilter)) ||
+      (opt.description && opt.description.toLowerCase().includes(lowerFilter))
+    );
+  });
+
+  // ✅ إعادة ضبط highlightIndex عند تغيير الفلتر
+  useEffect(() => {
+    setHighlightIndex(0);
+  }, [filter]);
+
+  const handleChange = (e) => {
+    const text = e.target.value;
+    const pos = e.target.selectionStart;
+    onChange(text);
+    setCursorPos(pos);
+
+    const beforeCursor = text.slice(0, pos);
+    const atMatch = beforeCursor.match(/@([\w.-]*)$/);
+    if (atMatch) {
+      setFilter(atMatch[1]);
+      setShowDropdown(true);
+    } else {
+      setShowDropdown(false);
+      setFilter('');
+    }
+  };
+
+  const insertMention = (option) => {
+    const beforeCursor = value.slice(0, cursorPos);
+    const afterCursor = value.slice(cursorPos);
+    const atMatch = beforeCursor.match(/@([\w.-]*)$/);
+    
+    if (atMatch) {
+      const beforeAt = beforeCursor.slice(0, -atMatch[0].length);
+      const newText = `${beforeAt}${option.key} ${afterCursor}`;
+      onChange(newText);
+    }
+    setShowDropdown(false);
+    setFilter('');
+    setTimeout(() => textareaRef.current?.focus(), 0);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!showDropdown || filteredOptions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev + 1) % filteredOptions.length);
+      // ✅ Scroll للعنصر المحدد
+      setTimeout(() => {
+        const el = dropdownRef.current?.querySelector(`[data-index="${(highlightIndex + 1) % filteredOptions.length}"]`);
+        el?.scrollIntoView({ block: 'nearest' });
+      }, 0);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev - 1 + filteredOptions.length) % filteredOptions.length);
+      setTimeout(() => {
+        const el = dropdownRef.current?.querySelector(`[data-index="${(highlightIndex - 1 + filteredOptions.length) % filteredOptions.length}"]`);
+        el?.scrollIntoView({ block: 'nearest' });
+      }, 0);
+    } else if (e.key === 'Enter' && showDropdown) {
+      e.preventDefault();
+      insertMention(filteredOptions[highlightIndex]);
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
+  };
+
+  // ✅ تجميع المستخدمين حسب القسم للعرض المنظم
+  const groupedUsers = filteredOptions.filter(o => o.type === 'user').reduce((acc, opt) => {
+    const dept = opt.description?.split(' · ')[1] || 'Other';
+    if (!acc[dept]) acc[dept] = [];
+    acc[dept].push(opt);
+    return acc;
+  }, {});
+
+  const fixedOptionsFiltered = filteredOptions.filter(o => o.type !== 'user');
+
+  // ✅ الألوان حسب القسم
+  const deptColors = {
+    'Design': 'from-sky-400 to-blue-600',
+    'Supervision': 'from-orange-400 to-red-600',
+    'Management': 'from-amber-400 to-yellow-600',
+    'Other': 'from-gray-400 to-slate-600',
+  };
+
+  return (
+    <div className="relative">
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full border rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-500"
+      />
+      
+      {/* ✅ Dropdown للـ mentions */}
+      {showDropdown && (loadingUsers || filteredOptions.length > 0) && (
+        <div 
+          ref={dropdownRef}
+          className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-2xl max-h-[480px] overflow-y-auto"
+          style={{ maxHeight: '480px' }}
+        >
+          {loadingUsers && (
+            <div className="p-3 text-xs text-gray-500 flex items-center gap-2 border-b">
+              <div className="w-3 h-3 border-2 border-gray-300 border-t-sky-500 rounded-full animate-spin"></div>
+              Loading users...
+            </div>
+          )}
+
+          {/* قسم الخيارات الثابتة */}
+          {fixedOptionsFiltered.length > 0 && (
+            <>
+              <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b bg-gradient-to-r from-gray-50 to-white sticky top-0 z-10">
+                Quick Mentions
+              </div>
+              {fixedOptionsFiltered.map((opt, idx) => (
+                <button
+                  key={opt.key}
+                  data-index={idx}
+                  type="button"
+                  onMouseEnter={() => setHighlightIndex(idx)}
+                  onClick={() => insertMention(opt)}
+                  className={`w-full text-left px-3 py-2.5 flex items-center gap-3 transition-colors border-b border-gray-50 last:border-0 ${
+                    highlightIndex === idx ? 'bg-sky-50' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="text-xl flex-shrink-0">{opt.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-gray-900 truncate">{opt.label}</div>
+                    <div className="text-[11px] text-gray-500 truncate">{opt.description}</div>
+                  </div>
+                  <span className="text-[10px] text-sky-600 font-mono font-bold shrink-0">{opt.key}</span>
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* ✅ قسم المستخدمين — مرتب حسب القسم */}
+          {Object.keys(groupedUsers).length > 0 && (
+            <>
+              <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b bg-gradient-to-r from-gray-50 to-white sticky top-0 z-10 flex items-center justify-between">
+                <span>People</span>
+                <span className="text-gray-400 font-mono">
+                  {filteredOptions.filter(o => o.type === 'user').length}
+                </span>
+              </div>
+              {Object.entries(groupedUsers).map(([dept, users]) => (
+                <div key={dept}>
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide bg-gray-50/50 border-b border-gray-100 sticky top-[32px] z-10">
+                    {dept} · {users.length}
+                  </div>
+                  {users.map((opt) => {
+                    const globalIdx = filteredOptions.findIndex(o => o.key === opt.key);
+                    const gradient = deptColors[dept] || deptColors.Other;
+                    return (
+                      <button
+                        key={opt.key}
+                        data-index={globalIdx}
+                        type="button"
+                        onMouseEnter={() => setHighlightIndex(globalIdx)}
+                        onClick={() => insertMention(opt)}
+                        className={`w-full text-left px-3 py-2 flex items-center gap-3 transition-colors border-b border-gray-50 last:border-0 ${
+                          highlightIndex === globalIdx ? 'bg-sky-50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm`}>
+                          {(opt.username || '?')[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-gray-900 truncate">
+                            {opt.full_name}
+                          </div>
+                          <div className="text-[11px] text-gray-500 truncate font-mono">
+                            {opt.description}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* لا توجد نتائج */}
+          {filteredOptions.length === 0 && !loadingUsers && (
+            <div className="p-4 text-center text-gray-400 text-sm">
+              <div className="text-2xl mb-1">🔍</div>
+              <div>No users found matching "{filter}"</div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* ✅ Helper text */}
+      <div className="mt-1.5 text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+        <AtSign size={11} />
+        <span>Type <code className="px-1.5 py-0.5 bg-gray-100 rounded text-sky-600 font-mono font-bold">@</code> to mention</span>
+        <span className="text-gray-300">·</span>
+        <span className="font-mono text-[10px]">↑↓ navigate · Enter select · Esc close</span>
+      </div>
+    </div>
+  );
+}
+// ═══════════════════════════════════════════════════════════
+// ✅ UPDATED: NotesBlock — مع دعم كامل للـ mentions + تمييز بصري
+// ═══════════════════════════════════════════════════════════
+function NotesBlock({ notes, note, setNote, onAdd, projectId, onReload }) {
   const list = notes || [];
+  const { user } = useAuth();
+  
+  // ✅ دالة تمييز الـ mentions في محتوى الـ Note
+  const renderNoteContent = (content) => {
+    if (!content) return null;
+    // ✅ دعم @username (حروف + أرقام + نقطة + شرطة)
+    const parts = content.split(/(@[\w.-]+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        const mentionKey = part.slice(1);
+        // تمييز الألوان حسب النوع
+        let colorClass = 'bg-gray-100 text-gray-700 border-gray-200'; // default: username
+        let icon = <User size={10} />;
+        
+        if (mentionKey === 'all') {
+          colorClass = 'bg-purple-100 text-purple-800 border-purple-200';
+          icon = <span>🌐</span>;
+        } else if (mentionKey === 'design-team') {
+          colorClass = 'bg-sky-100 text-sky-800 border-sky-200';
+          icon = <span>🎨</span>;
+        } else if (mentionKey === 'supervision-team') {
+          colorClass = 'bg-orange-100 text-orange-800 border-orange-200';
+          icon = <span>👷</span>;
+        } else if (mentionKey === 'management') {
+          colorClass = 'bg-amber-100 text-amber-800 border-amber-200';
+          icon = <span>👔</span>;
+        }
+        
+        return (
+          <span 
+            key={i}
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded border text-xs font-bold ${colorClass}`}
+            title={mentionKey}
+          >
+            {icon}
+            {mentionKey}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  // ✅ تحديد الـ mentions من محتوى النص
+   // ✅ تحديد الـ mentions من محتوى النص (دعم @username)
+  const extractMentions = (text) => {
+    const matches = text.match(/@([\w.-]+)/g) || [];
+    
+    return {
+      mentionAll: matches.includes('@all'),
+      mentionDepartments: matches
+        .filter(m => ['@design-team', '@supervision-team'].includes(m))
+        .map(m => m.replace('@', '').replace('-team', '')),
+      mentionRoles: matches
+        .filter(m => m === '@management')
+        .map(m => m.replace('@', '')),
+      // ✅ NEW: استخراج الـ usernames للأشخاص المحددين
+      mentionUsernames: matches
+        .filter(m => 
+          !['@all', '@design-team', '@supervision-team', '@management'].includes(m)
+        )
+        .map(m => m.slice(1)), // إزالة @ من البداية
+    };
+  };
+
+  const handleAddNote = () => {
+    if (!note.trim()) return;
+    const mentions = extractMentions(note);
+    // إرسال البيانات للباك-إند
+    onAdd({
+      content: note,
+      mention_all: mentions.mentionAll,
+      mention_departments: mentions.mentionDepartments,
+      mention_roles: mentions.mentionRoles,
+      mention_usernames: mentions.mentionUsernames, // ✅ NEW
+    });
+  };
   return (
     <div>
       <ul className="pd-notes">
@@ -1039,16 +1437,44 @@ function NotesBlock({ notes, note, setNote, onAdd }) {
               <span className="pd-note-by">{n.user_name}</span>
               <span className="pd-note-date">{new Date(n.created_at).toLocaleString('en-GB')}</span>
             </div>
-            <p className="pd-note-body">{n.content}</p>
+            {/* ✅ عرض المحتوى مع تمييز الـ mentions */}
+            <p className="pd-note-body">
+              {n.content ? renderNoteContent(n.content) : n.content}
+            </p>
+            {/* ✅ عرض من تم الإشارة إليهم */}
+            {n.mentions && n.mentions.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                <span className="text-xs text-gray-500 font-medium">Mentioned:</span>
+                {n.mentions.map((m, idx) => (
+                  <span 
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold border border-sky-200"
+                  >
+                    <User size={10} />
+                    {m.full_name || m.username}
+                  </span>
+                ))}
+              </div>
+            )}
           </li>
         ))}
         {!list.length && <p className="pd-empty-mini">No notes yet.</p>}
       </ul>
       <div className="pd-note-add">
         <AtSign size={14} />
-        <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)}
-          placeholder="Write a note…" />
-        <button className="pd-solid" onClick={onAdd} disabled={!note.trim()}> <Send size={14} /> </button>
+        <MentionInput
+          value={note}
+          onChange={setNote}
+          placeholder="Write a note… (use @ to mention)"
+          rows={2}
+        />
+        <button 
+          className="pd-solid" 
+          onClick={handleAddNote} 
+          disabled={!note.trim()}
+        >
+          <Send size={14} />
+        </button>
       </div>
     </div>
   );
@@ -1402,3 +1828,12 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 .pd-select{ flex:1; border:1px solid var(--line); border-radius:8px; background:var(--surf); color:var(--paper); font-family:inherit; font-size:12px; font-weight:600; padding:5px 8px; outline:none; transition:border-color .2s; }
 .pd-select:focus{ border-color:var(--amber); }
 `;
+
+
+
+
+
+
+
+
+ 
