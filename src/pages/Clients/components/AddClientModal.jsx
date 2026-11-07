@@ -1,11 +1,29 @@
-import { useState } from 'react';
-import { createClient } from '../../../api/services/clients';
-import { X, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createClient, updateClient } from '../../../api/services/clients';
+import { X, AlertTriangle, Pencil, Plus } from 'lucide-react';
 
-const AddClientModal = ({ onClose, onSuccess }) => {
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+const AddClientModal = ({ onClose, onSuccess, client }) => {
+  // ✅ NEW: إذا كان client موجود = وضع التعديل، وإلا = وضع الإضافة
+  const isEditMode = Boolean(client);
+  
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    phone: '', 
+    email: '' 
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // ✅ NEW: عند فتح المودال في وضع التعديل، املأ الحقول من بيانات العميل
+  useEffect(() => {
+    if (client) {
+      setFormData({
+        name: client.name || '',
+        phone: client.phone || '',
+        email: client.email || '',
+      });
+    }
+  }, [client]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,10 +35,25 @@ const AddClientModal = ({ onClose, onSuccess }) => {
     setLoading(true);
     setError('');
     try {
-      await createClient(formData);
+      // ✅ NEW: استدعاء الدالة المناسبة حسب الوضع
+      if (isEditMode) {
+        await updateClient(client.id, formData);
+      } else {
+        await createClient(formData);
+      }
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.name?.[0] || 'Failed to create client.');
+      const detail = err.response?.data?.detail;
+      const nameErr = err.response?.data?.name?.[0];
+      const phoneErr = err.response?.data?.phone?.[0];
+      const emailErr = err.response?.data?.email?.[0];
+      setError(
+        detail 
+        || nameErr 
+        || phoneErr 
+        || emailErr 
+        || `Failed to ${isEditMode ? 'update' : 'create'} client.`
+      );
     } finally {
       setLoading(false);
     }
@@ -30,7 +63,19 @@ const AddClientModal = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-bold text-gray-900">Add New Client</h2>
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            {isEditMode ? (
+              <>
+                <Pencil size={18} className="text-blue-600" />
+                Edit Client
+              </>
+            ) : (
+              <>
+                <Plus size={18} className="text-blue-600" />
+                Add New Client
+              </>
+            )}
+          </h2>
           <button 
             onClick={onClose} 
             className="text-gray-500 hover:text-gray-700 transition"
@@ -57,6 +102,7 @@ const AddClientModal = ({ onClose, onSuccess }) => {
               className="w-full border border-gray-300 rounded-lg p-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               placeholder="e.g. Al Rayyan Company"
               required
+              autoFocus
             />
           </div>
 
@@ -99,7 +145,10 @@ const AddClientModal = ({ onClose, onSuccess }) => {
               disabled={loading} 
               className="px-4 py-2 bg-blue-800 text-white rounded hover:bg-blue-900 disabled:opacity-50 font-semibold transition"
             >
-              {loading ? 'Saving...' : 'Save Client'}
+              {loading 
+                ? (isEditMode ? 'Updating...' : 'Saving...') 
+                : (isEditMode ? 'Update Client' : 'Save Client')
+              }
             </button>
           </div>
         </form>
