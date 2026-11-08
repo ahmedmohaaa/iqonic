@@ -54,9 +54,15 @@ export default function GlobalFinancialDashboard() {
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // ✅ NEW: حالة مودال الحذف
   const wrap = useRef(null);
 
-  const isAccountant = user?.role === 'ACCOUNTANT' || user?.groups?.includes('ACCOUNTANT');
+  // ✅ NEW: الصلاحيات الموسّعة — ناصر/نسرين/لندا + المحاسب
+  const canManageFinance =
+    user?.role === 'ACCOUNTANT' ||
+    user?.role === 'GM' ||
+    user?.role === 'AGM' ||
+    (user?.role === 'SECRETARY' && user?.department === 'Management');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,7 +79,6 @@ export default function GlobalFinancialDashboard() {
     finally { setLoading(false); }
   }, [filter]);
 
-  // 1. نقل تعريف visible هنا قبل استخدامه
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return invoices.filter((i) =>
@@ -88,7 +93,6 @@ export default function GlobalFinancialDashboard() {
   const totals = dash?.company_totals || {};
   const overdueCount = dash?.alerts?.total_overdue_invoices || 0;
 
-  // 2. الـ useEffects تأتي بعد التعريفات
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
@@ -110,32 +114,37 @@ export default function GlobalFinancialDashboard() {
     return () => io.disconnect();
   }, [invoices, loading, visible]);
 
-
-
+  // ✅ NEW: تأكيد الحذف الفعلي
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await apiClient.delete(`invoices/${deleteTarget.id}/delete/`);
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Unable to delete the invoice.';
+      alert(msg);
+    }
+  };
 
   return (
     <div ref={wrap} className="gfd" dir="rtl">
       <style>{CSS}</style>
       <div className="gfd-ambient" aria-hidden />
 
-      {/* الرأس + شريط الأفعال */}
-{/* الرأس + شريط الأفعال */}
-<header className="gfd-head rv">
-  <div>
-    <span className="gfd-kicker">ACCOUNTANT · Vault Room</span>
-    <h1 className="gfd-title">Financial Control Center</h1>
-    <p className="gfd-sub">Welcome, {user?.first_name || ''} — Create invoices, record payments, and upload documents all in one place.</p>
-  </div>
-  {/* === Edit: Show button to accountant only === */}
-  {isAccountant && (
-    <button className="gfd-create" onClick={() => setCreateOpen(true)}>
-      <Plus size={18} /> New Invoice
-    </button>
-  )}
-  {/* === End of edit === */}
-</header>
+      <header className="gfd-head rv">
+        <div>
+          <span className="gfd-kicker">FINANCE · Vault Room</span>
+          <h1 className="gfd-title">Financial Control Center</h1>
+          <p className="gfd-sub">Welcome, {user?.first_name || ''} — Create invoices, record payments, and upload documents all in one place.</p>
+        </div>
+        {canManageFinance && (
+          <button className="gfd-create" onClick={() => setCreateOpen(true)}>
+            <Plus size={18} /> New Invoice
+          </button>
+        )}
+      </header>
 
-{/* KPIs */}
       <section className="gfd-kpis rv">
         <Kpi tone="sky" icon={<Receipt size={18} />} label="Total Invoiced" value={totals.total_contract_values_invoiced} />
         <Kpi tone="emerald" icon={<CheckCircle2 size={18} />} label="Collected" value={totals.total_collected} />
@@ -143,7 +152,6 @@ export default function GlobalFinancialDashboard() {
         <Kpi tone="rose" icon={<AlertOctagon size={18} />} label="Overdue Invoices" value={overdueCount} pulse={overdueCount > 0} plain />
       </section>
 
-      {/* Search + Filter */}
       <section className="gfd-toolbar rv">
         <div className="gfd-search">
           <Search size={15} />
@@ -157,9 +165,8 @@ export default function GlobalFinancialDashboard() {
           <option value="OVERDUE">Overdue</option>
         </select>
       </section>
-      {/* قائمة الفواتير الحيّة */}
-{/* قائمة الفواتير الحيّة */}
-<section className="gfd-list">
+      
+      <section className="gfd-list">
         {loading ? <div className="gfd-empty">Loading vault…</div>
           : visible.length === 0 ? <div className="gfd-empty"><Receipt size={30} /> No matching invoices. Start with "New Invoice".</div>
           : visible.map((inv, idx) => (
@@ -168,7 +175,8 @@ export default function GlobalFinancialDashboard() {
               open={expanded === inv.id}
               onToggle={() => setExpanded(expanded === inv.id ? null : inv.id)}
               onChanged={load}
-              isAccountant={isAccountant} // === Add this prop ===
+              canManageFinance={canManageFinance}
+              onDeleteRequest={() => setDeleteTarget(inv)}
             />
           ))}
       </section>
@@ -176,9 +184,51 @@ export default function GlobalFinancialDashboard() {
       {createOpen && (
         <CreateInvoiceModal projects={projects} onClose={() => setCreateOpen(false)} onDone={() => { setCreateOpen(false); load(); }} />
       )}
+
+      {/* ✅ NEW: مودال تأكيد الحذف */}
+      {deleteTarget && (
+        <div className="gfd-mask" onClick={() => setDeleteTarget(null)}>
+          <div className="gfd-modal gfd-delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="gfd-modal-h">
+              <h3 style={{ color: 'var(--rose)' }}>
+                <Trash2 size={18} /> Delete Invoice
+              </h3>
+              <button type="button" onClick={() => setDeleteTarget(null)}><X size={18} /></button>
+            </div>
+            <div className="gfd-modal-b">
+              <div style={{ padding: '12px', background: 'rgba(227,112,126,.08)', border: '1px solid rgba(227,112,126,.3)', borderRadius: '10px' }}>
+                <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--paper)' }}>
+                  Are you sure you want to permanently delete invoice
+                </p>
+                <p style={{ margin: '8px 0 0', fontWeight: 700, fontSize: '14px', color: 'var(--rose)' }}>
+                  "{deleteTarget.title}"
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--mut)' }}>
+                  Project: {deleteTarget.project_name || '—'} · Amount: <Money value={deleteTarget.total_amount} /> QAR
+                </p>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--rose)', margin: '8px 0 0', fontWeight: 600 }}>
+                ⚠️ This action cannot be undone.
+              </p>
+            </div>
+            <div className="gfd-modal-f">
+              <button type="button" className="gfd-ghost" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button
+                type="button"
+                className="gfd-solid"
+                style={{ background: 'linear-gradient(180deg, #fb7185, var(--rose))', color: '#fff' }}
+                onClick={confirmDelete}
+              >
+                <Trash2 size={14} /> Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 /* ── بطاقة KPI ─────────────────────────────────────────────── */
 function Kpi({ tone, icon, label, value, pulse, plain }) {
   return (
@@ -186,15 +236,15 @@ function Kpi({ tone, icon, label, value, pulse, plain }) {
       <span className="gfd-kpi-ic">{icon}</span>
       <div>
         <span className="gfd-kpi-l">{label}</span>
-        <span className="gfd-kpi-v">{plain ? <Money value={value} /> : <><Money value={value} /> <i>ر.ق</i></>}</span>
+        <span className="gfd-kpi-v">{plain ? <Money value={value} /> : <><Money value={value} /> <i>QAR</i></>}</span>
       </div>
     </div>
   );
 }
 
 /* ── صف فاتورة قابل للتوسع ─────────────────────────────────── */
-function InvoiceRow({ inv, idx, open, onToggle, onChanged, isAccountant }) {
-    const m = STATUS_META[inv.status] || STATUS_META.slate;
+function InvoiceRow({ inv, idx, open, onToggle, onChanged, canManageFinance, onDeleteRequest }) {
+  const m = STATUS_META[inv.status] || STATUS_META.slate;
   const paid = Number(inv.collected_amount || 0);
   const total = Number(inv.total_amount || 0);
   const pct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
@@ -208,7 +258,7 @@ function InvoiceRow({ inv, idx, open, onToggle, onChanged, isAccountant }) {
           <span className="gfd-row-title">{inv.title}</span>
           <span className="gfd-row-ms">{inv.project_name || '—'} · {inv.project_no || ''} · {inv.milestone_type_display}</span>
         </div>
-<div className="gfd-row-amt"><Money value={total} /> <i>QAR</i></div>
+        <div className="gfd-row-amt"><Money value={total} /> <i>QAR</i></div>
         <div className="gfd-row-prog">
           <div className="gfd-prog-bar"><span style={{ width: `${pct}%` }} /></div>
           <em>{Math.round(pct)}%</em>
@@ -218,18 +268,24 @@ function InvoiceRow({ inv, idx, open, onToggle, onChanged, isAccountant }) {
           : <span className={`gfd-badge t-${m.tone}`}>{m.label}</span>}
         <ChevronDown size={18} className={`gfd-chev ${open ? 'rot' : ''}`} />
       </div>
-<div className={`gfd-detail ${open ? 'open' : ''}`}>
+      <div className={`gfd-detail ${open ? 'open' : ''}`}>
         <div className="gfd-detail-grid">
           <Cell icon={<Calendar size={13} />} l="Issue Date" v={inv.issue_date || '—'} />
           <Cell icon={<Calendar size={13} />} l="Due Date" v={inv.due_date || '—'} danger={overdue > 0} />
           <Cell icon={<CheckCircle2 size={13} />} l="Collected" v={<Money value={paid} />} good />
           <Cell icon={<Wallet size={13} />} l="Remaining" v={<Money value={inv.outstanding_amount} />} warn />
         </div>
-        <RowActions inv={inv} onChanged={onChanged} isAccountant={isAccountant} /> {/* === Add isAccountant === */}
+        <RowActions
+          inv={inv}
+          onChanged={onChanged}
+          canManageFinance={canManageFinance}
+          onDeleteRequest={onDeleteRequest}
+        />
       </div>
     </article>
   );
 }
+
 function Cell({ icon, l, v, good, warn, danger }) {
   return (
     <div className="gfd-cell">
@@ -239,9 +295,9 @@ function Cell({ icon, l, v, good, warn, danger }) {
   );
 }
 
-/* ── أفعال الصف: دفعة + PDF + حالة + إلغاء ─────────────────── */
-function RowActions({ inv, onChanged, isAccountant }) {
-    const [payOpen, setPayOpen] = useState(false);
+/* ── أفعال الصف: دفعة + PDF + حالة + إلغاء + حذف ─────────────── */
+function RowActions({ inv, onChanged, canManageFinance, onDeleteRequest }) {
+  const [payOpen, setPayOpen] = useState(false);
   const [amt, setAmt] = useState('');
   const [status, setStatus] = useState(inv.status);
   const [busy, setBusy] = useState(false);
@@ -278,18 +334,18 @@ function RowActions({ inv, onChanged, isAccountant }) {
     if (!window.confirm('Cancel the invoice permanently?')) return;
     await changeStatus('CANCELLED');
   };
-return (
+
+  return (
     <div className="gfd-acts">
       {/* تسجيل دفعة */}
-    <div className="gfd-act-block">
+      <div className="gfd-act-block">
         <div className="gfd-act-h"><DollarSign size={14} /> Payments</div>
         {(inv.payments || []).length === 0
           ? <p className="gfd-muted">No payments yet.</p>
           : (inv.payments || []).map((p, i) => (
             <div key={i} className="gfd-pay"><span className="gfd-pay-dot" /><span className="gfd-pay-d">{p.payment_date}</span><span className="gfd-pay-a">+<Money value={p.amount_paid} /></span></div>
           ))}
-        {/* === Edit: Show payment recording for accountant only === */}
-        {isAccountant && (
+        {canManageFinance && (
           payOpen ? (
             <form onSubmit={submitPay} className="gfd-payform">
               <input type="number" step="0.01" max={remaining} placeholder={`Max ${remaining}`} value={amt} onChange={(e) => setAmt(e.target.value)} required />
@@ -300,7 +356,6 @@ return (
             <button className="gfd-mini" onClick={() => setPayOpen(true)}><Plus size={13} /> Record Payment</button>
           )
         )}
-        {/* === End of edit === */}
       </div>
 
       {/* Documents */}
@@ -311,22 +366,19 @@ return (
             <a key={i} href={f.file} target="_blank" rel="noreferrer" className="gfd-file"><FileText size={13} /> {f.file?.split('/').pop()}</a>
           ))}
         
-        {/* === Edit: Show file attachment for accountant only === */}
-        {isAccountant && (
+        {canManageFinance && (
           <>
             <input ref={fileRef} type="file" hidden onChange={upload} />
             <button className="gfd-mini" onClick={() => fileRef.current?.click()} disabled={busy}><Upload size={13} /> Attach PDF</button>
           </>
         )}
-        {/* === End of edit === */}
       </div>
 
-      {/* Status + Cancel */}
+      {/* Status + Cancel + Delete */}
       <div className="gfd-act-block">
         <div className="gfd-act-h"><Clock size={14} /> Status</div>
         
-        {/* === Edit: If not an accountant, display status as text only without select === */}
-        {isAccountant ? (
+        {canManageFinance ? (
           <select className="gfd-status-sel" value={status} onChange={(e) => changeStatus(e.target.value)}>
             {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
@@ -335,13 +387,26 @@ return (
             {STATUS_META[inv.status]?.label || status}
           </span>
         )}
-        {/* === End of edit === */}
 
-        {/* === Edit: Show cancel invoice button for accountant only === */}
-        {isAccountant && inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (
+        {canManageFinance && inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (
           <button className="gfd-mini rose" onClick={cancel}><Trash2 size={13} /> Cancel Invoice</button>
         )}
-        {/* === End of edit === */}
+
+        {/* ✅ NEW: زر الحذف الفعلي */}
+        {canManageFinance && inv.status === 'DRAFT' && (
+          <button
+            className="gfd-mini"
+            style={{
+              color: '#fff',
+              background: 'linear-gradient(180deg, #fb7185, var(--rose))',
+              borderColor: 'var(--rose)',
+              borderStyle: 'solid',
+            }}
+            onClick={onDeleteRequest}
+          >
+            <Trash2 size={13} /> Delete Permanently
+          </button>
+        )}
       </div>
     </div>
   );
@@ -365,7 +430,7 @@ function CreateInvoiceModal({ projects, onClose, onDone }) {
   };
 
   return (
-  <div className="gfd-mask" onClick={onClose}>
+    <div className="gfd-mask" onClick={onClose}>
       <form className="gfd-modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="gfd-modal-h"><h3><Receipt size={18} /> New Invoice</h3><button type="button" onClick={onClose}><X size={18} /></button></div>
         <div className="gfd-modal-b">
@@ -406,14 +471,14 @@ function CreateInvoiceModal({ projects, onClose, onDone }) {
     </div>
   );
 }
-/* ═══════════════════════════════════════════════════════════════ */
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-.gfd{   --ink:#f8fafc;      /* خلفية الصفحة (كانت داكنة) */
-  --surf:#ffffff;     /* الكروت والأسطح */
+.gfd{   --ink:#f8fafc;
+  --surf:#ffffff;
   --line:#e2e8f0; --surf2:#18222f;
-    --mut:#64748b;      /* النص الثانوي */
-  --paper:#0f172a;    /* النص الأساسي (صار داكنًا على خلفية فاتحة) */
+    --mut:#64748b;
+  --paper:#0f172a;
   --amber:#d97706;
   --sky:#0284c7;
   --emerald:#059669;
@@ -530,6 +595,9 @@ const CSS = `
 
 .gfd-mask{ position:fixed; inset:0; z-index:60; display:grid; place-items:center; padding:18px; background:rgba(6,10,15,.76); backdrop-filter:blur(3px); }
 .gfd-modal{ width:min(520px,100%); background:linear-gradient(180deg,#16202c,#0e1822); border:1px solid var(--line); border-radius:18px; overflow:hidden; animation:gfdpop .25s cubic-bezier(.2,.8,.2,1); }
+.gfd-delete-modal{ background:linear-gradient(180deg,#ffffff,#f8fafc); color:var(--paper); }
+.gfd-delete-modal .gfd-modal-h h3{ color:var(--rose) !important; }
+.gfd-delete-modal .gfd-modal-b p{ color:var(--paper) !important; }
 @keyframes gfdpop{ from{ opacity:0; transform:scale(.95) translateY(8px); } to{ opacity:1; transform:none; } }
 .gfd-modal-h{ display:flex; justify-content:space-between; align-items:center; padding:15px 18px; border-bottom:1px solid var(--line); }
 .gfd-modal-h h3{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk','IBM Plex Sans Arabic'; font-size:17px; margin:0; }
