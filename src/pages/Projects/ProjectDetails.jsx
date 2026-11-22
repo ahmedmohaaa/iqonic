@@ -90,9 +90,13 @@ function usePerms(user, project) {
     canEditLifecycle: r === 'DESIGN_MGR' || r === 'AGM' || r === 'GM',
     canEditTender: r === 'AGM',
     canEditPriority: designMgrs,
-    canSeeContract: canSeeFinanceBlock,  // ✅ نفس من يرى بلوك المالية
+    // ✅ رؤية ملف العقد: نفس canSeeFinanceBlock + المهندسون الأربعة
+    canSeeContract: canSeeFinanceBlock || [
+      'israa.omran', 'salah.ahmad', 'basem.taha', 'basel.shaat'
+    ].includes(u),
     canManageOffer: isManagementSecretary || isMgmt || isAcc || isDMgr,
-    canUploadContract: isManagementSecretary,
+    // ✅ رفع ملف العقد: ناصر + نسرين + المحاسب + سكرتيرة الإدارة فقط (بدون فهمي والمهندسين الأربعة)
+    canUploadContract: isMgmt || isAcc || isManagementSecretary,
     canSeeNumbers: canSeeFullNumbers,  // ✅ فقط المدراء والمحاسب وسكرتيرة الإدارة
     canAddInvoice: isMgmt || isAcc,
     // ✅ NEW: من يرى بلوكات المالية والعقود؟
@@ -1834,6 +1838,3 @@ mask-image:radial-gradient(125% 100% at 50% 0%,#000,transparent 88%);
 
 
 
-
-
- 
