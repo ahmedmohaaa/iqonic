@@ -46,6 +46,16 @@ const AuditTable = ({ logs }) => {
     return colors[actionType] || 'bg-gray-100 text-gray-800';
   };
 
+  // ✅ NEW: لون ونص badge القسم
+  const getScopeBadge = (scope) => {
+    const map = {
+      DESIGN:      { cls: 'bg-sky-100 text-sky-800 border-sky-200',       label: 'Design' },
+      SUPERVISION: { cls: 'bg-orange-100 text-orange-800 border-orange-200', label: 'Supervision' },
+      BOTH:        { cls: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Shared' },
+    };
+    return map[scope] || null;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -60,59 +70,72 @@ const AuditTable = ({ logs }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {logs.map(log => (
-              <tr key={log.id} className="bg-gray-50 transition">
-                {/* Date & Time */}
-                <td className="p-4 text-gray-600 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <Calendar size={14} className="mr-2 text-gray-400" />
-                    <div>
-                      <p className="font-medium">{format(new Date(log.created_at), 'dd MMM yyyy')}</p>
-                      <p className="text-xs text-gray-500">{format(new Date(log.created_at), 'hh:mm a')}</p>
-                    </div>
-                  </div>
-                </td>
+            {logs.map(log => {
+              // ✅ NEW: badge القسم
+              const scopeBadge = getScopeBadge(log.project_scope);
 
-                {/* User */}
-                <td className="p-4">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
-                      <User size={14} className="text-primary" />
+              return (
+                <tr key={log.id} className="bg-gray-50 transition">
+                  {/* Date & Time */}
+                  <td className="p-4 text-gray-600 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Calendar size={14} className="mr-2 text-gray-400" />
+                      <div>
+                        <p className="font-medium">{format(new Date(log.created_at), 'dd MMM yyyy')}</p>
+                        <p className="text-xs text-gray-500">{format(new Date(log.created_at), 'hh:mm a')}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-800 text-xs">
-                        {log.user_name || log.user_username || 'System'}
-                      </p>
-                      <p className="text-[10px] text-gray-500">{log.user_role || ''}</p>
+                  </td>
+
+                  {/* User */}
+                  <td className="p-4">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-2">
+                        <User size={14} className="text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-800 text-xs">
+                          {log.user_name || log.user_username || 'System'}
+                        </p>
+                        <p className="text-[10px] text-gray-500">{log.user_role || ''}</p>
+                      </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
 
-                {/* Action Type */}
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getActionColor(log.action_type)}`}>
-                    {log.action_type_display || log.action_type.replace(/_/g, ' ')}
-                  </span>
-                </td>
+                  {/* Action Type */}
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getActionColor(log.action_type)}`}>
+                      {log.action_type_display || log.action_type.replace(/_/g, ' ')}
+                    </span>
+                  </td>
 
-                {/* Project */}
-                <td className="p-4">
-                  {log.project_name ? (
-                    <div>
-                      <p className="font-semibold text-gray-800 text-xs">{log.project_name}</p>
-                      <p className="text-[10px] text-gray-500 font-mono">{log.project_no || ''}</p>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-xs">N/A</span>
-                  )}
-                </td>
+                  {/* Project */}
+                  <td className="p-4">
+                    {log.project_name ? (
+                      <div>
+                        <p className="font-semibold text-gray-800 text-xs">{log.project_name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <p className="text-[10px] text-gray-500 font-mono">{log.project_no || ''}</p>
+                          {/* ✅ NEW: badge القسم بجانب رقم المشروع */}
+                          {scopeBadge && (
+                            <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold ${scopeBadge.cls}`}>
+                              {scopeBadge.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-xs">N/A</span>
+                    )}
+                  </td>
 
-                {/* Details */}
-                <td className="p-4 text-gray-600 text-xs max-w-md truncate" title={log.details}>
-                  {log.details || '-'}
-                </td>
-              </tr>
-            ))}
+                  {/* Details */}
+                  <td className="p-4 text-gray-600 text-xs max-w-md truncate" title={log.details}>
+                    {log.details || '-'}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -121,4 +144,3 @@ const AuditTable = ({ logs }) => {
 };
 
 export default AuditTable;
-
