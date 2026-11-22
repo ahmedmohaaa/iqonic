@@ -13,6 +13,7 @@ const AuditLogs = () => {
     search: '',
     user: '',
     action_type: '',
+    scope: '',            // ✅ NEW: فلتر القسم (DESIGN / SUPERVISION / BOTH)
     date_from: '',
     date_to: '',
     page: 1,
@@ -61,6 +62,8 @@ const AuditLogs = () => {
       if (filters.search) params.search = filters.search;
       if (filters.user) params.user = filters.user;
       if (filters.action_type) params.action_type = filters.action_type;
+      // ✅ NEW: إرسال فلتر القسم للباك-إند
+      if (filters.scope) params.scope = filters.scope;
       if (filters.date_from) params.created_at__date__gte = filters.date_from;
       if (filters.date_to) params.created_at__date__lte = filters.date_to;
       params.page = filters.page;
