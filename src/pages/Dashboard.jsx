@@ -27,27 +27,6 @@ const Dashboard = () => {
         <MetricCard icon={Clock} title="Pending Tasks" value={data.metrics.my_pending_tasks} color="yellow" />
         <MetricCard icon={AlertTriangle} title="Unread Notifications" value={data.metrics.unread_notifications} color="red" />
       </div>
-
-      {/* Financial Snapshot for Management & Accountant */}
-      {isAccountant() && data.financial_snapshot && (
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h2 className="text-lg font-semibold mb-4 text-gray-800">Financial Snapshot</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 bg-red-50 rounded-lg">
-              <p className="text-sm text-gray-600">Overdue Invoices</p>
-              <p className="text-2xl font-bold text-red-600">{data.financial_snapshot.total_unpaid_invoices}</p>
-            </div>
-            <div className="p-4 bg-yellow-50 rounded-lg">
-              <p className="text-sm text-gray-600">Partially Paid</p>
-              <p className="text-2xl font-bold text-yellow-600">{data.financial_snapshot.partially_paid_invoices}</p>
-            </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-gray-600">Total Outstanding</p>
-              <p className="text-2xl font-bold text-blue-600">${data.financial_snapshot.total_outstanding}</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
