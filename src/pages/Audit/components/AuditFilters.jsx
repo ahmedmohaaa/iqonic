@@ -1,10 +1,18 @@
 import { Filter, X } from 'lucide-react';
 
+// ✅ NEW: خيارات فلتر القسم
+const SCOPE_OPTIONS = [
+  { value: 'DESIGN', label: 'Design (incl. Shared)' },
+  { value: 'SUPERVISION', label: 'Supervision (incl. Shared)' },
+  { value: 'BOTH', label: 'Shared Only (Both)' },
+];
+
 const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
   const handleReset = () => {
     onFilterChange('search', '');
     onFilterChange('user', '');
     onFilterChange('action_type', '');
+    onFilterChange('scope', '');        // ✅ NEW
     onFilterChange('date_from', '');
     onFilterChange('date_to', '');
   };
@@ -59,6 +67,23 @@ const AuditFilters = ({ filters, onFilterChange, users, actionTypes }) => {
             <option value="">All Actions</option>
             {actionTypes.map(at => (
               <option key={at.value} value={at.value}>{at.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════
+            ✅ NEW: Department / Scope Filter (Design / Supervision)
+            ═══════════════════════════════════════════════════════ */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Department (Scope)</label>
+          <select
+            value={filters.scope || ''}
+            onChange={e => onFilterChange('scope', e.target.value)}
+            className="w-full border-2 border-gray-400 rounded-lg p-2 text-sm font-semibold text-gray-900 bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-500 outline-none"
+          >
+            <option value="">All Departments</option>
+            {SCOPE_OPTIONS.map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
         </div>
